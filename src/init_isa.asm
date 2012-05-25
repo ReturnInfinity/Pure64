@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ISA
 ; =============================================================================
@@ -11,9 +11,6 @@ isa_setup:
 	xor eax, eax
 	mov ecx, 2048
 	rep stosd
-
-	mov al, '1'
-	call serial_send_16
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -67,9 +64,6 @@ memmapend:
 	mov ecx, 8
 	rep stosd
 
-	mov al, '2'
-	call serial_send_16
-
 ; Enable the A20 gate
 set_A20:
 	in al, 0x64
@@ -84,53 +78,23 @@ check_A20:
 	mov al, 0xDF
 	out 0x60, al
 
-	mov al, '3'
-	call serial_send_16
-
-; Set PIT Channel 0 to fire at 1000Hz (Divisor = 1193180 / hz)
-	mov al, 0x36			; Set Timer
-	out 0x43, al
-	mov al, 0xA9			; We want 100MHz so 0x2E9B
-	out 0x40, al			; 1000MHz would be 0x04A9
-	mov al, 0x04
-	out 0x40, al
-
-	mov al, '4'
-	call serial_send_16
-
-; Set keyboard repeat rate to max
-	mov al, 0xf3
-	out 0x60, al			; Set Typematic Rate/Delay
-	xor al, al
-	out 0x60, al			; 30 cps and .25 second delay
-	mov al, 0xed
-	out 0x60, al			; Set/Reset LEDs
-	xor al, al
-	out 0x60, al			; all off
-
-	mov al, '5'
-	call serial_send_16
-
 ; Set up RTC
-	mov al, 0x0B
-	out 0x70, al
-	in al, 0x71
-	or al, 00000010b		; Bit 2 (0) Data Mode to BCD, Bit 1 (1) 24 hour mode
-	push ax
-	mov al, 0x0B
-	out 0x70, al
-	pop ax
-	out 0x71, al
-
-	mov al, '6'
-	call serial_send_16
+; Port 0x70 is RTC Address, and 0x71 is RTC Data
+; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
+rtc_poll:
+	mov al, 0x0A			; Status Register A
+	out 0x70, al			; Select the address
+	in al, 0x71			; Read the data
+	test al, 0x80			; Is there an update in process?
+	jne rtc_poll			; If so then keep polling
+	mov al, 0x0A			; Status Register A
+	out 0x70, al			; Select the address
+	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
+	out 0x71, al			; Write the data
 
 ; VBE init
 	cmp byte [cfg_vesa], 1		; Check if VESA should be enabled
 	jne VBEdone			; If not then skip VESA init
-
-	mov al, '7'
-	call serial_send_16
 
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
 	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
@@ -157,17 +121,10 @@ check_A20:
 
 VBEfail:
 	mov byte [cfg_vesa], 0		; Clear the VESA config as it was not sucessful
-	mov al, 'B'
-	call serial_send_16
 
 VBEdone:
 
-	mov al, 'C'
-	call serial_send_16
-
-; Remap IRQ's
-; As heard on an episode of Jerry Springer.. "It's time to lose the zero (8259 PIC) and get with a hero (IOAPIC)".
-; http://osdever.net/tutorials/apicarticle.php
+	; Remap PIC IRQ's
 	mov al, 00010001b		; begin PIC 1 initialization
 	out 0x20, al
 	mov al, 00010001b		; begin PIC 2 initialization
@@ -184,18 +141,10 @@ VBEdone:
 	out 0x21, al
 	out 0xA1, al
 
-	mov al, 'D'
-	call serial_send_16
-
-	in al, 0x21
-	mov al, 11111110b		; Disable all IRQs except for timer
+	; Mask all PIC interrupts
+	mov al, 0xFF
 	out 0x21, al
-	in al, 0xA1
-	mov al, 11111111b
 	out 0xA1, al
-
-	mov al, 'E'
-	call serial_send_16
 
 ret
 

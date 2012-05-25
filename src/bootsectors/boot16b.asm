@@ -27,13 +27,13 @@ entry:
 times 0x3B db 0				; Code starts at offset 0x3E
 
 begin:
+	mov bp, 0x7c00
 	mov [bsDriveNumber], dl	; BIOS passes drive number in DL
 	xor eax, eax
 	xor esi, esi
 	xor edi, edi
 	mov ds, ax
 	mov es, ax
-	mov bp, 0x7c00
 
 ; Make sure the screen is set to 80x25 color text mode
 	mov ax, 0x0003			; Set to normal (80x25 text) video mode
@@ -89,7 +89,7 @@ ff_next_sector:
 ; Search for file name, and find start cluster.
 ff_next_entry:
 	mov cx, 11
-	mov si, filename
+	mov si, loadername
 	repe cmpsb
 	jz ff_done		; note that di now is at dirent+11
 
@@ -240,7 +240,8 @@ print_string_16:			; Output string in SI to screen
 
 msg_Load db "Loading... ", 0
 msg_Error db "No "
-filename db "PURE64  SYS", 0
+loadername db "PURE64  SYS", 0
+kernelname db "KERNEL64SYS", 0
 datastart dw 0x0000
 rootstart dw 0x0000
 tcluster dw 0x0000

@@ -1,19 +1,93 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT HDD
 ; =============================================================================
 
+; The code below only utilizes the Master drive on the Primary ATA Bus.
+; Port IO is hard-coded to Primary : 0x01F0 - 0x01F7, 0x03F6
+; Secondary Bus would be 0x0170 - 0x0177, 0x0376
 
 hdd_setup:
+; Probe for PATA hard drive
+	mov dx, 0x01F0
+	mov [ata_base], dx
+	add dx, 7			; Primary ATA Regular Status Byte
+	in al, dx
+	cmp al, 0xFF			; Check for "float" value
+	je hdd_setup_try_sata		; No drive detected
+	test al, 0xA9			; Is ERR, DRQ, DF, or BSY set?
+	jne hdd_setup_err_read
+	jmp hdd_setup_load_sector
+
+; Probe for a hard drive controller
+hdd_setup_try_sata:
+	xor ebx, ebx
+	xor ecx, ecx
+findcontroller:
+	cmp bx, 256			; Search up to 256 buses
+	je hdd_setup_err_drive		; No drive detected
+	cmp cl, 32			; Up to 32 devices per bus
+	jne findcontroller_1
+	add bx, 1
+	xor ecx, ecx
+findcontroller_1:
+	mov dl, 2			; We want the Class/Device code
+	call os_pci_read_reg
+	add cl, 1
+	shr rax, 16
+	cmp ax, 0x0106			; Mass storage device, SATA
+	jne findcontroller
+	sub cl, 1
+	mov dl, 9
+	call os_pci_read_reg		; BAR5 (AHCI Base Address Register)
+	mov [sata_base], eax
+	call os_debug_dump_eax
+	call os_print_newline
+	mov rsi, rax
+	lodsd
+	call os_debug_dump_eax
+	call os_print_newline
+	bt rax, 18
+	jnc legacy_mode_ok
+	push rsi
+	mov rsi, no_sata_legacy
+	call os_print_string
+	pop rsi
+	jmp $
+legacy_mode_ok:
+	mov rdi, rsi
+	lodsd
+	call os_debug_dump_eax
+	call os_print_newline
+	xor eax, eax
+	stosd
+	
+;jmp $
+
+	mov dl, 4			; BAR0
+	call os_pci_read_reg
+	and ax, 0xFFFC			; AX now holds the Base IO Address (clear the low 2 bits)
+;	call os_debug_dump_eax
+	mov dx, ax
+	mov [ata_base], dx
+	in al, dx
+	cmp al, 0xFF			; Check for "float" value
+	je hdd_setup_err_drive		; No drive detected
+	test al, 0xA9			; Is ERR, DRQ, DF, or BSY set?
+	jne hdd_setup_err_read	
+
 ; Read first sector of HDD into memory
-	xor rax, rax
+hdd_setup_load_sector:
+	xor rax, rax			; We want sector 0
 	mov rdi, hdbuffer
 	push rdi
-	mov rcx, 1
+	mov rcx, 1			; Read one sector
 	call readsectors
 	pop rdi
+	cmp rcx, 0
+	je hdd_setup_err_read
 
 	cmp byte [cfg_mbr], 0x01	; Did we boot from a MBR drive
 	jne hdd_setup_no_mbr		; If not then we already have the correct sector
@@ -27,7 +101,9 @@ hdd_setup:
 	push rdi
 	mov rcx, 1
 	call readsectors
-	pop rdi	
+	pop rdi
+	cmp rcx, 0
+	je hdd_setup_err_read
 
 hdd_setup_no_mbr:
 ; Get the values we need to start using fat16
@@ -78,6 +154,15 @@ lessthan65536sectors:
 
 ret
 
+hdd_setup_err_drive:
+	mov rsi, hdd_setup_no_drive
+	call os_print_string
+	jmp exception_gate_halt
+
+hdd_setup_err_read:
+	mov rsi, hdd_setup_read_error
+	call os_print_string
+	jmp exception_gate_halt
 
 ; -----------------------------------------------------------------------------
 ; readsectors -- Read sectors on the hard drive
@@ -96,6 +181,8 @@ readsectors:
 
 	push rcx		; Save RCX for use in the read loop
 	mov rbx, rcx		; Store number of sectors to read
+	cmp rcx, 0
+	je readsectors_fail	; Try to read nothing? Fail!
 	cmp rcx, 256
 	jg readsectors_fail	; Over 256? Fail!
 	jne readsectors_skip	; Not 256? No need to modify CL
@@ -103,7 +190,9 @@ readsectors:
 readsectors_skip:
 
 	push rax		; Save RAX since we are about to overwrite it
-	mov dx, 0x01F2		; 0x01F2 - Sector count Port 7:0
+	mov dx, [ata_base]
+	;mov dx, 0x01F2		; 0x01F2 - Sector count Port 7:0
+	add dx, 2
 	mov al, cl		; Read CL sectors
 	out dx, al
 	pop rax			; Restore RAX which is our sector number
@@ -155,6 +244,9 @@ readsectors_dataready:
 	cmp rbx, 0
 	jne readsectors_nextsector
 
+	test al, 0x21		; ERR or DF set?
+	jne readsectors_fail
+
 	pop rcx
 	pop rax
 	pop rbx
@@ -173,6 +265,7 @@ readsectors_fail:
 ret
 ; -----------------------------------------------------------------------------
 
+no_sata_legacy: db "SATA Controller only suppports native mode!", 13, 0
 
 ; =============================================================================
 ; EOF

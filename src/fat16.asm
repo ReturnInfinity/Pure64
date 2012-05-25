@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; FAT16 functions
 ; =============================================================================
@@ -35,6 +35,8 @@ readcluster:
 
 	pop rcx					; Restore the number of sectors per cluster
 	call readsectors			; Read one cluster of sectors
+	cmp rcx, 0
+	je readcluster_error
 
 ; Calculate the next cluster
 ; Psuedo-code
@@ -51,6 +53,8 @@ readcluster:
 	add rax, rbx				; Add the sector offset
 	mov rcx, 1
 	call readsectors
+	cmp rcx, 0
+	je readcluster_error
 	pop rax					; Get our original cluster value back
 	shl rbx, 8				; Quick multiply by 256 (RBX was the sector offset in the FAT)
 	sub rax, rbx				; RAX is now pointed to the offset within the sector
@@ -70,6 +74,11 @@ readcluster_end:
 	pop rdx
 	pop rsi
 ret
+
+readcluster_error:
+	mov rsi, readcluster_err_msg
+	call os_print_string
+	jmp exception_gate_halt
 ; -----------------------------------------------------------------------------
 
 
@@ -96,6 +105,8 @@ os_fat16_find_file_read_sector:
 	push rdi
 	mov rcx, 1
 	call readsectors
+	cmp rcx, 0
+	je os_fat16_find_file_error
 	pop rdi
 	mov rbx, 16			; Each record is 32 bytes. 512 (bytes per sector) / 32 = 16
 
@@ -137,8 +148,15 @@ wut:
 	pop rdi
 	pop rsi
 ret
+
+os_fat16_find_file_error:
+	mov rsi, findfile_err_msg
+	call os_print_string
+	jmp exception_gate_halt
 ; -----------------------------------------------------------------------------
 
+readcluster_err_msg:	db 'Error reading cluster', 0
+findfile_err_msg:	db 'Error finding file', 0
 
 ; =============================================================================
 ; EOF

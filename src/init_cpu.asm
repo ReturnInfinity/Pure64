@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT CPU
 ; =============================================================================
@@ -9,16 +9,16 @@
 init_cpu:
 
 ; Check for Prefetcher and L2 Cache support
-	mov r15b, 1			; Set MSR support to 1
-	xor eax, eax
-	mov al, 1			; Access CPUID leaf 1
-	cpuid
-	shr rax, 8			; Family now in AL (lowest 4 bits)
-	and al, 0x0F			; Clear the high 4 bits
-	cmp al, 0x0F
-	jne init_cpu_msrok		; If Family is not 0xF then jump
-	mov r15b, 0			; If it is 0xF (Older P4/Xeon) then set MSR support to 0
-init_cpu_msrok:
+;	mov r15b, 1			; Set MSR support to 1
+;	xor eax, eax
+;	mov al, 1			; Access CPUID leaf 1
+;	cpuid
+;	shr rax, 8			; Family now in AL (lowest 4 bits)
+;	and al, 0x0F			; Clear the high 4 bits
+;	cmp al, 0x0F
+;	jne init_cpu_msrok		; If Family is not 0xF then jump
+;	mov r15b, 0			; If it is 0xF (Older P4/Xeon) then set MSR support to 0
+;init_cpu_msrok:
 
 ; Disable Cache
 	mov rax, cr0
@@ -118,9 +118,9 @@ init_cpu_msrok:
 	mov cr0, rax
 
 ; Enable Paging Global Extensions
-	mov rax, cr4
-	bts rax, 7			; Set Paging Global Extensions (Bit 7)
-	mov cr4, rax
+;	mov rax, cr4
+;	bts rax, 7			; Set Paging Global Extensions (Bit 7)
+;	mov cr4, rax
 
 ; Enable Floating Point
 	mov rax, cr0
@@ -136,6 +136,54 @@ init_cpu_msrok:
 
 ; Enable Math Co-processor
 	finit
+
+; Enable and Configure Local APIC
+	mov rsi, [os_LocalAPICAddress]
+	cmp rsi, 0x00000000
+	je noMP				; Skip MP init if we didn't get a valid LAPIC address
+
+	xor eax, eax			; Clear Task Priority (bits 7:4) and Priority Sub-Class (bits 3:0)
+	mov dword [rsi+0x80], eax	; Task Priority Register (TPR)
+
+	mov eax, 0x01000000		; Set bits 31-24 for all cores to be in Group 1
+	mov dword [rsi+0xD0], eax	; Logical Destination Register
+
+	xor eax, eax
+	sub eax, 1			; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
+	mov dword [rsi+0xE0], eax	; Destination Format Register
+
+	mov eax, dword [rsi+0xF0]	; Spurious Interrupt Vector Register
+	mov al, 0xF8
+	bts eax, 8			; Enable APIC (Set bit 8)
+	mov dword [rsi+0xF0], eax
+
+	mov eax, dword [rsi+0x320]	; LVT Timer Register
+	bts eax, 16			; Set bit 16 for mask interrupts
+	mov dword [rsi+0x320], eax
+
+;	mov eax, dword [rsi+0x350]	; LVT LINT0 Register
+;	mov al, 0			;Set interrupt vector (bits 7:0)
+;	bts eax, 8			;Delivery Mode (111b==ExtlNT] (bits 10:8)
+;	bts eax, 9
+;	bts eax, 10
+;	bts eax, 15			;bit15:Set trigger mode to Level (0== Edge, 1== Level)  
+;	btr eax, 16			;bit16:unmask interrupts (0==Unmasked, 1== Masked)
+;	mov dword [rsi+0x350], eax
+
+;	mov eax, dword [rsi+0x360]	; LVT LINT1 Register
+;	mov al, 0			;Set interrupt vector (bits 7:0)
+;	bts eax, 8			;Delivery Mode (111b==ExtlNT] (bits 10:8)
+;	bts eax, 9
+;	bts eax, 10
+;	bts eax, 15			;bit15:Set trigger mode to Edge (0== Edge, 1== Level)
+;	btr eax, 16			;bit16:unmask interrupts (0==Unmasked, 1== Masked)
+;	mov dword [rsi+0x360], eax
+
+;	mov eax, dword [rsi+0x370]	; LVT Error Register
+;	mov al, 0			;Set interrupt vector (bits 7:0)
+;	bts eax, 16			;bit16:Mask interrupts (0==Unmasked, 1== Masked)
+;	mov dword [rsi+0x370], eax
+
 
 ret
 

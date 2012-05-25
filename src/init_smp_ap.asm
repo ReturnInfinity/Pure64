@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT SMP AP
 ; =============================================================================
@@ -62,22 +62,22 @@ startap32:
 ; Load the GDT
 	lgdt [GDTR64]
 
-; Enable physical-address extensions (set CR4.PAE=1)
+; Enable extended properties
 	mov eax, cr4
-	or eax, 0x000000020		; PAE (Bit 5)
+	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
 	mov cr4, eax
 
 ; Point cr3 at PML4
 	mov eax, 0x00002008		; Write-thru (Bit 3)
 	mov cr3, eax
 
-; Enable long mode (set EFER.LME=1)
+; Enable long mode and SYSCALL/SYSRET
 	mov ecx, 0xC0000080		; EFER MSR number
 	rdmsr				; Read EFER
-	or eax, 0x00000100 		; LME (Bit 8)
+	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
-; Enable paging to activate long mode (set CR0.PG=1)
+; Enable paging to activate long mode
 	mov eax, cr0
 	or eax, 0x80000000		; PG (Bit 31)
 	mov cr0, eax

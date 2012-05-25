@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; System Variables
 ; =============================================================================
@@ -22,12 +22,14 @@ hdbuffer:		equ 0x0000000000070000	; 32768 bytes = 0x6000 -> 0xDFFF VERIFY THIS!!
 hdbuffer1:		equ 0x000000000007E000	; 512 bytes = 0xE000 -> 0xE1FF VERIFY THIS!!!
 
 ; DQ - Starting at offset 0, increments by 0x8
-os_LocalAPICAddress:	equ SystemVariables + 0x00
-os_IOAPICAddress:	equ SystemVariables + 0x08
-os_ACPITableAddress:	equ SystemVariables + 0x10
-screen_cursor_offset:	equ SystemVariables + 0x18
-hd1_maxlba:		equ SystemVariables + 0x20
-os_Counter:		equ SystemVariables + 0x28
+os_ACPITableAddress:	equ SystemVariables + 0x00
+screen_cursor_offset:	equ SystemVariables + 0x08
+hd1_maxlba:		equ SystemVariables + 0x10
+os_Counter_Timer:	equ SystemVariables + 0x18
+os_Counter_RTC:		equ SystemVariables + 0x20
+os_LocalAPICAddress:	equ SystemVariables + 0x28
+os_IOAPICAddress:	equ SystemVariables + 0x30
+os_HPETAddress:		equ SystemVariables + 0x38
 
 ; DD - Starting at offset 128, increments by 4
 hd1_size:		equ SystemVariables + 128
@@ -36,16 +38,19 @@ fat16_TotalSectors:	equ SystemVariables + 136
 fat16_DataStart:	equ SystemVariables + 140
 fat16_RootStart:	equ SystemVariables + 144
 fat16_PartitionOffset:	equ SystemVariables + 148
+sata_base:		equ SystemVariables + 152
+os_BSP:			equ SystemVariables + 156
+mem_amount:		equ SystemVariables + 160
 
 ; DW - Starting at offset 256, increments by 2
 cpu_speed:		equ SystemVariables + 256
 cpu_activated:		equ SystemVariables + 258
 cpu_detected:		equ SystemVariables + 260
-mem_amount:		equ SystemVariables + 262
-fat16_BytesPerSector:	equ SystemVariables + 264
-fat16_ReservedSectors:	equ SystemVariables + 266
-fat16_SectorsPerFat:	equ SystemVariables + 268
-fat16_RootDirEnts:	equ SystemVariables + 270
+fat16_BytesPerSector:	equ SystemVariables + 262
+fat16_ReservedSectors:	equ SystemVariables + 264
+fat16_SectorsPerFat:	equ SystemVariables + 266
+fat16_RootDirEnts:	equ SystemVariables + 268
+ata_base:		equ SystemVariables + 270
 
 ; DB - Starting at offset 384, increments by 1
 hd1_enable:		equ SystemVariables + 384
@@ -58,6 +63,8 @@ memtempstring:		equ SystemVariables + 390
 speedtempstring:	equ SystemVariables + 400
 cpu_amount_string:	equ SystemVariables + 410
 hdtempstring:		equ SystemVariables + 420
+os_key:			equ SystemVariables + 421
+os_IOAPICCount:		equ SystemVariables + 424
 
 ;MISC
 screen_cols:		db 80
@@ -75,13 +82,14 @@ msg_mhz:		db 'MHz x', 0
 msg_MEM:		db ']  [MEM: ', 0
 msg_mb:			db ' MiB]', 0
 msg_HDD:		db '  [HDD: ', 0
-msg_loadingkernel:	db 'Loading software...', 0
+msg_loadingkernel:	db 'Loading software', 0;...', 0
 msg_startingkernel:	db 'Starting software.', 0
 msg_noconfig:		db '(default config)', 0
-no64msg:		db 'ERROR: CPU does not support 64-bit mode.', 0
-initStartupMsg:		db 'Pure64 v0.5.0-dev - http://www.returninfinity.com', 13, 10, 13, 10, 'Initializing system... ', 0
-msg_date:		db '2011/05/19', 0
-
+no64msg:		db 'ERROR: This computer does not support 64-Bit mode. Press any key to reboot.', 0
+initStartupMsg:		db 'Pure64 v0.5.1 - http://www.returninfinity.com', 13, 10, 13, 10, 'Initializing system... ', 0
+msg_date:		db '2012/04/26', 0
+hdd_setup_no_drive:	db 'No HDD detected', 0
+hdd_setup_read_error:	db 'Error reading HDD', 0
 
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes

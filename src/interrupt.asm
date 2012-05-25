@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2011 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
 ;
 ; Interrupts
 ; =============================================================================
@@ -13,7 +13,10 @@ exception_gate:
 	call os_print_string
 	mov rsi, exc_string
 	call os_print_string
-	jmp $					; hang
+exception_gate_halt:
+	cli				; Disable interrupts
+	hlt				; Halt the system
+	jmp exception_gate_halt
 ; -----------------------------------------------------------------------------
 
 
@@ -25,18 +28,76 @@ interrupt_gate:				; handler for all other interrupts
 
 
 ; -----------------------------------------------------------------------------
-; Real-time clock interrupt. IRQ 0x00, INT 0x20
+; Keyboard interrupt. IRQ 0x01, INT 0x21
+; This IRQ runs whenever there is input on the keyboard
 align 16
-timer:
+keyboard:
+	push rdi
 	push rax
-	add qword [os_Counter], 1	; 64-bit counter started at bootup
-	mov rax, [os_Counter]
+
+	xor rax, rax
+
+	in al, 0x60			; Get the scancode from the keyboard
+	test al, 0x80
+	jz keydown
+	jmp keyboard_done
+
+keydown:
+	mov [0x000B8088], al		; Dump the scancode to the screen
+
+	mov rax, [os_Counter_RTC]
+	add rax, 10
+	mov [os_Counter_RTC], rax
+
+keyboard_done:
+	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
+	add rdi, 0xB0
+	xor eax, eax
+	stosd
+
+	pop rax
+	pop rdi
+	iretq
+; -----------------------------------------------------------------------------
+
+
+
+; -----------------------------------------------------------------------------
+; Real-time clock interrupt. IRQ 0x08, INT 0x28
+align 16
+rtc:
+	push rdi
+	push rax
+
+	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
+
+	mov al, 'R'
+	mov [0x000B8092], al
+	mov rax, [os_Counter_RTC]
 	and al, 1			; Clear all but lowest bit (Can only be 0 or 1)
 	add al, 48
 	mov [0x000B8094], al
-	mov al, 0x20			; Acknowledge the IRQ
-	out 0x20, al
+	mov al, 0x0C			; Select RTC register C
+	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
+	in al, 0x71			; Read the value in register C
+
+	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
+	add rdi, 0xB0
+	xor eax, eax
+	stosd
+
 	pop rax
+	pop rdi
+	iretq
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; Spurious interrupt. INT 0xFF
+align 16
+spurious:				; handler for spurious interrupts
+	mov al, 'S'
+	mov [0x000B8080], al
 	iretq
 ; -----------------------------------------------------------------------------
 
