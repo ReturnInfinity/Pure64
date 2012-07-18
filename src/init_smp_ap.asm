@@ -10,7 +10,7 @@ USE16
 mp_ap_setup:
 	nop
 	jmp 0x0000:clearcs_ap
-	
+
 clearcs_ap:
 
 ; Enable the A20 gate
@@ -83,7 +83,7 @@ startap32:
 	mov cr0, eax
 
 ; Make the jump directly from 16-bit real mode to 64-bit long mode
-	jmp SYS64_CODE_SEL:startap64	
+	jmp SYS64_CODE_SEL:startap64
 
 align 16
 
@@ -151,8 +151,7 @@ clearcs64_ap:
 ;	xor rdx, rdx
 ;	div rax
 
-	lock
-	inc word [cpu_activated]
+	lock inc word [cpu_activated]
 	xor eax, eax
 	mov rsi, [os_LocalAPICAddress]
 	add rsi, 0x20			; Add the offset for the APIC ID location
