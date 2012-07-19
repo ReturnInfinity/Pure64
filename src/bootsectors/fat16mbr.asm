@@ -121,7 +121,7 @@ print_string_16:			; Output string in SI to screen
 ;------------------------------------------------------------------------------
 
 msg_Load db "Loading... ", 0
-msg_NoPartition db "No active partition found"
+msg_NoPartition db "No active partition found", 0
 DriveNumber db 0x00
 
 times 446-$+$$ db 0

@@ -55,7 +55,7 @@ smp_send_INIT_verify:
 
 smp_send_INIT_skipcore:
 	dec cl
-	jmp smp_send_INIT	
+	jmp smp_send_INIT
 
 smp_send_INIT_done:
 
@@ -92,14 +92,14 @@ smp_send_SIPI_verify:
 
 smp_send_SIPI_skipcore:
 	dec cl
-	jmp smp_send_SIPI	
+	jmp smp_send_SIPI
 
 smp_send_SIPI_done:
 
 	mov al, 'A'
 	mov [0x000B809E], al
 ;	mov al, 'S'
-;	call serial_send_64	
+;	call serial_send_64
 
 ; Let things settle (Give the AP's some time to finish)
 	mov rax, [os_Counter_RTC]
@@ -111,8 +111,7 @@ wait3:
 
 ; Step 4: Finish up
 noMP:
-	lock
-	inc word [cpu_activated]	; BSP adds one here
+	lock inc word [cpu_activated]	; BSP adds one here
 
 	xor eax, eax
 	mov rsi, [os_LocalAPICAddress]
@@ -157,7 +156,7 @@ speedtest:
 
 	mov al, 'E'
 	mov [0x000B809E], al
-	
+
 	cli				; Disable Interrupts
 
 	ret
