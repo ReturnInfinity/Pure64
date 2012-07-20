@@ -553,7 +553,7 @@ clearmapnext:
 
 ; Init of SMP
 	call smp_setup
-	
+
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
@@ -713,22 +713,28 @@ nodefaultconfig:
 	mov rsi, msg_mb
 	call os_print_string
 
+	cmp byte [cfg_hdd], 0x00
+	je no_msg_HDD
 	mov rsi, msg_HDD
 	call os_print_string
 	mov rsi, hdtempstring
 	call os_print_string
 	mov rsi, msg_mb
 	call os_print_string
+no_msg_HDD:
 
 ; =============================================================================
 %ifdef PURE64_CHAIN_LOADING
 	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
-	mov rdi, 0x100000	; Destination address at the 1MiB mark
+	mov rdi, 0x200000	; Destination address at the 1MiB mark
 	mov rcx, 0x1000		; For up to 32KiB kernel (4096 x 8)
 	rep movsq		; Copy 8 bytes at a time
 	jmp fini		; Print starting message and jump to kernel
 %endif
-; =============================================================================	
+; =============================================================================
+
+	cmp byte [cfg_hdd], 0x00
+	je nokernel
 
 ; Print a message that the kernel is being loaded
 	mov ax, 0x0006
@@ -738,8 +744,8 @@ nodefaultconfig:
 
 ; Find the kernel file
 	mov rsi, kernelname
-	call findfile
-	cmp ax, 0x0000
+	call findfile				; Return start block in RAX, num of blocks in RCX
+	cmp rax, 0
 	je near nokernel
 
 ; Debug
@@ -748,16 +754,13 @@ nodefaultconfig:
 	mov [0x000B809E], al
 	pop rax
 
-; Load 64-bit kernel from drive to 0x0000000000010000
-	mov rdi, 0x0000000000100000
-readfile_getdata:
-	push rax
-	mov al, '.'		; Show loading progress
-	call os_print_char
-	pop rax
-	call readcluster	; store in memory
-	cmp ax, 0xFFFF		; Value for end of cluster chain.
-	jne readfile_getdata	; Are there more clusters? If so then read again.. if not fall through.
+; Load 64-bit kernel from drive to 0x0000000000020000
+nextblock:
+	sub rcx, 1
+	mov rdi, 0x0000000000200000
+	call readblock
+	cmp rcx, 0
+	jne nextblock
 
 ; Print a message that the kernel has been loaded
 	mov rsi, msg_done
@@ -797,7 +800,7 @@ fini:	; For chainloading
 	xor r14, r14
 	xor r15, r15
 
-	jmp 0x0000000000100000		; Jump to the kernel
+	jmp 0x0000000000200000		; Jump to the kernel
 
 nokernel:
 	mov al, 6
@@ -832,7 +835,7 @@ nokernelhalt:
 %include "syscalls.asm"
 %include "interrupt.asm"
 %include "pci.asm"
-%include "fat16.asm"
+%include "bmfs.asm"
 %include "sysvar.asm"
 
 ; Pad to an even KB file (7 KiB)
