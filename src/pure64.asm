@@ -720,9 +720,6 @@ no_msg_HDD:
 ; Load the kernel at 0x100000
 	mov rax, 0x0000000000100000
 	call loadkernel
-; Print a message that the kernel has been loaded
-	mov rsi, msg_done
-	call os_print_string
 %endif
 ; =============================================================================
 

@@ -81,7 +81,7 @@ hextable: 		db '0123456789ABCDEF'
 
 ;STRINGS
 pure64:			db 'Pure64 - ', 0
-kernelerror:		db 'ERROR: Software not found.', 0
+kernelerror:		db 'ERROR: Could not find ', 0
 kernelname:		db KERNEL, 0
 msg_done:		db ' Done', 0
 msg_CPU:		db '[CPU: ', 0
@@ -90,14 +90,15 @@ msg_MEM:		db ']  [MEM: ', 0
 msg_mb:			db ' MiB]', 0
 msg_HDD:		db '  [HDD: ', 0
 msg_gb:			db ' GiB]', 0
-msg_loadingkernel:	db 'Loading software...', 0
-msg_startingkernel:	db 'Starting software...', 0
+msg_loadingkernel:	db 'Loading kernel...', 0
+msg_startingkernel:	db 'Starting kernel...', 0
 no64msg:		db 'ERROR: This computer does not support 64-Bit mode. Press any key to reboot.', 0
 initStartupMsg:		db 'Pure64 v0.5.1 - http://www.returninfinity.com', 13, 10, 13, 10, 'Initializing system... ', 0
 msg_date:		db '2012/04/15', 0
 ;hdd_setup_no_sata:	db 'No supported SATA Controller detected', 0
 hdd_setup_no_disk:	db 'No HDD detected', 0
-hdd_setup_read_error:	db 'Error reading HDD', 0
+hdd_setup_read_error:	db 'ERROR: Could not read HDD', 0
+fs_read_error:		db 'ERROR: Could not read filesystem', 0
 
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes

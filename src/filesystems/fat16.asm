@@ -21,7 +21,7 @@ fat16_setup:
 	call readsectors
 	pop rdi
 	cmp rcx, 0
-	je hdd_setup_err_read
+	je fat16_err_read
 
 	cmp byte [cfg_mbr], 0x01    ; Did we boot from a MBR drive
 	jne hdd_setup_no_mbr        ; If not then we already have the correct sector
@@ -37,7 +37,7 @@ fat16_setup:
 	call readsectors
 	pop rdi
 	cmp rcx, 0
-	je hdd_setup_err_read
+	je fat16_err_read
 
 hdd_setup_no_mbr:
 ; Get the values we need to start using fat16
@@ -83,6 +83,11 @@ lessthan65536sectors:
 	pop rax
 ret
 
+fat16_err_read:
+	mov rsi, fs_read_error
+	call os_print_string
+	jmp exception_gate_halt
+
 ; -----------------------------------------------------------------------------
 ; loadkernel -- loads the kernel file
 ; IN:   RAX(Memory offset to load to)
@@ -100,7 +105,7 @@ loadkernel:
 	mov rsi, kernelname
 	call findfile
 	cmp ax, 0x0000
-	je done
+	je loadkernel_notfound
 
 	; Load 64-bit kernel from drive to [RAX]
 	mov rdi, rax
@@ -269,6 +274,14 @@ os_fat16_find_file_error:
 	mov rsi, findfile_err_msg
 	call os_print_string
 	jmp exception_gate_halt
+
+loadkernel_notfound:
+	mov rsi, kernelerror
+	call os_print_string
+	mov rsi, kernelname
+	call os_print_string
+	jmp exception_gate_halt
+
 ; -----------------------------------------------------------------------------
 
 readcluster_err_msg:	db 'Error reading cluster', 0
