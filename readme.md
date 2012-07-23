@@ -22,8 +22,8 @@ Ian Seyler (ian.seyler@returninfinity.com)
 To build all required Pure64 binaries, including MBRs, use the makefile:
 
     make pure64.sys
-    make FAT16.mbr
-    make BMFS.mbr
+    make FAT16mbr.bin
+    make BMFSmbr.bin
 
 Alternatively, a raw disk image can be produced using:
 
