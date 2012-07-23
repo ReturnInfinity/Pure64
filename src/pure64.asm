@@ -37,7 +37,7 @@ start:
 align 16
 	jmp start16			; This command will be overwritten with 'NOP's before the AP's are started
 
-%include "init_smp_ap.asm"		; Our AP code is at 0x8000
+%include "init/smp_ap.asm"		; Our AP code is at 0x8000
 
 align 16
 db '16'
@@ -159,7 +159,7 @@ buffer_empty:
 	int 0xff			; reboot by causing a triple fault
 	jmp $
 
-%include "init_isa.asm"
+%include "init/isa.asm"
 
 align 16
 GDTR32:					; Global Descriptors Table Register
@@ -533,24 +533,6 @@ clearmapnext:
 ;	mov al, '8'
 ;	call serial_send_64
 
-; Find init64.cfg
-;	mov rbx, configname
-;	call findfile
-;	cmp rbx, 0
-;	je near noconfig		; If the config file was not found we just use the default settings.
-	mov al, 1
-	mov byte [cfg_default], al	; We have a config file
-
-; Read in the first cluster of init64.cfg
-;	mov rdi, 0x0000000000100000
-;	call readcluster
-
-; Parse init64.cfg
-; Get Kernel name
-; get SMP setting
-
-; noconfig:
-
 ; Init of SMP
 	call smp_setup
 
@@ -680,16 +662,6 @@ nextIOAPIC:
 	mov rsi, msg_done
 	call os_print_string
 
-; Write an extra message if we are using the default config
-	cmp byte [cfg_default], 1
-	je nodefaultconfig
-	mov al, 2
-	mov ah, 28
-	call os_move_cursor
-	mov rsi, msg_noconfig
-	call os_print_string
-nodefaultconfig:
-
 ; Debug
 	mov al, '4'
 	mov [0x000B809E], al
@@ -723,16 +695,20 @@ nodefaultconfig:
 	call os_print_string
 no_msg_HDD:
 
-; =============================================================================
+; Debug
+	push rax
+	mov al, '6'
+	mov [0x000B809E], al
+	pop rax
+
+	; =============================================================================
 %ifdef PURE64_CHAIN_LOADING
 	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
-	mov rdi, 0x200000	; Destination address at the 1MiB mark
+	mov rdi, 0x100000	; Destination address at the 1MiB mark
 	mov rcx, 0x1000		; For up to 32KiB kernel (4096 x 8)
 	rep movsq		; Copy 8 bytes at a time
-	jmp fini		; Print starting message and jump to kernel
-%endif
-; =============================================================================
-
+%else
+; Loading from filesystem -- require a hard disk be present
 	cmp byte [cfg_hdd], 0x00
 	je nokernel
 
@@ -741,32 +717,14 @@ no_msg_HDD:
 	call os_move_cursor
 	mov rsi, msg_loadingkernel
 	call os_print_string
-
-; Find the kernel file
-	mov rsi, kernelname
-	call findfile				; Return start block in RAX, num of blocks in RCX
-	cmp rax, 0
-	je near nokernel
-
-; Debug
-	push rax
-	mov al, '6'
-	mov [0x000B809E], al
-	pop rax
-
-; Load 64-bit kernel from drive to 0x0000000000020000
-nextblock:
-	sub rcx, 1
-	mov rdi, 0x0000000000200000
-	call readblock
-	cmp rcx, 0
-	jne nextblock
-
+; Load the kernel at 0x100000
+	mov rax, 0x0000000000100000
+	call loadkernel
 ; Print a message that the kernel has been loaded
 	mov rsi, msg_done
 	call os_print_string
-
-fini:	; For chainloading
+%endif
+; =============================================================================
 
 ; Print a message that the kernel is being started
 	mov ax, 0x0008
@@ -800,7 +758,7 @@ fini:	; For chainloading
 	xor r14, r14
 	xor r15, r15
 
-	jmp 0x0000000000200000		; Jump to the kernel
+	jmp 0x0000000000100000		; Jump to the kernel
 
 nokernel:
 	mov al, 6
@@ -827,15 +785,27 @@ nokernelhalt:
 ;	pop rdx
 ;	ret
 
-%include "init_cpu.asm"
-%include "init_acpi.asm"
-%include "init_ioapic.asm"
-%include "init_hdd.asm"
-%include "init_smp.asm"
+%include "init/cpu.asm"
+%include "init/acpi.asm"
+%include "init/ioapic.asm"
+
+%ifidn HDD,PIO
+%include "interfaces/pio.asm"
+%else ; HDD == AHCI
+%include "interfaces/ahci.asm"
+%endif
+
+%include "init/smp.asm"
 %include "syscalls.asm"
 %include "interrupt.asm"
 %include "pci.asm"
-%include "bmfs.asm"
+
+%ifidn FS,FAT16
+%include "filesystems/fat16.asm"
+%else ; FS == BMFS
+%include "filesystems/bmfs.asm"
+%endif
+
 %include "sysvar.asm"
 
 ; Pad to an even KB file (7 KiB)

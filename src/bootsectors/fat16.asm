@@ -1,6 +1,9 @@
 USE16
 org 0x7C00
 
+%define KERNEL "KERNEL64SYS"
+%define LOADER "PURE64  SYS"
+
 entry:
 	jmp short begin
 	nop
@@ -53,7 +56,7 @@ begin:
 ;rootcluster = bsResSectors + (bsFATs * bsSecsPerFat)
 ; 4 + (2 * 254) = sector 512
 
-;datastart = bsResSectors + (bsFATs * bsSecsPerFat) + ((bsRootDirEnts * 32) / bsBytesPerSec) 
+;datastart = bsResSectors + (bsFATs * bsSecsPerFat) + ((bsRootDirEnts * 32) / bsBytesPerSec)
 ; 4 + (2 * 254) + ((512 * 32) / 512) = sector 544
 
 ;cluster X starting sector
@@ -78,7 +81,7 @@ ff:
 	shr bx, 4	; bx = (bx * 32) / 512
 	add bx, ax	; BX now holds the datastart sector number
 	mov [datastart], bx
-	
+
 ff_next_sector:
 	mov bx, 0x8000
 	mov si, bx
@@ -108,15 +111,15 @@ ff_done:
 ; At this point we have found the file we want and know the cluster where the file starts
 
 	mov bx, 0x8000	; We want to load to 0x0000:0x8000
-loadfile:	
+loadfile:
 	call readcluster
 	cmp ax, 0xFFF8	; Have we reached the end cluster marker?
 	jg loadfile	; If not then load another
-	
+
 	jmp 0x0000:0x8000
 
-	
-	
+
+
 ;------------------------------------------------------------------------------
 ; Read a sector from a disk, using LBA
 ; input:  EAX - 32-bit DOS sector number
@@ -212,10 +215,10 @@ readcluster_nextsector:
 	shl ax, 1		; multipy by 2
 	add bx, ax
 	mov ax, [bx]
-	
+
 	pop bx			; restore our memory pointer
 	pop cx
-	
+
 	ret
 ;------------------------------------------------------------------------------
 
@@ -240,8 +243,8 @@ print_string_16:			; Output string in SI to screen
 
 msg_Load db "Loading... ", 0
 msg_Error db "No "
-loadername db "PURE64  SYS", 0
-kernelname db "KERNEL64SYS", 0
+loadername db LOADER , 0
+kernelname db KERNEL , 0
 datastart dw 0x0000
 rootstart dw 0x0000
 tcluster dw 0x0000

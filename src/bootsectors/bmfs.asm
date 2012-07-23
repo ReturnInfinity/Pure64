@@ -32,7 +32,12 @@ load:
 	mov eax, 0
 	mov ebx, 16			; Start immediately after directory
 	mov cx, 0x8000			; Pure64 expects to be loaded at 0x8000
+
+%ifdef PURE64_CHAIN_LOADING
+	times 64 call readsector	; Load 32KiB - pure64 + kernel
+%else
 	times 16 call readsector	; Load 8KiB
+%endif
 
 	mov eax, [0x8000]
 	cmp eax, 0xC03166FA
@@ -133,8 +138,6 @@ msg_LoadDone db " - done", 0
 msg_MagicFail db " - failed magic number check", 0
 DriveNumber db 0x00
 
-times 446-$+$$ db 0
-
-tables db "XXXXXXXXXXXXXXXX  DO NOT OVERWRITE THIS AREA!!! XXXXXXXXXXXXXXXX"	; 64 bytes in length
+times 510-$+$$ db 0
 
 sign dw 0xAA55
