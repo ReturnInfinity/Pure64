@@ -284,8 +284,8 @@ loadkernel_notfound:
 
 ; -----------------------------------------------------------------------------
 
-readcluster_err_msg:	db 'Error reading cluster', 0
-findfile_err_msg:	db 'Error finding file', 0
+readcluster_err_msg:	db 'ERROR: Could not read cluster', 0
+findfile_err_msg:	db 'ERROR: Could not find file', 0
 
 ; =============================================================================
 ; EOF

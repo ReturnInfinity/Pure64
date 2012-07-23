@@ -710,7 +710,7 @@ no_msg_HDD:
 %else
 ; Loading from filesystem -- require a hard disk be present
 	cmp byte [cfg_hdd], 0x00
-	je nokernel
+	je nohdd
 
 ; Print a message that the kernel is being loaded
 	mov ax, 0x0006
@@ -757,15 +757,15 @@ no_msg_HDD:
 
 	jmp 0x0000000000100000		; Jump to the kernel
 
-nokernel:
+nohdd:
 	mov al, 6
 	mov ah, 0
 	call os_move_cursor
-	mov rsi, kernelerror
+	mov rsi, hdd_setup_read_error
 	call os_print_string
-nokernelhalt:
+nohddhalt:
 	hlt
-	jmp nokernelhalt
+	jmp nohdd
 
 ; 64-bit function to send a char our via serial
 ;serial_send_64:

@@ -260,8 +260,8 @@ iddrive_retry:
 
 iddrive_dataready:
 	sub dx, 7			; Data port (0x1F0)
-	mov rcx, 128			; Read
-	rep insw			; Copy the 256-byte ID structure to rdi
+	mov rcx, 256			; Read
+	rep insw			; Copy the 512-byte ID structure to rdi
 	add dx, 7			; Set DX back to status register (0x01F7)
 	in al, dx			; Delay ~400ns to allow drive to set
 					; new values of BSY and DRQ
