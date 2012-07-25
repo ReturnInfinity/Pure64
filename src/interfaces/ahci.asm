@@ -8,12 +8,12 @@
 
 hdd_setup:
 
-; Probe for an ACHI hard drive controller
+; Probe for an AHCI hard drive controller
 	xor ebx, ebx
 	xor ecx, ecx
 findcontroller:
 	cmp bx, 256			; Search up to 256 buses
-	je hdd_setup_err_nosata		; No ACHI controller detected
+	je hdd_setup_err_nosata		; No AHCI controller detected
 	cmp cx, 256			; Up to 32 devices per bus
 	jne findcontroller_1
 	add bx, 1			; Next bus
@@ -196,7 +196,7 @@ ret
 ; -----------------------------------------------------------------------------
 ; readsectors -- Read sectors on the hard drive
 ; IN:   RAX = starting sector to read
-;   RCX = number of sectors to read (1 - 256)
+;   RCX = number of sectors to read
 ;   RDI = memory location to store sectors
 ; OUT:  RAX = RAX + number of sectors that were read
 ;   RCX = number of sectors that were read (0 on error)

@@ -9,6 +9,11 @@
 ; =============================================================================
 
 
+%define HDD PIO
+%define FS FAT16
+%define LOADER "PURE64  SYS"
+%define KERNEL "KERNEL64SYS"
+
 ; %define PURE64_CHAIN_LOADING
 ; If this is defined, Pure64 will chainload the kernel attached to the end of the pure64.sys binary
 ; Windows - copy /b pure64.sys + kernel64.sys
