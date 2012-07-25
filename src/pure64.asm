@@ -9,10 +9,21 @@
 ; =============================================================================
 
 
+%ifndef HDD
 %define HDD PIO
+%endif
+
+%ifndef FS
 %define FS FAT16
+%endif
+
+%ifndef LOADER
 %define LOADER "PURE64  SYS"
+%endif
+
+%ifndef KERNEL
 %define KERNEL "KERNEL64SYS"
+%endif
 
 ; %define PURE64_CHAIN_LOADING
 ; If this is defined, Pure64 will chainload the kernel attached to the end of the pure64.sys binary
