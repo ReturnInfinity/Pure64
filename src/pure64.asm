@@ -215,6 +215,10 @@ start32:
 	mov esp, 0x8000			; Set a known free location for the stack
 
 ; Debug
+	rdtsc				; Get current cycle count and save to timer
+	mov [os_Counter_Timer+4], edx
+	mov [os_Counter_Timer], eax
+
 	mov al, '2'			; Now in 32-bit protected mode
 	mov [0x000B809C], al
 	mov al, '0'
