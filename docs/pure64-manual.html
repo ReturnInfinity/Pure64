@@ -60,7 +60,9 @@ The Pure64 information table is located at 0x0000000000005000 and ends at 0x0000
 <tr><td>0x5022 - 0x502F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5030</td><td>8-bit</td><td>MBR</td><td>MBR Boot Flag. Set to 1 if the disk uses MBR, 0 if not</td></tr>
 <tr><td>0x5031</td><td>8-bit</td><td>IOAPIC_COUNT</td><td>Number of IO-APICs in the system</td></tr>
-<tr><td>0x5032 - 0x503F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5032</td><td>16-bit</td><td>ATA_PORT</td><td>Base port for the ATA device</td></tr>
+<tr><td>0x5034</td><td>32-bit</td><td>SATA_PORT</td><td>Base port for the SATA device</td></tr>
+<tr><td>0x5038</td><td>64-bit</td><td>AHCI_BASE</td><td>Base memory address for the AHCI</td></tr>
 <tr><td>0x5040</td><td>64-bit</td><td>HPET</td><td>Base memory address for the High Precision Event Timer</td></tr>
 <tr><td>0x5048 - 0x504F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5050</td><td>32-bit</td><td>VIDEOBASE</td><td>Base memory address for video display, 0 if not configured</td></tr>

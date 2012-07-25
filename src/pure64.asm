@@ -653,6 +653,18 @@ endmemcalc:
 	mov al, [os_IOAPICCount]
 	stosb
 
+	mov di, 0x5032
+	mov ax, [ata_base]
+	stosw
+
+	mov di, 0x5034
+	mov eax, [drive_port]
+	stosd
+
+	mov di, 0x5038
+	mov rax, [sata_base]
+	stosq
+
 	mov di, 0x5040
 	mov rax, [os_HPETAddress]
 	stosq
