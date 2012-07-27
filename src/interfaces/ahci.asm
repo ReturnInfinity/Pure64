@@ -67,11 +67,11 @@ founddrive:
 	shl rcx, 7			; Quick multiply by 0x80
 	add rdi, rcx
 	pop rcx				; Restore port number
-	mov rax, 0x70000		; 1024 bytes per port
+	mov rax, ahci_cmdlist		; 1024 bytes per port
 	stosd				; Offset 00h: PxCLB – Port x Command List Base Address
 	xor eax, eax
 	stosd				; Offset 04h: PxCLBU – Port x Command List Base Address Upper 32-bits
-	mov rax, 0x71000		; 256 or 4096 bytes per port
+	mov rax, ahci_cmdlist + 0x1000	; 256 or 4096 bytes per port
 	stosd				; Offset 08h: PxFB – Port x FIS Base Address
 	xor eax, eax
 	stosd				; Offset 0Ch: PxFBU – Port x FIS Base Address Upper 32-bits
@@ -117,13 +117,13 @@ iddrive:
 
 	mov rsi, [sata_base]
 
-	mov rdi, 0x70000		; command list (1K with 32 entries, 32 bytes each)
+	mov rdi, ahci_cmdlist		; command list (1K with 32 entries, 32 bytes each)
 	xor eax, eax
 	mov eax, 0x00010005 ;4		; 1 PRDTL Entry, Command FIS Length = 16 bytes
 	stosd				; DW 0 - Description Information
 	xor eax, eax
 	stosd				; DW 1 - Command Status
-	mov eax, 0x72000
+	mov eax, ahci_cmdtable
 	stosd				; DW 2 - Command Table Base Address
 	xor eax, eax
 	stosd				; DW 3 - Command Table Base Address Upper
@@ -134,7 +134,7 @@ iddrive:
 	; DW 4 - 7 are reserved
 
 	; command table
-	mov rdi, 0x72000		; Build a command table for Port 0
+	mov rdi, ahci_cmdtable		; Build a command table for Port 0
 	mov eax, 0x00EC8027		; EC identify, bit 15 set, fis 27 H2D
 	stosd				; feature 7:0, command, c, fis
 	xor eax, eax
@@ -142,7 +142,7 @@ iddrive:
 	stosd				; feature 15:8, lba 47:40, lba 39:32, lba 31:24
 	stosd				; control, ICC, count 15:8, count 7:0
 ;	stosd				; reserved
-	mov rdi, 0x72080
+	mov rdi, ahci_cmdtable + 0x80
 	pop rax				; Restore the destination memory address
 	stosd				; Data Base Address
 	shr rax, 32
@@ -221,13 +221,13 @@ readsectors:
 
 	mov rsi, [sata_base]
 
-	mov rdi, 0x70000		; command list (1K with 32 entries, 32 bytes each)
+	mov rdi, ahci_cmdlist		; command list (1K with 32 entries, 32 bytes each)
 	xor eax, eax
 	mov eax, 0x00010005 ;4		; 1 PRDTL Entry, Command FIS Length = 16 bytes
 	stosd				; DW 0 - Description Information
 	xor eax, eax
 	stosd				; DW 1 - Command Status
-	mov eax, 0x72000
+	mov eax, ahci_cmdtable
 	stosd				; DW 2 - Command Table Base Address
 	xor eax, eax
 	stosd				; DW 3 - Command Table Base Address Upper
@@ -238,7 +238,7 @@ readsectors:
 	; DW 4 - 7 are reserved
 
 	; command table
-	mov rdi, 0x72000		; Build a command table for Port 0
+	mov rdi, ahci_cmdtable		; Build a command table for Port 0
 	mov eax, 0x00258027		; 25 dma read, bit 15 set, fis 27 H2D
 	stosd				; feature 7:0, command, c, fis
 	pop rax				; Restore the start sector number
@@ -253,7 +253,7 @@ readsectors:
 	stosd				; control, ICC, count 15:8, count 7:0
 	mov rax, 0x00000000
 	stosd				; reserved
-	mov rdi, 0x72080
+	mov rdi, ahci_cmdtable + 0x80
 	pop rax				; Restore the destination memory address
 	stosd				; Data Base Address
 	shr rax, 32

@@ -19,8 +19,13 @@ E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
 SystemVariables:	equ 0x0000000000005A00
 VBEModeInfoBlock:	equ 0x0000000000005C00
-hdbuffer:		equ 0x0000000000070000  ; 32768 bytes = 0x6000 -> 0xDFFF VERIFY THIS!!!
-hdbuffer1:		equ 0x000000000007E000  ; 512 bytes = 0xE000 -> 0xE1FF VERIFY THIS!!!
+hdbuffer:		equ 0x0000000000060000  ; 32768 bytes = 0x6000 -> 0xDFFF VERIFY THIS!!!
+hdbuffer1:		equ 0x000000000006E000  ; 512 bytes = 0xE000 -> 0xE1FF VERIFY THIS!!!
+
+%ifidn HDD,AHCI
+ahci_cmdlist:		equ 0x0000000000070000	; 4096 bytes	0x070000 -> 0x071FFF
+ahci_cmdtable:		equ 0x0000000000072000	; 57344 bytes	0x072000 -> 0x07FFFF
+%endif
 
 ; DQ - Starting at offset 0, increments by 0x8
 os_ACPITableAddress:	equ SystemVariables + 0x00
