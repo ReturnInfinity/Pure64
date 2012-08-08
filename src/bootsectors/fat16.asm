@@ -1,5 +1,8 @@
 USE16
-org 0x7C00
+org 0x0600
+
+%define KERNEL "KERNEL64SYS"
+%define LOADER "PURE64  SYS"
 
 entry:
 	jmp short begin
@@ -27,13 +30,25 @@ entry:
 times 0x3B db 0				; Code starts at offset 0x3E
 
 begin:
-	mov bp, 0x7c00
-	mov [bsDriveNumber], dl	; BIOS passes drive number in DL
-	xor eax, eax
-	xor esi, esi
-	xor edi, edi
-	mov ds, ax
+	cli
+	xor ax, ax
+	mov ss, ax
 	mov es, ax
+	mov ds, ax
+	mov sp, 0x7C00
+	sti
+
+; Copy MBR sector to 0x0600 and jump there
+	cld
+	mov si, sp
+	mov di, 0x0600
+	mov cx, 0x0200
+	rep movsw
+	jmp 0x0000:load
+
+; Print message
+load:
+	mov [drivenum], dl	; BIOS passes drive number in DL
 
 ; Make sure the screen is set to 80x25 color text mode
 	mov ax, 0x0003			; Set to normal (80x25 text) video mode
@@ -53,19 +68,24 @@ begin:
 ;rootcluster = bsResSectors + (bsFATs * bsSecsPerFat)
 ; 4 + (2 * 254) = sector 512
 
-;datastart = bsResSectors + (bsFATs * bsSecsPerFat) + ((bsRootDirEnts * 32) / bsBytesPerSec) 
+;datastart = bsResSectors + (bsFATs * bsSecsPerFat) + ((bsRootDirEnts * 32) / bsBytesPerSec)
 ; 4 + (2 * 254) + ((512 * 32) / 512) = sector 544
 
 ;cluster X starting sector
 ; starting sector = (bsSecsPerClust * (cluster# - 2)) + datastart
 
-; 0x7C5C as of Jan 6, 2010
 getoffset:
-	xor eax, eax
-	mov bx, 0x8000
-	call readsector		; Read the MBR to 0x8000
-	mov eax, [0x81C6]	; Grab the dword at 0x01C6 (num of sectors between MBR and first sector in partition)
+	mov bp, 0x7C00
+	mov eax, 0
+	mov bx, 0x7C00
+	call readsector		; Read the MBR back to 0x7C00
+	mov eax, [0x7DC6]	; Grab the dword at 0x01C6 (start offset of
+				; first partition boot sector)
 	mov [secoffset], eax	; Save it for later use
+
+	mov bx, 0x7C00
+	call readsector		; Read the boot sector of the first partition
+
 	xor eax, eax
 
 ff:
@@ -78,7 +98,7 @@ ff:
 	shr bx, 4	; bx = (bx * 32) / 512
 	add bx, ax	; BX now holds the datastart sector number
 	mov [datastart], bx
-	
+
 ff_next_sector:
 	mov bx, 0x8000
 	mov si, bx
@@ -108,15 +128,15 @@ ff_done:
 ; At this point we have found the file we want and know the cluster where the file starts
 
 	mov bx, 0x8000	; We want to load to 0x0000:0x8000
-loadfile:	
+loadfile:
 	call readcluster
 	cmp ax, 0xFFF8	; Have we reached the end cluster marker?
 	jg loadfile	; If not then load another
-	
+
 	jmp 0x0000:0x8000
 
-	
-	
+
+
 ;------------------------------------------------------------------------------
 ; Read a sector from a disk, using LBA
 ; input:  EAX - 32-bit DOS sector number
@@ -141,7 +161,7 @@ read_it:
 	push byte 16	; [0] size of parameter block (word)
 
 	mov si, sp
-	mov dl, [bsDriveNumber]
+	mov dl, [drivenum]
 	mov ah, 42h	; EXTENDED READ
 	int 0x13	; http://hdebruijn.soo.dto.tudelft.nl/newpage/interupt/out-0700.htm#0651
 
@@ -212,10 +232,10 @@ readcluster_nextsector:
 	shl ax, 1		; multipy by 2
 	add bx, ax
 	mov ax, [bx]
-	
+
 	pop bx			; restore our memory pointer
 	pop cx
-	
+
 	ret
 ;------------------------------------------------------------------------------
 
@@ -238,14 +258,15 @@ print_string_16:			; Output string in SI to screen
 ;------------------------------------------------------------------------------
 
 
-msg_Load db "Loading... ", 0
+msg_Load db "Loading... ", 0x0D, 0x0A, 0
 msg_Error db "No "
-loadername db "PURE64  SYS", 0
-kernelname db "KERNEL64SYS", 0
+loadername db LOADER , 0
+kernelname db KERNEL , 0
 datastart dw 0x0000
 rootstart dw 0x0000
 tcluster dw 0x0000
 secoffset dd 0x00000000
+drivenum dw 0x0000
 
 times 510-$+$$ db 0
 
