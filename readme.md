@@ -83,6 +83,9 @@ To create FAT16 disk images on OS X, run:
 All modes have been tested using VirtualBox 4.1.18 (you must build using PIO
 for IDE drives, and AHCI for SATA drives).
 
-PIO modes have been tested using VMware Fusion 4.1.3.
+PIO modes have been tested using VMware Fusion 4.1.3 and qemu 0.12.5 (included
+in BareMetal v0.5.3 VM for Windows [1]).
+
+[1]: http://baremetal.googlecode.com/files/BareMetal%20v0.5.3%20VM%20for%20Windows.zip
 
 
