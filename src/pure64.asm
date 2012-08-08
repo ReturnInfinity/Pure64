@@ -9,6 +9,22 @@
 ; =============================================================================
 
 
+%ifndef HDD
+%define HDD PIO
+%endif
+
+%ifndef FS
+%define FS FAT16
+%endif
+
+%ifndef LOADER
+%define LOADER "PURE64  SYS"
+%endif
+
+%ifndef KERNEL
+%define KERNEL "KERNEL64SYS"
+%endif
+
 ; %define PURE64_CHAIN_LOADING
 ; If this is defined, Pure64 will chainload the kernel attached to the end of the pure64.sys binary
 ; Windows - copy /b pure64.sys + kernel64.sys
@@ -37,7 +53,7 @@ start:
 align 16
 	jmp start16			; This command will be overwritten with 'NOP's before the AP's are started
 
-%include "init_smp_ap.asm"		; Our AP code is at 0x8000
+%include "init/smp_ap.asm"		; Our AP code is at 0x8000
 
 align 16
 db '16'
@@ -159,7 +175,7 @@ buffer_empty:
 	int 0xff			; reboot by causing a triple fault
 	jmp $
 
-%include "init_isa.asm"
+%include "init/isa.asm"
 
 align 16
 GDTR32:					; Global Descriptors Table Register
@@ -199,6 +215,10 @@ start32:
 	mov esp, 0x8000			; Set a known free location for the stack
 
 ; Debug
+	rdtsc				; Get current cycle count and save to timer
+	mov [os_Counter_Timer+4], edx
+	mov [os_Counter_Timer], eax
+
 	mov al, '2'			; Now in 32-bit protected mode
 	mov [0x000B809C], al
 	mov al, '0'
@@ -533,27 +553,9 @@ clearmapnext:
 ;	mov al, '8'
 ;	call serial_send_64
 
-; Find init64.cfg
-;	mov rbx, configname
-;	call findfile
-;	cmp rbx, 0
-;	je near noconfig		; If the config file was not found we just use the default settings.
-	mov al, 1
-	mov byte [cfg_default], al	; We have a config file
-
-; Read in the first cluster of init64.cfg
-;	mov rdi, 0x0000000000100000
-;	call readcluster
-
-; Parse init64.cfg
-; Get Kernel name
-; get SMP setting
-
-; noconfig:
-
 ; Init of SMP
 	call smp_setup
-	
+
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
@@ -651,6 +653,18 @@ endmemcalc:
 	mov al, [os_IOAPICCount]
 	stosb
 
+	mov di, 0x5032
+	mov ax, [ata_base]
+	stosw
+
+	mov di, 0x5034
+	mov eax, [drive_port]
+	stosd
+
+	mov di, 0x5038
+	mov rax, [sata_base]
+	stosq
+
 	mov di, 0x5040
 	mov rax, [os_HPETAddress]
 	stosq
@@ -680,16 +694,6 @@ nextIOAPIC:
 	mov rsi, msg_done
 	call os_print_string
 
-; Write an extra message if we are using the default config
-	cmp byte [cfg_default], 1
-	je nodefaultconfig
-	mov al, 2
-	mov ah, 28
-	call os_move_cursor
-	mov rsi, msg_noconfig
-	call os_print_string
-nodefaultconfig:
-
 ; Debug
 	mov al, '4'
 	mov [0x000B809E], al
@@ -713,34 +717,15 @@ nodefaultconfig:
 	mov rsi, msg_mb
 	call os_print_string
 
+	cmp byte [cfg_hdd], 0x00
+	je no_msg_HDD
 	mov rsi, msg_HDD
 	call os_print_string
 	mov rsi, hdtempstring
 	call os_print_string
 	mov rsi, msg_mb
 	call os_print_string
-
-; =============================================================================
-%ifdef PURE64_CHAIN_LOADING
-	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
-	mov rdi, 0x100000	; Destination address at the 1MiB mark
-	mov rcx, 0x1000		; For up to 32KiB kernel (4096 x 8)
-	rep movsq		; Copy 8 bytes at a time
-	jmp fini		; Print starting message and jump to kernel
-%endif
-; =============================================================================	
-
-; Print a message that the kernel is being loaded
-	mov ax, 0x0006
-	call os_move_cursor
-	mov rsi, msg_loadingkernel
-	call os_print_string
-
-; Find the kernel file
-	mov rsi, kernelname
-	call findfile
-	cmp ax, 0x0000
-	je near nokernel
+no_msg_HDD:
 
 ; Debug
 	push rax
@@ -748,22 +733,27 @@ nodefaultconfig:
 	mov [0x000B809E], al
 	pop rax
 
-; Load 64-bit kernel from drive to 0x0000000000010000
-	mov rdi, 0x0000000000100000
-readfile_getdata:
-	push rax
-	mov al, '.'		; Show loading progress
-	call os_print_char
-	pop rax
-	call readcluster	; store in memory
-	cmp ax, 0xFFFF		; Value for end of cluster chain.
-	jne readfile_getdata	; Are there more clusters? If so then read again.. if not fall through.
+	; =============================================================================
+%ifdef PURE64_CHAIN_LOADING
+	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
+	mov rdi, 0x100000	; Destination address at the 1MiB mark
+	mov rcx, 0x1000		; For up to 32KiB kernel (4096 x 8)
+	rep movsq		; Copy 8 bytes at a time
+%else
+; Loading from filesystem -- require a hard disk be present
+	cmp byte [cfg_hdd], 0x00
+	je nohdd
 
-; Print a message that the kernel has been loaded
-	mov rsi, msg_done
+; Print a message that the kernel is being loaded
+	mov ax, 0x0006
+	call os_move_cursor
+	mov rsi, msg_loadingkernel
 	call os_print_string
-
-fini:	; For chainloading
+; Load the kernel at 0x100000
+	mov rax, 0x0000000000100000
+	call loadkernel
+%endif
+; =============================================================================
 
 ; Print a message that the kernel is being started
 	mov ax, 0x0008
@@ -799,15 +789,15 @@ fini:	; For chainloading
 
 	jmp 0x0000000000100000		; Jump to the kernel
 
-nokernel:
+nohdd:
 	mov al, 6
 	mov ah, 0
 	call os_move_cursor
-	mov rsi, kernelerror
+	mov rsi, hdd_setup_read_error
 	call os_print_string
-nokernelhalt:
+nohddhalt:
 	hlt
-	jmp nokernelhalt
+	jmp nohdd
 
 ; 64-bit function to send a char our via serial
 ;serial_send_64:
@@ -824,15 +814,27 @@ nokernelhalt:
 ;	pop rdx
 ;	ret
 
-%include "init_cpu.asm"
-%include "init_acpi.asm"
-%include "init_ioapic.asm"
-%include "init_hdd.asm"
-%include "init_smp.asm"
+%include "init/cpu.asm"
+%include "init/acpi.asm"
+%include "init/ioapic.asm"
+
+%ifidn HDD,PIO
+%include "interfaces/pio.asm"
+%else ; HDD == AHCI
+%include "interfaces/ahci.asm"
+%endif
+
+%include "init/smp.asm"
 %include "syscalls.asm"
 %include "interrupt.asm"
 %include "pci.asm"
-%include "fat16.asm"
+
+%ifidn FS,FAT16
+%include "filesystems/fat16.asm"
+%else ; FS == BMFS
+%include "filesystems/bmfs.asm"
+%endif
+
 %include "sysvar.asm"
 
 ; Pad to an even KB file (7 KiB)
