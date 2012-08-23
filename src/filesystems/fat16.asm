@@ -100,7 +100,7 @@ loadkernel:
 	push rbx
 	push rcx
 
-	mov rax, rbx
+	mov rbx, rax
 
 	mov rsi, kernelname
 	call findfile
@@ -108,7 +108,7 @@ loadkernel:
 	je loadkernel_notfound
 
 	; Load 64-bit kernel from drive to [RAX]
-	mov rdi, rax
+	mov rdi, rbx
 readfile_getdata:
 	push rax
 	mov al, '.'		; Show loading progress
