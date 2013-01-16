@@ -6,13 +6,11 @@
 ; =============================================================================
 
 
-smp_setup:
+init_smp:
 	mov al, '5'			; Start of MP init
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
-;	mov al, 'S'
-;	call serial_send_64
 
 ; Check if we want the AP's to be enabled.. if not then skip to end
 ;	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
@@ -65,8 +63,6 @@ wait1:
 	mov rbx, [os_Counter_RTC]
 	cmp rax, rbx
 	jg wait1
-;	mov al, 'i'
-;	call serial_send_64
 
 	mov rsi, 0x0000000000005100
 	xor ecx, ecx
@@ -98,8 +94,6 @@ smp_send_SIPI_done:
 
 	mov al, 'A'
 	mov [0x000B809E], al
-;	mov al, 'S'
-;	call serial_send_64
 
 ; Let things settle (Give the AP's some time to finish)
 	mov rax, [os_Counter_RTC]

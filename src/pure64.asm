@@ -9,22 +9,6 @@
 ; =============================================================================
 
 
-%ifndef HDD
-%define HDD PIO
-%endif
-
-%ifndef FS
-%define FS FAT16
-%endif
-
-%ifndef LOADER
-%define LOADER "PURE64  SYS"
-%endif
-
-%ifndef KERNEL
-%define KERNEL "KERNEL64SYS"
-%endif
-
 ; %define PURE64_CHAIN_LOADING
 ; If this is defined, Pure64 will chainload the kernel attached to the end of the pure64.sys binary
 ; Windows - copy /b pure64.sys + kernel64.sys
@@ -74,20 +58,13 @@ no_mbr:
 	xor dx, dx			; First serial port
 	mov ax, 0000000011100011b	; 9600 baud, no parity, 1 stop bit, 8 data bits
 	int 0x14
-;	mov si, pure64
-;banner:
-;	lodsb
-;	cmp al, 0x00
-;	je bannerdone
-;	call serial_send_16
-;	jmp banner
-;bannerdone:
 
 ; Make sure the screen is set to 80x25 color text mode
 	mov ax, 0x0003			; Set to normal (80x25 text) video mode
 	int 0x10
 
 ; Hide the hardware cursor
+; !!!!! GET STATUS BEFORE CHANGE !!!!!
 	mov ax, 0x0100			; VIDEO - SET TEXT-MODE CURSOR SHAPE
 	mov cx, 0x0706			; 0607 for underline, 0007 for full block
 	int 0x10
@@ -106,19 +83,10 @@ no_mbr:
 	bt edx, 29			; Test if long mode is supported.
 	jnc no_long_mode		; Exit if not supported.
 
-;	mov al, '0'
-;	call serial_send_16
-
-	call isa_setup			; Setup legacy hardware
-
-;	mov al, 'F'
-;	call serial_send_16
+	call init_isa			; Setup legacy hardware
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	lgdt [cs:GDTR32]		; Load GDT register
-
-;	mov al, '-'
-;	call serial_send_16
 
 	mov eax, cr0
 	or al, 0x01			; Set protected mode bit
@@ -140,25 +108,11 @@ print_string_16_done:
 	popa
 	ret
 
-; 16-bit function to send a char our via serial
-;serial_send_16:
-;	push edx
-;	push eax			; Save EAX since the serial line status check clobbers AL
-;	mov dx, 0x03FD			; Serial Line Status register
-;serial_send_wait_16:
-;	in al, dx
-;	bt ax, 5			; Copy bit 5 (THR is empty) to the Carry Flag
-;	jnc serial_send_wait_16		; If the bit is not set then the queue isn't ready for another byte
-;	pop eax				; Get the byte back from the stack
-;	mov dx, 0x03F8			; Serial data register
-;	out dx, al			; Send the byte
-;	pop edx
-;	ret
-
 ; Display an error message that the CPU does not support 64-bit mode
 no_long_mode:
 	mov si, no64msg
 	call print_string_16
+	jmp $
 
 buffer_test:
 	in al, 0x64
@@ -214,17 +168,10 @@ start32:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
-; Debug
-	rdtsc				; Get current cycle count and save to timer
-	mov [os_Counter_Timer+4], edx
-	mov [os_Counter_Timer], eax
-
 	mov al, '2'			; Now in 32-bit protected mode
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
-;	mov al, '0'
-;	call serial_send_32
 
 ; Clear out the first 4096 bytes of memory. This will store the 64-bit IDT, GDT, PML4, and PDP
 	mov ecx, 1024
@@ -294,29 +241,17 @@ pd_again:				; Create a 2 MiB page
 	cmp ecx, 2048
 	jne pd_again			; Create 2048 2 MiB page maps.
 
-;	mov al, '3'
-;	call serial_send_32
-
 ; Load the GDT
 	lgdt [GDTR64]
-
-;	mov al, '4'
-;	call serial_send_32
 
 ; Enable extended properties
 	mov eax, cr4
 	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
 	mov cr4, eax
 
-;	mov al, '5'
-;	call serial_send_32
-
 ; Point cr3 at PML4
 	mov eax, 0x00002008		; Write-thru (Bit 3)
 	mov cr3, eax
-
-;	mov al, '6'
-;	call serial_send_32
 
 ; Enable long mode and SYSCALL/SYSRET
 	mov ecx, 0xC0000080		; EFER MSR number
@@ -324,17 +259,11 @@ pd_again:				; Create a 2 MiB page
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
-;	mov al, '7'
-;	call serial_send_32
-
 ; Debug
 	mov al, '1'			; About to make the jump into 64-bit mode
 	mov [0x000B809C], al
 	mov al, 'E'
 	mov [0x000B809E], al
-
-;	mov al, '-'
-;	call serial_send_32
 
 ; Enable paging to activate long mode
 	mov eax, cr0
@@ -342,21 +271,6 @@ pd_again:				; Create a 2 MiB page
 	mov cr0, eax
 
 	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
-
-; 32-bit function to send a char our via serial
-;serial_send_32:
-;	push edx
-;	push eax			; Save EAX since the serial line status check clobbers AL
-;	mov dx, 0x03FD			; Serial Line Status register
-;serial_send_wait_32:
-;	in al, dx
-;	bt ax, 5			; Copy bit 5 (THR is empty) to the Carry Flag
-;	jnc serial_send_wait_32		; If the bit is not set then the queue isn't ready for another byte
-;	pop eax				; Get the byte back from the stack
-;	mov dx, 0x03F8			; Serial data register
-;	out dx, al			; Send the byte
-;	pop edx
-;	ret
 
 align 16
 db '64'
@@ -369,12 +283,10 @@ USE64
 
 start64:
 ; Debug
-	mov al, '4'			; Now in 64-bit mode
+	mov al, '2'			; Now in 64-bit mode
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
-;	mov al, '0'
-;	call serial_send_64
 
 	mov al, 2
 	mov ah, 22
@@ -414,8 +326,6 @@ clearcs64:
 ; Debug
 	mov al, '2'
 	mov [0x000B809E], al
-;	mov al, '2'
-;	call serial_send_64
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, 0x00008030		; We need to remove the BSP Jump call to get the AP's
@@ -513,8 +423,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 ; Debug
 	mov al, '4'
 	mov [0x000B809E], al
-;	mov al, '5'
-;	call serial_send_64
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
 	xor rax, rax
@@ -535,8 +443,6 @@ clearmapnext:
 ; Debug
 	mov al, '6'			; CPU Init complete
 	mov [0x000B809E], al
-;	mov al, '6'
-;	call serial_send_64
 
 ; Make sure exceptions are working.
 ;	xor rax, rax
@@ -545,16 +451,14 @@ clearmapnext:
 ;	xor rdx, rdx
 ;	div rax
 
-	call hdd_setup			; Gather Hard Drive information
+	call init_hdd			; Gather Hard Drive information
 
 ; Debug
 	mov al, '8'			; HDD Init complete
 	mov [0x000B809E], al
-;	mov al, '8'
-;	call serial_send_64
 
 ; Init of SMP
-	call smp_setup
+	call init_smp
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
@@ -570,8 +474,6 @@ clearmapnext:
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
-;	mov al, 'E'
-;	call serial_send_64
 
 ; Calculate amount of usable RAM from Memory Map
 	xor rcx, rcx
@@ -733,7 +635,7 @@ no_msg_HDD:
 	mov [0x000B809E], al
 	pop rax
 
-	; =============================================================================
+; =============================================================================
 %ifdef PURE64_CHAIN_LOADING
 	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
 	mov rdi, 0x100000	; Destination address at the 1MiB mark
@@ -750,8 +652,23 @@ no_msg_HDD:
 	mov rsi, msg_loadingkernel
 	call os_print_string
 ; Load the kernel at 0x100000
-	mov rax, 0x0000000000100000
-	call loadkernel
+	mov rdi, 0x0000000000100000
+
+; The kernel is located 16KiB in, and is (up to) 64KiB long -- load it to
+; the offset in rbx since that's where it expects to be located
+	mov rax, 32			; start 32 sectors in = 16KiB
+	mov rcx, 128			; load 128 sectors = 64KiB
+	call readsectors
+
+; Verify that the BareMetal OS kernel was loaded
+	mov eax, [0x00100008]
+	cmp eax, 0x52454D45		; Match against the Pure64 binary
+	je kernelok
+	mov rsi, msg_invalidkernel
+	call os_print_string
+	jmp $
+
+kernelok:
 %endif
 ; =============================================================================
 
@@ -762,13 +679,10 @@ no_msg_HDD:
 	call os_print_string
 
 ; Debug
-;	mov al, ' '			; Clear the debug messages
-;	mov [0x000B809A], al
-;	mov [0x000B809C], al
-;	mov [0x000B809E], al
-
-;	mov al, '-'
-;	call serial_send_64
+	mov al, ' '			; Clear the debug messages
+	mov [0x000B809A], al
+	mov [0x000B809C], al
+	mov [0x000B809E], al
 
 ; Clear all registers (skip the stack pointer)
 	xor rax, rax			; aka r0
@@ -797,48 +711,26 @@ nohdd:
 	call os_print_string
 nohddhalt:
 	hlt
-	jmp nohdd
+	jmp nohddhalt
 
-; 64-bit function to send a char our via serial
-;serial_send_64:
-;	push rdx
-;	push rax			; Save RAX since the serial line status check clobbers AL
-;	mov dx, 0x03FD			; Serial Line Status register
-;serial_send_wait_64:
-;	in al, dx
-;	bt ax, 5			; Copy bit 5 (THR is empty) to the Carry Flag
-;	jnc serial_send_wait_64		; If the bit is not set then the queue isn't ready for another byte
-;	pop rax				; Get the byte back from the stack
-;	mov dx, 0x03F8			; Serial data register
-;	out dx, al			; Send the byte
-;	pop rdx
-;	ret
 
-%include "init/cpu.asm"
 %include "init/acpi.asm"
+%include "init/cpu.asm"
 %include "init/ioapic.asm"
-
-%ifidn HDD,PIO
-%include "interfaces/pio.asm"
-%else ; HDD == AHCI
-%include "interfaces/ahci.asm"
-%endif
-
 %include "init/smp.asm"
+
+%include "interfaces/ahci.asm"
+;%include "interfaces/pio.asm"
+
 %include "syscalls.asm"
 %include "interrupt.asm"
 %include "pci.asm"
-
-%ifidn FS,FAT16
-%include "filesystems/fat16.asm"
-%else ; FS == BMFS
-%include "filesystems/bmfs.asm"
-%endif
 
 %include "sysvar.asm"
 
 ; Pad to an even KB file (7 KiB)
 times 7168-($-$$) db 0x90
+
 
 ; =============================================================================
 ; EOF

@@ -6,7 +6,7 @@
 ; =============================================================================
 
 
-isa_setup:
+init_isa:
 	mov edi, 0x00004000		; Clear out memory for the E820 map
 	xor eax, eax
 	mov ecx, 2048

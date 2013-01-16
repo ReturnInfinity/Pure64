@@ -7,7 +7,7 @@
 
 USE16
 
-mp_ap_setup:
+init_smp_ap:
 	nop
 	jmp 0x0000:clearcs_ap
 

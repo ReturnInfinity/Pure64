@@ -1,46 +1,41 @@
-;------------------------------------------------------------------------------
-; MBR for use on BMFS. Loads PURE64 from (512-byte) sector 16 and jumps.
-;------------------------------------------------------------------------------
+; =============================================================================
+; Pure64 MBR -- a 64-bit OS loader written in Assembly for x86-64 systems
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+;
+; This Master Boot Record will load Pure64 from a pre-defined location on the
+; hard drive without making use of the file system.
+; =============================================================================
 
 USE16
-org 0x0600
+org 0x7C00
 
 entry:
-	cli
+	cli				; Disable interrupts
+	xchg bx, bx			; Bochs magic debug
 	xor ax, ax
 	mov ss, ax
 	mov es, ax
 	mov ds, ax
 	mov sp, 0x7C00
-	sti
+	sti				; Enable interrupts
 
-; Copy MBR sector to 0x0600 and jump there
-	cld
-	mov si, sp
-	mov di, 0x0600
-	mov cx, 0x0100
-	rep movsw
-	jmp 0x0000:load
-
-; Print message
-load:
-	mov [DriveNumber], dl	; BIOS passes drive number in DL
+	mov [DriveNumber], dl		; BIOS passes drive number in DL
 
 	mov si, msg_Load
 	call print_string_16
 
-	mov eax, 0
+	mov eax, 16			; Number of sectors to load. 16 sectors = 8192 bytes
 	mov ebx, 16			; Start immediately after directory
 	mov cx, 0x8000			; Pure64 expects to be loaded at 0x8000
 
-%ifdef PURE64_CHAIN_LOADING
-	times 64 call readsector	; Load 32KiB - pure64 + kernel
-%else
-	times 16 call readsector	; Load 8KiB
-%endif
-
+load_nextsector:
+	call readsector			; Load 512 bytes
+	dec eax
+	cmp eax, 0
+	jnz load_nextsector
+	
 	mov eax, [0x8000]
-	cmp eax, 0xC03166FA
+	cmp eax, 0xC03166FA		; Match against the Pure64 binary
 	jne magic_fail
 
 	mov si, msg_LoadDone
@@ -51,17 +46,21 @@ load:
 magic_fail:
 	mov si, msg_MagicFail
 	call print_string_16
+halt:
 	hlt
+	jmp halt
 
 ;------------------------------------------------------------------------------
 ; Read a sector from a disk, using LBA
-; input:	EAX - High word of 64-bit DOS sector number
-;		EBX - Low word of 64-bit DOS sector number
-; 		ES:CX - destination buffer
-; output:	ES:CX points one byte after the last byte read
-; 		EAX - High word of next sector
-;		EBX - Low word of sector
+; IN:	EAX - High word of 64-bit DOS sector number
+;	EBX - Low word of 64-bit DOS sector number
+;	ES:CX - destination buffer
+; OUT:	ES:CX points one byte after the last byte read
+;	EAX - High word of next sector
+;	EBX - Low word of sector
 readsector:
+	push eax
+	xor eax, eax	; We don't need to load from sectors > 32-bit
 	push dx
 	push si
 	push di
@@ -110,22 +109,23 @@ no_incr_es:
 	pop di
 	pop si
 	pop dx
+	pop eax
 
 	ret
 ;------------------------------------------------------------------------------
 
 
 ;------------------------------------------------------------------------------
-; 16-bit Function to print a sting to the screen
-; input:    SI - Address of start of string
-print_string_16:	; Output string in SI to screen
+; 16-bit function to print a sting to the screen
+; IN:	SI - Address of start of string
+print_string_16:		; Output string in SI to screen
 	pusha
-	mov ah, 0x0E	; int 0x10 teletype function
+	mov ah, 0x0E		; int 0x10 teletype function
 .repeat:
-	lodsb		; Get char from string
+	lodsb			; Get char from string
 	cmp al, 0
-	je .done	; If char is zero, end of string
-	int 0x10	; Otherwise, print it
+	je .done		; If char is zero, end of string
+	int 0x10		; Otherwise, print it
 	jmp short .repeat
 .done:
 	popa
@@ -133,9 +133,9 @@ print_string_16:	; Output string in SI to screen
 ;------------------------------------------------------------------------------
 
 
-msg_Load db "Loading PURE64", 0
-msg_LoadDone db " - done", 0
-msg_MagicFail db " - failed magic number check", 0
+msg_Load db "BMFS MBR v1.0 - Loading Pure64", 0
+msg_LoadDone db " - done.", 13, 10, "Executing...", 0
+msg_MagicFail db " - Not found!", 0
 DriveNumber db 0x00
 
 times 510-$+$$ db 0

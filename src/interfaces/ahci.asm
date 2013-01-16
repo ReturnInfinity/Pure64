@@ -6,7 +6,7 @@
 ; =============================================================================
 
 
-hdd_setup:
+init_hdd:
 
 ; Probe for an AHCI hard drive controller
 	xor ebx, ebx
@@ -193,15 +193,16 @@ iddrive_poll:
 ret
 ; -----------------------------------------------------------------------------
 
+
 ; -----------------------------------------------------------------------------
 ; readsectors -- Read sectors on the hard drive
-; IN:   RAX = starting sector to read
-;   RCX = number of sectors to read
-;   RDI = memory location to store sectors
-; OUT:  RAX = RAX + number of sectors that were read
-;   RCX = number of sectors that were read (0 on error)
-;   RDI = RDI + (number of sectors * 512)
-;   All other registers preserved
+; IN:	RAX = starting sector to read
+;	RCX = number of sectors to read
+;	RDI = memory location to store sectors
+; OUT	RAX = RAX + number of sectors that were read
+;	RCX = number of sectors that were read (0 on error)
+;	RDI = RDI + (number of sectors * 512)
+;	All other registers preserved
 readsectors:
 	push rbx
 	push rdi
