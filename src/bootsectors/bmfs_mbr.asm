@@ -24,7 +24,11 @@ entry:
 	mov si, msg_Load
 	call print_string_16
 
+%ifdef PURE64_CHAIN_LOADING
+	mov eax, 64			; Number of sectors to load. 64 sectors = 32768 bytes
+%else
 	mov eax, 16			; Number of sectors to load. 16 sectors = 8192 bytes
+%endif
 	mov ebx, 16			; Start immediately after directory
 	mov cx, 0x8000			; Pure64 expects to be loaded at 0x8000
 
