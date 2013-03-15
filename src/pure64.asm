@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; Loaded from the first stage. Gather information about the system while
 ; in 16-bit mode (BIOS is still accessable), setup a minimal 64-bit
@@ -482,13 +482,13 @@ readnextrecord:
 	lodsq
 	lodsq
 	lodsd
-	cmp eax, 0	; Are we at the end?
+	cmp eax, 0			; Are we at the end?
 	je endmemcalc
-	cmp eax, 1	; Usuable RAM
+	cmp eax, 1			; Usuable RAM
 	je goodmem
-	cmp eax, 3	; ACPI Reclaimable
+	cmp eax, 3			; ACPI Reclaimable
 	je goodmem
-	cmp eax, 6	; BIOS Reclaimable
+	cmp eax, 6			; BIOS Reclaimable
 	je goodmem
 	lodsd
 	lodsq
@@ -502,9 +502,9 @@ goodmem:
 	jmp readnextrecord
 
 endmemcalc:
-	shr rcx, 20		; Value is in bytes so do a quick divide by 1048576 to get MiB's
-	add ecx, 1		; The BIOS will usually report actual memory minus 1
-	and ecx, 0xFFFFFFFE	; Make sure it is an even number (in case we added 1 to an even number)
+	shr rcx, 20			; Value is in bytes so do a quick divide by 1048576 to get MiB's
+	add ecx, 1			; The BIOS will usually report actual memory minus 1
+	and ecx, 0xFFFFFFFE		; Make sure it is an even number (in case we added 1 to an even number)
 	mov dword [mem_amount], ecx
 
 ; Debug
@@ -571,14 +571,6 @@ endmemcalc:
 	mov rax, [os_HPETAddress]
 	stosq
 
-	mov di, 0x5050
-	mov eax, [VBEModeInfoBlock.PhysBasePtr]
-	stosd
-	mov ax, [VBEModeInfoBlock.XResolution]
-	stosw
-	mov ax, [VBEModeInfoBlock.YResolution]
-	stosw
-
 	mov di, 0x5060
 	mov rax, [os_LocalAPICAddress]
 	stosq
@@ -637,10 +629,10 @@ no_msg_HDD:
 
 ; =============================================================================
 %ifdef PURE64_CHAIN_LOADING
-	mov rsi, 0x8000+7168	; Memory offset to end of pure64.sys
-	mov rdi, 0x100000	; Destination address at the 1MiB mark
-	mov rcx, 0x1000		; For up to 32KiB kernel (4096 x 8)
-	rep movsq		; Copy 8 bytes at a time
+	mov rsi, 0x8000+7168		; Memory offset to end of pure64.sys
+	mov rdi, 0x100000		; Destination address at the 1MiB mark
+	mov rcx, 0x1000			; For up to 32KiB kernel (4096 x 8)
+	rep movsq			; Copy 8 bytes at a time
 %else
 ; Loading from filesystem -- require a hard disk be present
 	cmp byte [cfg_hdd], 0x00
@@ -685,13 +677,13 @@ kernelok:
 	mov [0x000B809E], al
 
 ; Clear all registers (skip the stack pointer)
-	xor rax, rax			; aka r0
-	xor rbx, rbx			; aka r3
-	xor rcx, rcx			; aka r1
-	xor rdx, rdx			; aka r2
-	xor rsi, rsi			; aka r6
-	xor rdi, rdi			; aka r7
-	xor rbp, rbp			; aka r5
+	xor rax, rax
+	xor rbx, rbx
+	xor rcx, rcx
+	xor rdx, rdx
+	xor rsi, rsi
+	xor rdi, rdi
+	xor rbp, rbp
 	xor r8, r8
 	xor r9, r9
 	xor r10, r10

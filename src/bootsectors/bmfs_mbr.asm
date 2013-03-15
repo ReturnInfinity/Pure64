@@ -11,7 +11,7 @@ org 0x7C00
 
 entry:
 	cli				; Disable interrupts
-	xchg bx, bx			; Bochs magic debug
+;	xchg bx, bx			; Bochs magic debug
 	xor ax, ax
 	mov ss, ax
 	mov es, ax
@@ -24,12 +24,8 @@ entry:
 	mov si, msg_Load
 	call print_string_16
 
-%ifdef PURE64_CHAIN_LOADING
 	mov eax, 64			; Number of sectors to load. 64 sectors = 32768 bytes
-%else
-	mov eax, 16			; Number of sectors to load. 16 sectors = 8192 bytes
-%endif
-	mov ebx, 16			; Start immediately after directory
+	mov ebx, 16			; Start immediately after directory (offset 8192)
 	mov cx, 0x8000			; Pure64 expects to be loaded at 0x8000
 
 load_nextsector:
@@ -64,49 +60,49 @@ halt:
 ;	EBX - Low word of sector
 readsector:
 	push eax
-	xor eax, eax	; We don't need to load from sectors > 32-bit
+	xor eax, eax			; We don't need to load from sectors > 32-bit
 	push dx
 	push si
 	push di
 
 read_it:
-	push eax	; Save the sector number
+	push eax			; Save the sector number
 	push ebx
-	mov di, sp	; remember parameter block end
+	mov di, sp			; remember parameter block end
 
-	push eax	; [C] sector number high 32bit
-	push ebx	; [8] sector number low 32bit
-	push es		; [6] buffer segment
-	push cx		; [4] buffer offset
-	push byte 1	; [2] 1 sector (word)
-	push byte 16	; [0] size of parameter block (word)
+	push eax			; [C] sector number high 32bit
+	push ebx			; [8] sector number low 32bit
+	push es				; [6] buffer segment
+	push cx				; [4] buffer offset
+	push byte 1			; [2] 1 sector (word)
+	push byte 16			; [0] size of parameter block (word)
 
 	mov si, sp
 	mov dl, [DriveNumber]
-	mov ah, 42h	; EXTENDED READ
-	int 0x13	; http://hdebruijn.soo.dto.tudelft.nl/newpage/interupt/out-0700.htm#0651
+	mov ah, 42h			; EXTENDED READ
+	int 0x13			; http://hdebruijn.soo.dto.tudelft.nl/newpage/interupt/out-0700.htm#0651
 
-	mov sp, di	; remove parameter block from stack
+	mov sp, di			; remove parameter block from stack
 	pop ebx
-	pop eax		; Restore the sector number
+	pop eax				; Restore the sector number
 
-	jnc read_ok	; jump if no error
+	jnc read_ok			; jump if no error
 
 	push ax
-	xor ah, ah	; else, reset and retry
+	xor ah, ah			; else, reset and retry
 	int 0x13
 	pop ax
 	jmp read_it
 
 read_ok:
-	add ebx, 1	; increment next sector with carry
+	add ebx, 1			; increment next sector with carry
 	adc eax, 0
-	add cx, 512	; Add bytes per sector
-	jnc no_incr_es	; if overflow...
+	add cx, 512			; Add bytes per sector
+	jnc no_incr_es			; if overflow...
 
 incr_es:
 	mov dx, es
-	add dh, 0x10	; ...add 1000h to ES
+	add dh, 0x10			; ...add 1000h to ES
 	mov es, dx
 
 no_incr_es:
@@ -122,14 +118,14 @@ no_incr_es:
 ;------------------------------------------------------------------------------
 ; 16-bit function to print a sting to the screen
 ; IN:	SI - Address of start of string
-print_string_16:		; Output string in SI to screen
+print_string_16:			; Output string in SI to screen
 	pusha
-	mov ah, 0x0E		; int 0x10 teletype function
+	mov ah, 0x0E			; int 0x10 teletype function
 .repeat:
-	lodsb			; Get char from string
+	lodsb				; Get char from string
 	cmp al, 0
-	je .done		; If char is zero, end of string
-	int 0x10		; Otherwise, print it
+	je .done			; If char is zero, end of string
+	int 0x10			; Otherwise, print it
 	jmp short .repeat
 .done:
 	popa

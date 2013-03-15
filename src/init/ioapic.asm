@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT IO-APIC
 ; =============================================================================
@@ -101,8 +101,8 @@ ioapic_entry_write:
 	push rcx
 
 	; Calculate index for lower DWORD
-	shl rcx, 1				; Quick multiply by 2
-	add rcx, 0x10				; IO Redirection tables start at 0x10
+	shl rcx, 1			; Quick multiply by 2
+	add rcx, 0x10			; IO Redirection tables start at 0x10
 
 	; Write lower DWORD
 	call ioapic_reg_write
@@ -128,8 +128,8 @@ ioapic_entry_read:
 	push rcx
 
 	; Calculate index for lower DWORD
-	shl rcx, 1				; Quick multiply by 2
-	add rcx, 0x10				; IO Redirection tables start at 0x10
+	shl rcx, 1			; Quick multiply by 2
+	add rcx, 0x10			; IO Redirection tables start at 0x10
 
 	; Read lower DWORD
 	call ioapic_reg_read

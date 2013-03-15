@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; System Calls
 ; =================================================================
@@ -8,8 +8,8 @@
 
 ; -----------------------------------------------------------------------------
 ; os_move_cursor -- Moves the virtual cursor in text mode
-;  IN: AH, AL = row, column
-; OUT: Nothing. All registers preserved
+;  IN:	AH, AL = row, column
+; OUT:	Nothing. All registers preserved
 os_move_cursor:
 	push rcx
 	push rbx
@@ -39,8 +39,8 @@ os_move_cursor:
 
 ; -----------------------------------------------------------------------------
 ; os_print_newline -- Reset cursor to start of next line and scroll if needed
-;  IN: Nothing
-; OUT: Nothing, all registers perserved
+;  IN:	Nothing
+; OUT:	Nothing, all registers perserved
 os_print_newline:
 	push rax
 
@@ -65,8 +65,8 @@ os_print_newline_done:
 
 ; -----------------------------------------------------------------------------
 ; os_print_string -- Displays text
-;  IN: RSI = message location (zero-terminated string)
-; OUT: Nothing, all registers perserved
+;  IN:	RSI = message location (zero-terminated string)
+; OUT:	Nothing, all registers perserved
 os_print_string:
 	push rsi
 	push rax
@@ -98,8 +98,8 @@ os_print_string_done:
 
 ; -----------------------------------------------------------------------------
 ; os_print_char -- Displays a char
-;  IN: AL = char to display
-; OUT: Nothing. All registers preserved
+;  IN:	AL = char to display
+; OUT:	Nothing. All registers preserved
 os_print_char:
 	push rdi
 
@@ -114,21 +114,21 @@ os_print_char:
 
 ; -----------------------------------------------------------------------------
 ; os_print_char_hex -- Displays a char in hex mode
-;  IN: AL = char to display
-; OUT: Nothing. All registers preserved
+;  IN:	AL = char to display
+; OUT:	Nothing. All registers preserved
 os_print_char_hex:
 	push rbx
 	push rax
 
 	mov rbx, hextable
 
-	push rax	; save rax for the next part
-	shr al, 4	; we want to work on the high part so shift right by 4 bits
+	push rax			; save rax for the next part
+	shr al, 4			; we want to work on the high part so shift right by 4 bits
 	xlatb
 	call os_print_char
 
 	pop rax
-	and al, 0x0f	; we want to work on the low part so clear the high part
+	and al, 0x0f			; we want to work on the low part so clear the high part
 	xlatb
 	call os_print_char
 
@@ -164,107 +164,6 @@ os_debug_dump_ax:
 	rol rax, 8
 os_debug_dump_al:
 	call os_print_char_hex
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; os_string_copy -- Copy the contents of one string into another
-;  IN:	RSI = source
-;	RDI = destination
-; OUT:	Nothing. All registers preserved
-; Note:	It is up to the programmer to ensure that there is sufficient space in the destination
-os_string_copy:
-	push rsi
-	push rdi
-	push rax
-
-os_string_copy_more:
-	lodsb				; Load a character from the source string
-	stosb
-	cmp al, 0			; If source string is empty, quit out
-	jne os_string_copy_more
-
-	pop rax
-	pop rdi
-	pop rsi
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; os_string_compare -- See if two strings match
-;  IN:	RSI = string one
-;	RDI = string two
-; OUT:	Carry flag set if same
-os_string_compare:
-	push rsi
-	push rdi
-	push rbx
-	push rax
-
-os_string_compare_more:
-	mov al, [rsi]		; Store string contents
-	mov bl, [rdi]
-
-	cmp al, 0		; End of first string?
-	je os_string_compare_terminated
-
-	cmp al, bl
-	jne os_string_compare_not_same
-
-	inc rsi
-	inc rdi
-	jmp os_string_compare_more
-
-os_string_compare_not_same:
-	pop rax
-	pop rbx
-	pop rdi
-	pop rsi
-	clc
-	ret
-
-os_string_compare_terminated:
-	cmp bl, 0		; End of second string?
-	jne os_string_compare_not_same
-
-	pop rax
-	pop rbx
-	pop rdi
-	pop rsi
-	stc
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; os_string_uppercase -- Convert zero-terminated string to uppercase
-;  IN:	RSI = string location
-; OUT:	Nothing. All registers preserved
-os_string_uppercase:
-	push rsi
-
-os_string_uppercase_more:
-	cmp byte [rsi], 0x00			; Zero-termination of string?
-	je os_string_uppercase_done		; If so, quit
-
-	cmp byte [rsi], 97			; In the uppercase A to Z range?
-	jl os_string_uppercase_noatoz
-	cmp byte [rsi], 122
-	jg os_string_uppercase_noatoz
-
-	sub byte [rsi], 0x20			; If so, convert input char to uppercase
-
-	inc rsi
-	jmp os_string_uppercase_more
-
-os_string_uppercase_noatoz:
-	inc rsi
-	jmp os_string_uppercase_more
-
-os_string_uppercase_done:
-	pop rsi
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -474,13 +373,13 @@ create_gate:
 	push rdi
 	push rax
 	
-	shl rdi, 4	; quickly multiply rdi by 16
-	stosw		; store the low word (15..0)
+	shl rdi, 4			; quickly multiply rdi by 16
+	stosw				; store the low word (15..0)
 	shr rax, 16
-	add rdi, 4	; skip the gate marker
-	stosw		; store the high word (31..16)
+	add rdi, 4			; skip the gate marker
+	stosw				; store the high word (31..16)
 	shr rax, 16
-	stosd		; store the high dword (63..32)
+	stosd				; store the high dword (63..32)
 
 	pop rax
 	pop rdi

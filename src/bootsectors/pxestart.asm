@@ -61,8 +61,8 @@ print_string_16:			; Output string in SI to screen
 
 msg_Load db "Loading via PXE... ", 0
 
-times 510-$+$$ db 0	; Pad out for a normal boot sector
+times 510-$+$$ db 0			; Pad out for a normal boot sector
 
 sign dw 0xAA55
 
-times 1024-$+$$ db 0	; Padding so that Pure64 will be aligned at 0x8000
+times 1024-$+$$ db 0			; Padding so that Pure64 will be aligned at 0x8000

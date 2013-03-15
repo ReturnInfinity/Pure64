@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ISA
 ; =============================================================================
@@ -91,38 +91,6 @@ rtc_poll:
 	out 0x70, al			; Select the address
 	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
 	out 0x71, al			; Write the data
-
-; VBE init
-	cmp byte [cfg_vesa], 1		; Check if VESA should be enabled
-	jne VBEdone			; If not then skip VESA init
-
-	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
-	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
-	; CX queries the mode, it should be in the form 0x41XX as bit 14 is set for LFB and bit 8 is set for VESA mode
-	; 0x4112 is 640x480x24bit	0x4129 is 640x480x32bit
-	; 0x4115 is 800x600x24bit	0x412E is 800x600x32bit
-	; 0x4118 is 1024x768x24bit	0x4138 is 1024x768x32bit
-	; 0x411B is 1280x1024x24bit	0x413D is 1280x1024x32bit
-	mov cx, 0x4112			; Put your desired mode here
-	mov bx, cx			; Mode is saved to BX for the set command later
-	int 0x10
-
-	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and sucessful
-	jne VBEfail
-	cmp byte[VBEModeInfoBlock.BitsPerPixel], 24	; Make sure this matches the number of bits for the mode!
-	jne VBEfail			; If set bit mode was unsucessful then bail out
-
-	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
-	int 0x10
-	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and sucessful
-	jne VBEfail
-
-	jmp VBEdone
-
-VBEfail:
-	mov byte [cfg_vesa], 0		; Clear the VESA config as it was not sucessful
-
-VBEdone:
 
 	; Remap PIC IRQ's
 	mov al, 00010001b		; begin PIC 1 initialization

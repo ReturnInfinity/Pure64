@@ -1,24 +1,12 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT CPU
 ; =============================================================================
 
 
 init_cpu:
-
-; Check for Prefetcher and L2 Cache support
-;	mov r15b, 1			; Set MSR support to 1
-;	xor eax, eax
-;	mov al, 1			; Access CPUID leaf 1
-;	cpuid
-;	shr rax, 8			; Family now in AL (lowest 4 bits)
-;	and al, 0x0F			; Clear the high 4 bits
-;	cmp al, 0x0F
-;	jne init_cpu_msrok		; If Family is not 0xF then jump
-;	mov r15b, 0			; If it is 0xF (Older P4/Xeon) then set MSR support to 0
-;init_cpu_msrok:
 
 ; Disable Cache
 	mov rax, cr0
@@ -35,25 +23,6 @@ init_cpu:
 	mov cr4, rax
 	mov rax, cr3
 	mov cr3, rax
-
-; Skip next portion if MSR support doesn't exist
-;	cmp r15b, 0
-;	je init_cpu_skip1
-
-; Disable Prefetchers (Not supported on P4 or Atom)
-;	mov ecx, 0x000001A0
-;	rdmsr
-;	or eax, 0x00080200		; Set Hardware Prefetcher Disable (Bit 9) and Adjacent Cache Line Prefetch Disable (Bit 19)
-;	or edx, 0x000000A0		; Set DCU Prefetcher Disable (Bit 37) and IP Prefetcher Disable (Bit 39)
-;	wrmsr
-
-; Disable L2 Cache (Not supported on P4 or Atom)
-;	mov ecx, 0x0000011E		; Control register 3: used to configure the L2 Cache
-;	rdmsr
-;	btr eax, 8			; Clear L2 Enabled (Bit 8)
-;	wrmsr
-
-;init_cpu_skip1:
 
 ; Disable MTRRs and Configure default memory type to UC
 	mov ecx, 0x000002FF
@@ -91,25 +60,6 @@ init_cpu:
 
 ; Flush Cache
 	wbinvd
-
-; Skip next portion if MSR support doesn't exist
-;	cmp r15b, 0
-;	je init_cpu_skip2
-
-; Enable L2 Cache (Not supported on P4 or Atom)
-;	mov ecx, 0x0000011E		; Control register 3: used to configure the L2 Cache
-;	rdmsr
-;	bts eax, 8			; Set L2 Enabled (Bit 8)
-;	wrmsr
-
-; Enable Prefetchers (Not supported on P4 or Atom)
-;	mov ecx, 0x000001A0
-;	rdmsr
-;	and eax, 0xFFF7FDFF		; Clear Hardware Prefetcher Disable (Bit 9) and Adjacent Cache Line Prefetch Disable (Bit 19)
-;	and edx, 0xFFFFFFAF		; Clear DCU Prefetcher Disable (Bit 37) and IP Prefetcher Disable (Bit 39)
-;	wrmsr
-
-;init_cpu_skip2:
 
 ; Enable Cache
 	mov rax, cr0

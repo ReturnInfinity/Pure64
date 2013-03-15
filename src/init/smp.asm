@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT SMP
 ; =============================================================================
@@ -16,16 +16,16 @@ init_smp:
 ;	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 ;	jne noMP			; If not then skip SMP init
 
-; Step 3: Start the AP's one by one
+; Start the AP's one by one
 	xor eax, eax
 	xor edx, edx
 	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20		; Add the offset for the APIC ID location
-	lodsd			; APIC ID is stored in bits 31:24
-	shr rax, 24		; AL now holds the BSP CPU's APIC ID
-	mov dl, al		; Store BSP APIC ID in DL
+	add rsi, 0x20			; Add the offset for the APIC ID location
+	lodsd				; APIC ID is stored in bits 31:24
+	shr rax, 24			; AL now holds the BSP CPU's APIC ID
+	mov dl, al			; Store BSP APIC ID in DL
 
-	mov al, '8'		; Start the AP's
+	mov al, '8'			; Start the AP's
 	mov [0x000B809E], al
 
 	mov rsi, 0x0000000000005100
@@ -37,18 +37,18 @@ smp_send_INIT:
 	je smp_send_INIT_done
 	lodsb
 
-	cmp al, dl		; Is it the BSP?
+	cmp al, dl			; Is it the BSP?
 	je smp_send_INIT_skipcore
 
 	; Broadcast 'INIT' IPI to APIC ID in AL
 	mov rdi, [os_LocalAPICAddress]
 	shl eax, 24
-	mov dword [rdi+0x310], eax		; Interrupt Command Register (ICR); bits 63-32
+	mov dword [rdi+0x310], eax	; Interrupt Command Register (ICR); bits 63-32
 	mov eax, 0x00004500
-	mov dword [rdi+0x300], eax		; Interrupt Command Register (ICR); bits 31-0
+	mov dword [rdi+0x300], eax	; Interrupt Command Register (ICR); bits 31-0
 smp_send_INIT_verify:
-	mov eax, [rdi+0x300]			; Interrupt Command Register (ICR); bits 31-0
-	bt eax, 12				; Verify that the command completed
+	mov eax, [rdi+0x300]		; Interrupt Command Register (ICR); bits 31-0
+	bt eax, 12			; Verify that the command completed
 	jc smp_send_INIT_verify
 
 smp_send_INIT_skipcore:
@@ -72,18 +72,18 @@ smp_send_SIPI:
 	je smp_send_SIPI_done
 	lodsb
 
-	cmp al, dl				; Is it the BSP?
+	cmp al, dl			; Is it the BSP?
 	je smp_send_SIPI_skipcore
 
 	; Broadcast 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
 	mov rdi, [os_LocalAPICAddress]
 	shl eax, 24
-	mov dword [rdi+0x310], eax		; Interrupt Command Register (ICR); bits 63-32
-	mov eax, 0x00004608			; Vector 0x08
-	mov dword [rdi+0x300], eax		; Interrupt Command Register (ICR); bits 31-0
+	mov dword [rdi+0x310], eax	; Interrupt Command Register (ICR); bits 63-32
+	mov eax, 0x00004608		; Vector 0x08
+	mov dword [rdi+0x300], eax	; Interrupt Command Register (ICR); bits 31-0
 smp_send_SIPI_verify:
-	mov eax, [rdi+0x300]			; Interrupt Command Register (ICR); bits 31-0
-	bt eax, 12				; Verify that the command completed
+	mov eax, [rdi+0x300]		; Interrupt Command Register (ICR); bits 31-0
+	bt eax, 12			; Verify that the command completed
 	jc smp_send_SIPI_verify
 
 smp_send_SIPI_skipcore:
@@ -103,7 +103,7 @@ wait3:
 	cmp rax, rbx
 	jg wait3
 
-; Step 4: Finish up
+; Finish up
 noMP:
 	lock inc word [cpu_activated]	; BSP adds one here
 

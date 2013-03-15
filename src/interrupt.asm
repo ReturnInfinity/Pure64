@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2012 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; Interrupts
 ; =============================================================================
@@ -198,9 +198,9 @@ exception_gate_main:
 	call os_print_string
 	mov rax, [rsp]
 	mov rdi, os_dump_reg_tstring
-	call os_int_to_hex_string		; Convert the register value to a hex string
+	call os_int_to_hex_string	; Convert the register value to a hex string
 	mov rsi, os_dump_reg_tstring
-	call os_print_string			; Print the hex string
+	call os_print_string		; Print the hex string
 	call os_print_newline
 	call os_dump_regs
 
@@ -222,7 +222,7 @@ exc_string05 db '05 - BR', 0
 exc_string06 db '06 - UD', 0
 exc_string07 db '07 - NM', 0
 exc_string08 db '08 - DF', 0
-exc_string09 db '09     ', 0	; No longer generated on new CPU's
+exc_string09 db '09     ', 0		; No longer generated on new CPU's
 exc_string10 db '10 - TS', 0
 exc_string11 db '11 - NP', 0
 exc_string12 db '12 - SS', 0
