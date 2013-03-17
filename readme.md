@@ -10,11 +10,14 @@ Ian Seyler (ian.seyler@returninfinity.com)
 
 ## Building
 
-The Pure64 second stage ("PURE64.SYS") can be built directly using nasm:
+The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler). In Linux you can probably download it from the distro's repository. If you are using Windows or Mac OS X you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.10.07/) in the `macosx` and `win32` directories, respectively.
 
-    nasm pure64.asm -o pure64.sys
+Build scripts are included for *nix and Windows systems.
 
+Mac OS X/Linux: `./build.sh`
+
+Windows: `build.bat`
 
 ## Notes
 
-Pure64 requires at least nasm v2; the version included in the OS X 10.7 Developer Tools is not recent enough.
+Pure64 requires at least NASM v2.10; the version included in the OS X 10.8 Developer Tools is not recent enough. - *Seriously Apple? NASM v0.98 is from 2007!!*

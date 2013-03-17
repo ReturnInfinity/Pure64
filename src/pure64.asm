@@ -4,16 +4,17 @@
 ;
 ; Loaded from the first stage. Gather information about the system while
 ; in 16-bit mode (BIOS is still accessable), setup a minimal 64-bit
-; enviroment, load the 64-bit kernel from the filesystem into memory and
-; jump to it!
-; =============================================================================
-
-
-; %define PURE64_CHAIN_LOADING
-; If this is defined, Pure64 will chainload the kernel attached to the end of the pure64.sys binary
+; enviroment, copy the 64-bit kernel from the end of the Pure64 binary to 
+; the 1MiB memory mark and jump to it!
+;
+; Pure64 requires a payload for execution! The stand-alone pure64.sys file
+; is not sufficient. You must append your kernel or software to the end of
+; the Pure64 binary. The maximum size of the kernel of software is 26KiB.
+;
 ; Windows - copy /b pure64.sys + kernel64.sys
 ; Unix - cat pure64.sys kernel64.sys > pure64.sys
-; Max size of the resulting pure64.sys is 28672 bytes
+; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
+; =============================================================================
 
 
 USE16
@@ -48,11 +49,6 @@ start16:
 	jmp 0x0000:clearcs
 
 clearcs:
-	mov ax, [0x07FE]		; MBR sector is copied to 0x0600
-	cmp ax, 0xAA55			; Check if the word at 0x07FE is set to 0xAA55 (Boot sector marker)
-	jne no_mbr
-	mov byte [cfg_mbr], 1		; Set for booting from a disk with a MBR
-no_mbr:
 
 ; Configure serial port
 	xor dx, dx			; First serial port
@@ -451,8 +447,6 @@ clearmapnext:
 ;	xor rdx, rdx
 ;	div rax
 
-	call init_hdd			; Gather Hard Drive information
-
 ; Debug
 	mov al, '8'			; HDD Init complete
 	mov [0x000B809E], al
@@ -555,18 +549,6 @@ endmemcalc:
 	mov al, [os_IOAPICCount]
 	stosb
 
-	mov di, 0x5032
-	mov ax, [ata_base]
-	stosw
-
-	mov di, 0x5034
-	mov eax, [drive_port]
-	stosd
-
-	mov di, 0x5038
-	mov rax, [sata_base]
-	stosq
-
 	mov di, 0x5040
 	mov rax, [os_HPETAddress]
 	stosq
@@ -592,7 +574,7 @@ nextIOAPIC:
 	mov al, '4'
 	mov [0x000B809E], al
 
-; Print info on CPU, MEM, and HD
+; Print info on CPU and MEM
 	mov ax, 0x0004
 	call os_move_cursor
 	mov rsi, msg_CPU
@@ -611,58 +593,16 @@ nextIOAPIC:
 	mov rsi, msg_mb
 	call os_print_string
 
-	cmp byte [cfg_hdd], 0x00
-	je no_msg_HDD
-	mov rsi, msg_HDD
-	call os_print_string
-	mov rsi, hdtempstring
-	call os_print_string
-	mov rsi, msg_mb
-	call os_print_string
-no_msg_HDD:
-
 ; Debug
 	push rax
 	mov al, '6'
 	mov [0x000B809E], al
 	pop rax
 
-; =============================================================================
-%ifdef PURE64_CHAIN_LOADING
-	mov rsi, 0x8000+7168		; Memory offset to end of pure64.sys
+	mov rsi, 0x8000+6144		; Memory offset to end of pure64.sys
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
-	mov rcx, 0x1000			; For up to 32KiB kernel (4096 x 8)
+	mov rcx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
 	rep movsq			; Copy 8 bytes at a time
-%else
-; Loading from filesystem -- require a hard disk be present
-	cmp byte [cfg_hdd], 0x00
-	je nohdd
-
-; Print a message that the kernel is being loaded
-	mov ax, 0x0006
-	call os_move_cursor
-	mov rsi, msg_loadingkernel
-	call os_print_string
-; Load the kernel at 0x100000
-	mov rdi, 0x0000000000100000
-
-; The kernel is located 16KiB in, and is (up to) 64KiB long -- load it to
-; the offset in rbx since that's where it expects to be located
-	mov rax, 32			; start 32 sectors in = 16KiB
-	mov rcx, 128			; load 128 sectors = 64KiB
-	call readsectors
-
-; Verify that the BareMetal OS kernel was loaded
-	mov eax, [0x00100008]
-	cmp eax, 0x52454D45		; Match against the Pure64 binary
-	je kernelok
-	mov rsi, msg_invalidkernel
-	call os_print_string
-	jmp $
-
-kernelok:
-%endif
-; =============================================================================
 
 ; Print a message that the kernel is being started
 	mov ax, 0x0008
@@ -695,33 +635,17 @@ kernelok:
 
 	jmp 0x0000000000100000		; Jump to the kernel
 
-nohdd:
-	mov al, 6
-	mov ah, 0
-	call os_move_cursor
-	mov rsi, hdd_setup_read_error
-	call os_print_string
-nohddhalt:
-	hlt
-	jmp nohddhalt
-
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
 %include "init/ioapic.asm"
 %include "init/smp.asm"
-
-%include "interfaces/ahci.asm"
-;%include "interfaces/pio.asm"
-
 %include "syscalls.asm"
 %include "interrupt.asm"
-%include "pci.asm"
-
 %include "sysvar.asm"
 
-; Pad to an even KB file (7 KiB)
-times 7168-($-$$) db 0x90
+; Pad to an even KB file (6 KiB)
+times 6144-($-$$) db 0x90
 
 
 ; =============================================================================
