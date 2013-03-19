@@ -582,7 +582,7 @@ nextIOAPIC:
 	rep movsq			; Copy 8 bytes at a time
 
 ; Print a message that the kernel is being started
-	mov ax, 0x0008
+	mov ax, 0x0006
 	call os_move_cursor
 	mov rsi, msg_startingkernel
 	call os_print_string
