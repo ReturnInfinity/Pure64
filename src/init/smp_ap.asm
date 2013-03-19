@@ -164,8 +164,7 @@ clearcs64_ap:
 	sti				; Activate interrupts for SMP
 	jmp ap_sleep
 
-align 16
-.apmsg db 'THE_AP_SPIN_ZONE'
+
 align 16
 
 ap_sleep:

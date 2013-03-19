@@ -4,6 +4,10 @@
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
+;
+; In this code we are expecting a BMFS-formatted drive. With BMFS the Pure64
+; binary is required to start at sector 8 (8192 bytes from the start). A small
+; ckeck is made to make sure Pure64 was loaded by comparing a signiture.
 ; =============================================================================
 
 USE16

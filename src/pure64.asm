@@ -40,8 +40,8 @@ align 16
 
 %include "init/smp_ap.asm"		; Our AP code is at 0x8000
 
-align 16
-db '16'
+
+;db '_16_'				; Debug
 align 16
 
 USE16
@@ -66,7 +66,7 @@ clearcs:
 	int 0x10
 
 ; Print message
-	mov si, initStartupMsg
+	mov si, msg_initializing
 	call print_string_16
 
 ; Check to make sure the CPU supports 64-bit mode... If not then bail out
@@ -106,23 +106,8 @@ print_string_16_done:
 
 ; Display an error message that the CPU does not support 64-bit mode
 no_long_mode:
-	mov si, no64msg
+	mov si, msg_no64
 	call print_string_16
-	jmp $
-
-buffer_test:
-	in al, 0x64
-	test al, 0x01
-	jz buffer_empty
-	in al, 0x60
-	jmp buffer_test
-
-buffer_empty:
-	in al, 0x64			; wait for key pressed
-	test al, 0x01
-	jz buffer_empty
-
-	int 0xff			; reboot by causing a triple fault
 	jmp $
 
 %include "init/isa.asm"
@@ -139,8 +124,7 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code desciptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data desciptor
 gdt32_end:
 
-align 16
-db '32'
+;db '_32_'				; Debug
 align 16
 
 
@@ -268,8 +252,7 @@ pd_again:				; Create a 2 MiB page
 
 	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
 
-align 16
-db '64'
+;db '_64_'				; Debug
 align 16
 
 
@@ -447,10 +430,6 @@ clearmapnext:
 ;	xor rdx, rdx
 ;	div rax
 
-; Debug
-	mov al, '8'			; HDD Init complete
-	mov [0x000B809E], al
-
 ; Init of SMP
 	call init_smp
 
@@ -544,8 +523,6 @@ endmemcalc:
 	stosd
 
 	mov di, 0x5030
-	mov al, [cfg_mbr]
-	stosb
 	mov al, [os_IOAPICCount]
 	stosb
 
