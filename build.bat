@@ -12,3 +12,4 @@ cd src
 echo | set /p x=Building Pure64... 
 call nasm pure64.asm -o ..\pure64.sys && (echo Success) || (echo Error!)
 cd ..
+pause

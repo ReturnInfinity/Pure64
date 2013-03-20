@@ -197,10 +197,7 @@ exception_gate_main:
 	mov rsi, adr_string
 	call os_print_string
 	mov rax, [rsp]
-	mov rdi, os_dump_reg_tstring
-	call os_int_to_hex_string	; Convert the register value to a hex string
-	mov rsi, os_dump_reg_tstring
-	call os_print_string		; Print the hex string
+	call os_debug_dump_rax
 	call os_print_newline
 	call os_dump_regs
 

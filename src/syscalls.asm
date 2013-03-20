@@ -203,12 +203,9 @@ os_dump_regs_again:
 	add rsi, rax
 	call os_print_string			; Print the register name
 
-	mov rdi, os_dump_reg_tstring
-	mov rsi, rdi
 	mov rax, [rcx]
 	add rcx, 8
-	call os_int_to_hex_string		; Convert the register value to a hex string
-	call os_print_string			; Print the hex string
+	call os_debug_dump_rax
 
 	add byte [os_dump_reg_stage], 1
 	cmp byte [os_dump_reg_stage], 0x10
@@ -249,8 +246,6 @@ os_dump_reg_string0C: db ' 12:', 0
 os_dump_reg_string0D: db ' 13:', 0
 os_dump_reg_string0E: db ' 14:', 0
 os_dump_reg_string0F: db ' 15:', 0
-
-os_dump_reg_tstring: times 17 db 0
 os_dump_reg_stage: db 0x00
 ; -----------------------------------------------------------------------------
 
@@ -326,41 +321,6 @@ os_int_to_string_next_digit:
 	pop rbx
 	pop rcx
 	pop rdx
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; os_int_to_hex_string -- Convert an integer to a hex string
-;  IN:	RAX = Integer value
-;	RDI = location to store string
-; OUT:	Nothing. All registers preserved
-os_int_to_hex_string:
-	push rdi
-	push rdx
-	push rcx
-	push rbx
-	push rax
-
-	mov rcx, 16				; number of nibbles. 64 bit = 16 nibbles = 8 bytes
-os_int_to_hex_string_next_nibble:	
-	rol rax, 4				; next nibble into AL
-	mov bl, al				; copy nibble into BL
-	and rbx, 0x0F				; and convert to word
-	mov dl, [hextable + rbx]		; lookup ascii numeral
-	push rax
-	mov al, dl
-	stosb
-	pop rax
-	loop os_int_to_hex_string_next_nibble	; again for next nibble
-	xor rax, rax				; clear RAX to 0
-	stosb					; Store AL to terminate string
-
-	pop rax
-	pop rbx
-	pop rcx
-	pop rdx
-	pop rdi
 	ret
 ; -----------------------------------------------------------------------------
 
