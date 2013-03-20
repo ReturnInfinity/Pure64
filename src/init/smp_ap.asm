@@ -8,7 +8,6 @@
 USE16
 
 init_smp_ap:
-	nop
 	jmp 0x0000:clearcs_ap
 
 clearcs_ap:

@@ -35,10 +35,11 @@ start:
 	mov gs, ax
 	mov esp, 0x8000			; Set a known free location for the stack
 
-align 16
+ap_modify:
 	jmp start16			; This command will be overwritten with 'NOP's before the AP's are started
+	nop				; The 'jmp' is only 3 bytes
 
-%include "init/smp_ap.asm"		; Our AP code is at 0x8000
+%include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
 
 ;db '_16_'				; Debug
@@ -148,7 +149,7 @@ start32:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
-	mov al, '2'			; Now in 32-bit protected mode
+	mov al, '2'			; Now in 32-bit protected mode (0x20 = 32)
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
@@ -262,7 +263,7 @@ USE64
 
 start64:
 ; Debug
-	mov al, '2'			; Now in 64-bit mode
+	mov al, '4'			; Now in 64-bit mode (0x40 = 64)
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
@@ -295,8 +296,8 @@ start64:
 	mov gs, ax
 
 	mov rax, clearcs64		; Do a proper 64-bit jump. Should not be needed as the ...
-	jmp rax				; ... jmp SYS64_CODE_SEL:start64 would have sent us ...
-	nop				; .. out of compatibilty mode and into 64-bit mode
+	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
+	nop				; out of compatibilty mode and into 64-bit mode
 clearcs64:
 	xor rax, rax
 
@@ -307,7 +308,7 @@ clearcs64:
 	mov [0x000B809E], al
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
-	mov edi, 0x00008030		; We need to remove the BSP Jump call to get the AP's
+	mov edi, ap_modify		; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
 
@@ -562,7 +563,6 @@ nextIOAPIC:
 	call os_print_string
 	mov rsi, cpu_amount_string
 	call os_print_string
-
 	mov rsi, msg_MEM
 	call os_print_string
 	mov rsi, memtempstring
@@ -570,12 +570,7 @@ nextIOAPIC:
 	mov rsi, msg_mb
 	call os_print_string
 
-; Debug
-	push rax
-	mov al, '6'
-	mov [0x000B809E], al
-	pop rax
-
+; Move the trailing binary to its final location
 	mov rsi, 0x8000+6144		; Memory offset to end of pure64.sys
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
 	mov rcx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
@@ -588,10 +583,14 @@ nextIOAPIC:
 	call os_print_string
 
 ; Debug
-	mov al, ' '			; Clear the debug messages
-	mov [0x000B809A], al
-	mov [0x000B809C], al
-	mov [0x000B809E], al
+	mov rdi, 0x000B8092		; Clear the debug messages
+	mov ax, 0x0720
+	mov cx, 7
+clearnext:
+	stosw
+	sub cx, 1
+	cmp cx, 0
+	jne clearnext
 
 ; Clear all registers (skip the stack pointer)
 	xor rax, rax
