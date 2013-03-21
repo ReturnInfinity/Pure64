@@ -60,7 +60,7 @@ msg_CPU:		db '[CPU: ', 0
 msg_mhz:		db 'MHz x', 0
 msg_MEM:		db ']  [MEM: ', 0
 msg_mb:			db ' MiB]', 0
-msg_startingkernel:	db 'Starting kernel...', 0
+msg_startingkernel:	db 'Starting kernel...', 13, 10, 13, 10, 0
 msg_no64:		db 'ERROR: This computer does not support 64-bit mode.', 0
 
 
