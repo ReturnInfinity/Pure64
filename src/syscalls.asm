@@ -14,16 +14,16 @@ os_move_cursor:
 	push rcx
 	push rbx
 	push rax
-	
+
+	xor ebx, ebx
 	mov [screen_cursor_x], ah
 	mov [screen_cursor_y], al
-
-	and rax, 0x000000000000FFFF	; only keep the low 16 bits
-	;calculate the new offset
+	mov bl, ah
+	
+	; Calculate the new offset
+	and rax, 0x00000000000000FF	; only keep the low 8 bits
 	mov cl, 80
 	mul cl				; AX = AL * CL
-	xor rbx, rbx
-	mov bl, [screen_cursor_x]
 	add ax, bx
 	shl ax, 1			; multiply by 2
 
