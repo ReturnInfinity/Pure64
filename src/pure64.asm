@@ -61,9 +61,9 @@ clearcs:
 	int 0x10
 
 ; Hide the hardware cursor
-; !!!!! GET STATUS BEFORE CHANGE !!!!!
-	mov ax, 0x0100			; VIDEO - SET TEXT-MODE CURSOR SHAPE
-	mov cx, 0x0706			; 0607 for underline, 0007 for full block
+	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
+	mov bx, 0x0000			; Page number
+	mov dx, 0xFFFF			; Row / Column
 	int 0x10
 
 ; Print message
