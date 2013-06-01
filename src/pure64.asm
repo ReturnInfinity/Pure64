@@ -63,7 +63,12 @@ clearcs:
 ; Hide the hardware cursor
 	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
 	mov bx, 0x0000			; Page number
-	mov dx, 0xFFFF			; Row / Column
+	mov dx, 0x2000			; Row / Column
+	int 0x10
+
+; Disable blinking
+	mov ax, 0x1003
+	mov bx, 0x0000
 	int 0x10
 
 ; Print message
