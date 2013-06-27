@@ -60,12 +60,6 @@ clearcs:
 	mov ax, 0x0003			; Set to normal (80x25 text) video mode
 	int 0x10
 
-; Hide the hardware cursor
-	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
-	mov bx, 0x0000			; Page number
-	mov dx, 0x2000			; Row / Column
-	int 0x10
-
 ; Disable blinking
 	mov ax, 0x1003
 	mov bx, 0x0000
@@ -87,6 +81,12 @@ clearcs:
 
 	call init_isa			; Setup legacy hardware
 
+; Hide the hardware cursor (interferes with print_string_16 if called earlier)
+	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
+	mov bx, 0x0000			; Page number
+	mov dx, 0x2000			; Row / Column
+	int 0x10
+
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	lgdt [cs:GDTR32]		; Load GDT register
 
@@ -99,7 +99,7 @@ clearcs:
 ; 16-bit function to print a sting to the screen
 print_string_16:			; Output string in SI to screen
 	pusha
-	mov ah, 0x0E			; int 0x10 teletype function
+	mov ah, 0x0E			; http://www.ctyme.com/intr/rb-0106.htm
 print_string_16_repeat:
 	lodsb				; Get char from string
 	cmp al, 0
