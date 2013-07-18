@@ -20,9 +20,6 @@ init_ioapic:
 	add eax, 1
 	mov rcx, rax
 	xor rax, rax
-	mov eax, dword [rsi+0x20]	; Grab the BSP APIC ID; stored in bits 31:24
-	shr rax, 24			; AL now holds the BSP CPU's APIC ID
-	shl rax, 56
 	bts rax, 16			; Interrupt Mask Enabled
 initentry:				; Initialize all entries 1:1
 	dec rcx
@@ -30,14 +27,21 @@ initentry:				; Initialize all entries 1:1
 	cmp rcx, 0
 	jne initentry
 
+	; Get the BSP APIC ID
+	mov rsi, [os_LocalAPICAddress]
+	add rsi, 0x20			; Add the offset for the APIC ID
+	lodsd				; Load a 32-bit value. We only want the high 8 bits
+	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+	shl rax, 56
+
 	; Enable the Keyboard
 	mov rcx, 1			; IRQ value
-	mov rax, 0x21			; Interrupt value
+	mov al, 0x21			; Interrupt value
 	call ioapic_entry_write
 
 	; Enable the RTC
 	mov rcx, 8			; IRQ value
-	mov rax, 0x28			; Interrupt value
+	mov al, 0x28			; Interrupt value
 	call ioapic_entry_write
 
 	; Set the periodic flag in the RTC
