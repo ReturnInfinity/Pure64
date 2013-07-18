@@ -35,6 +35,7 @@ os_HPETAddress:		equ SystemVariables + 0x38
 ; DD - Starting at offset 128, increments by 4
 os_BSP:			equ SystemVariables + 128
 mem_amount:		equ SystemVariables + 132
+os_VideoBase:		equ SystemVariables + 136
 
 ; DW - Starting at offset 256, increments by 2
 cpu_speed:		equ SystemVariables + 256
