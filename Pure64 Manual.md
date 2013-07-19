@@ -72,6 +72,10 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5048 - 0x505F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5060</td><td>64-bit</td><td>LAPIC</td><td>Local APIC address</td></tr>
 <tr><td>0x5068...</td><td>64-bit</td><td>IOAPIC</td><td>IO-APIC addresses (based on IOAPIC_COUNT)</td></tr>
+<tr><td>0x5080</td><td>32-bit</td><td>VIDEO_BASE</td><td>Base memory for video (if graphics mode set)</td></tr>
+<tr><td>0x5084</td><td>16-bit</td><td>VIDEO_X</td><td>X resolution</td></tr>
+<tr><td>0x5086</td><td>16-bit</td><td>VIDEO_Y</td><td>Y resolution</td></tr>
+<tr><td>0x5088</td><td>8-bit</td><td>VIDEO_DEPTH</td><td>Color depth</td></tr>
 <tr><td>0x5100...</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 </table>
 
