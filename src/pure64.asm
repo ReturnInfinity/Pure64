@@ -3,8 +3,8 @@
 ; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
 ;
 ; Loaded from the first stage. Gather information about the system while
-; in 16-bit mode (BIOS is still accessable), setup a minimal 64-bit
-; enviroment, copy the 64-bit kernel from the end of the Pure64 binary to 
+; in 16-bit mode (BIOS is still accessible), setup a minimal 64-bit
+; environment, copy the 64-bit kernel from the end of the Pure64 binary to 
 ; the 1MiB memory mark and jump to it!
 ;
 ; Pure64 requires a payload for execution! The stand-alone pure64.sys file
@@ -126,8 +126,8 @@ dq gdt32				; linear address of GDT
 align 16
 gdt32:
 dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
-dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code desciptor
-dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data desciptor
+dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
+dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
 ;db '_32_'				; Debug
@@ -302,7 +302,7 @@ start64:
 
 	mov rax, clearcs64		; Do a proper 64-bit jump. Should not be needed as the ...
 	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
-	nop				; out of compatibilty mode and into 64-bit mode
+	nop				; out of compatibility mode and into 64-bit mode
 clearcs64:
 	xor rax, rax
 
@@ -463,7 +463,7 @@ readnextrecord:
 	lodsd
 	cmp eax, 0			; Are we at the end?
 	je endmemcalc
-	cmp eax, 1			; Usuable RAM
+	cmp eax, 1			; Useable RAM
 	je goodmem
 	cmp eax, 3			; ACPI Reclaimable
 	je goodmem
@@ -548,6 +548,14 @@ nextIOAPIC:
 	sub cl, 1
 	cmp cl, 0
 	jne nextIOAPIC
+
+	mov di, 0x5080
+	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
+	stosd
+	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
+	stosd
+	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
+	stosb
 
 ; Initialization is now complete... write a message to the screen
 	mov rsi, msg_done
