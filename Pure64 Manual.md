@@ -1,4 +1,4 @@
-# Pure64 - v0.6.0 Manual #
+# Pure64 - v0.6.1 Manual #
 
 Pure64 must be loaded to the 16-bit memory address `0x0000:0x8000`
 
