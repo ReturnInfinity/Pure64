@@ -66,21 +66,6 @@ initentry:				; Initialize all entries 1:1
 
 
 ; -----------------------------------------------------------------------------
-; ioapic_reg_write -- Write to an I/O APIC register
-;  IN:	EAX = Value to write
-;	ECX = Index of register 
-; OUT:	Nothing. All registers preserved
-ioapic_reg_write:
-	push rsi
-	mov rsi, [os_IOAPICAddress]
-	mov dword [rsi], ecx		; Write index to register selector
-	mov dword [rsi + 0x10], eax	; Write data to window register
-	pop rsi
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
 ; ioapic_reg_read -- Read from an I/O APIC register
 ;  IN:	ECX = Index of register 
 ; OUT:	EAX = Value of register
@@ -90,6 +75,21 @@ ioapic_reg_read:
 	mov rsi, [os_IOAPICAddress]
 	mov dword [rsi], ecx		; Write index to register selector
 	mov eax, dword [rsi + 0x10]	; Read data from window register
+	pop rsi
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; ioapic_reg_write -- Write to an I/O APIC register
+;  IN:	EAX = Value to write
+;	ECX = Index of register 
+; OUT:	Nothing. All registers preserved
+ioapic_reg_write:
+	push rsi
+	mov rsi, [os_IOAPICAddress]
+	mov dword [rsi], ecx		; Write index to register selector
+	mov dword [rsi + 0x10], eax	; Write data to window register
 	pop rsi
 	ret
 ; -----------------------------------------------------------------------------
@@ -118,38 +118,6 @@ ioapic_entry_write:
 
 	pop rcx
 	pop rax
-	ret
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; ioapic_entry_read -- Read an I/O APIC entry from the redirection table
-;  IN:	ECX = Index of the entry
-; OUT:	RAX = Data that was read
-;	All other registers preserved
-ioapic_entry_read:
-	push rbx
-	push rcx
-
-	; Calculate index for lower DWORD
-	shl rcx, 1			; Quick multiply by 2
-	add rcx, 0x10			; IO Redirection tables start at 0x10
-
-	; Read lower DWORD
-	call ioapic_reg_read
-	mov rbx, rax
-
-	; Read higher DWORD
-	add rcx, 1
-	call ioapic_reg_read
-
-	; Combine
-	shr rax, 32
-	or rbx, rax
-	xchg rbx, rax
-
-	pop rcx
-	pop rbx
 	ret
 ; -----------------------------------------------------------------------------
 
