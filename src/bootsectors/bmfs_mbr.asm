@@ -120,7 +120,7 @@ no_incr_es:
 
 
 ;------------------------------------------------------------------------------
-; 16-bit function to print a sting to the screen
+; 16-bit function to print a string to the screen
 ; IN:	SI - Address of start of string
 print_string_16:			; Output string in SI to screen
 	pusha
