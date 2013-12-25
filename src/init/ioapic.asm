@@ -7,51 +7,57 @@
 
 
 init_ioapic:
+	xor eax, eax
 	mov al, 0x70			; IMCR access
 	out 0x22, al
 	mov al, 0x01			; set bit 1 for SMP mode
 	out 0x23, al
-
-	xor eax, eax
-	mov rcx, 1			; Register 1 - IOAPIC VERSION REGISTER
-	call ioapic_reg_read
+	mov rsi, [os_IOAPICAddress]
+	xor ecx, ecx
+	mov cl, 1			; Register 1 - IOAPIC VERSION REGISTER
+	mov [rsi], ecx
+	mov eax, [rsi+0x10]
 	shr eax, 16			; Extract bytes 16-23 (Maximum Redirection Entry)
-	and eax, 0xFF			; Clear bits 16-31
-	add eax, 1
-	mov rcx, rax
-	xor rax, rax
-	bts rax, 16			; Interrupt Mask Enabled
+	movzx ecx, ax			; Clear bits 16-31
+	add ecx, 1
+	xor eax, eax
+	bts rax, 47			; Interrupt Mask Enabled
 initentry:				; Initialize all entries 1:1
-	dec rcx
-	call ioapic_entry_write
-	cmp rcx, 0
-	jne initentry
+	or rax,rcx
+	mov [rsi], rax
+	dec ecx
+	jnz initentry
 
 	; Get the BSP APIC ID
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+			
+	mov eax, [rsi+0x20]		; Load a 32-bit value. We only want the high 8 bits
+	shr eax, 24			; Shift to the right and AL now holds the CPU's APIC ID
 	shl rax, 56
 
 	; Enable the Keyboard
-	mov rcx, 1			; IRQ value
-	mov al, 0x21			; Interrupt value
-	call ioapic_entry_write
+	xor ecx, ecx
+	mov cl, 0x21			; Interrupt Value
+	or  rax,rcx
+	mov cl, 0x12			; IRQ value 1, 2*1+16=18=0x12				; Interrupt value
+	mov [rsi], ecx
+	mov [rsi+0x10], rax
 
-	; Enable the RTC
-	mov rcx, 8			; IRQ value
-	mov al, 0x28			; Interrupt value
-	call ioapic_entry_write
+	; Enable the RTC		; IRQ value
+	mov cl, 0x28			; Interrupt value
+	or rax, rcx
+	mov cl, 0x20			; 2*8+16=32=0x20
+	mov [rsi], ecx
+	mov [rsi+0x10], rax
 
 	; Set the periodic flag in the RTC
+	xor eax, eax
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the current settings
-	push rax
+	mov ecx, eax
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
-	pop rax
+	mov eax, ecx
 	bts ax, 6			; Set Periodic(6)
 	out 0x71, al			; Write the new settings
 
@@ -61,7 +67,6 @@ initentry:				; Initialize all entries 1:1
 	mov al, 0x0C			; Status Register C
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the current settings
-
 	ret
 
 
