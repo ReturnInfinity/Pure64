@@ -32,31 +32,29 @@ interrupt_gate:				; handler for all other interrupts
 ; This IRQ runs whenever there is input on the keyboard
 align 16
 keyboard:
-	push rdi
-	push rax
+	mov r8, rdi
+	mov r9, rax
 
-	xor rax, rax
+	xor eax, eax
 
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
-	jz keydown
-	jmp keyboard_done
+	jnz keyboard_done
 
 keydown:
 	mov [0x000B8088], al		; Dump the scancode to the screen
 
-	mov rax, [os_Counter_RTC]
-	add rax, 10
-	mov [os_Counter_RTC], rax
+	mov rdi, [os_Counter_RTC]
+	add rdi, 10
+	mov [os_Counter_RTC], rdi
 
 keyboard_done:
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
+	mov [rdi+0xB0], eax
 
-	pop rax
-	pop rdi
+	mov rax, r9
+	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -66,14 +64,16 @@ keyboard_done:
 ; Real-time clock interrupt. IRQ 0x08, INT 0x28
 align 16
 rtc:
-	push rdi
-	push rax
+	mov r8, rdi
+	mov r9, rax
 
-	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
-
+					; 64-bit counter started at bootup
+	mov rdi, [os_Counter_RTC]
 	mov al, 'R'
+	add rdi, 1
 	mov [0x000B8092], al
-	mov rax, [os_Counter_RTC]
+	mov [os_Counter_RTC], rdi
+	mozx eax, dil 
 	and al, 1			; Clear all but lowest bit (Can only be 0 or 1)
 	add al, 48
 	mov [0x000B8094], al
@@ -82,12 +82,11 @@ rtc:
 	in al, 0x71			; Read the value in register C
 
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
+	mov [rdi+0xB0], eax
 
-	pop rax
-	pop rdi
+	mov rax, r9
+	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -189,9 +188,8 @@ exception_gate_main:
 	mov rsi, int_string
 	call os_print_string
 	mov rsi, exc_string00
-	and rax, 0xFF			; Clear out everything in RAX except for AL
-	mov bl, 8
-	mul bl				; AX = AL x BL
+	movzx eax, al			; Clear out everything in RAX except for AL
+	shl eax, 3			; AX = AL x 8
 	add rsi, rax			; Use the value in RAX as an offset to get to the right message
 	call os_print_string
 	mov rsi, adr_string
