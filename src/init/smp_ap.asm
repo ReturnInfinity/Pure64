@@ -44,7 +44,8 @@ align 16
 USE32
 
 startap32:
-	mov eax, 16			; load 4 GB data descriptor
+	xor eax, eax
+	mov al, 16			; load 4 GB data descriptor
 	mov ds, ax			; to all data segment registers
 	mov es, ax
 	mov fs, ax
@@ -93,14 +94,14 @@ align 16
 USE64
 
 startap64:
-	xor rax, rax			; aka r0
-	xor rbx, rbx			; aka r3
-	xor rcx, rcx			; aka r1
-	xor rdx, rdx			; aka r2
-	xor rsi, rsi			; aka r6
-	xor rdi, rdi			; aka r7
-	xor rbp, rbp			; aka r5
-	xor rsp, rsp			; aka r4
+	xor eax, eax			; aka r0
+	xor ebx, ebx			; aka r3
+	xor ecx, ecx			; aka r1
+	xor edx, edx			; aka r2
+	xor esi, esi			; aka r6
+	xor edi, edi			; aka r7
+	xor ebp, ebp			; aka r5
+	xor esp, esp			; aka r4
 	xor r8, r8
 	xor r9, r9
 	xor r10, r10
@@ -116,31 +117,28 @@ startap64:
 	mov fs, ax
 	mov gs, ax
 
-	mov rax, clearcs64_ap
-	jmp rax
-	nop
+;	mov rax, clearcs64_ap
+;	jmp rax
+;	nop
 clearcs64_ap:
-	xor rax, rax
+;	xor eax, eax
 
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
-	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
-	shl rax, 10			; shift left 10 bits for a 1024byte stack
-	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
-	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
+	mov rsi, [os_LocalAPICAddress]; We would call os_smp_get_id here but the stack is not ...
+	mov eax, [rsi+0x20]			; Load a 32-bit value. We only want the high 8 bits
+	shr eax, 14			; Shift to the right and AL now holds the CPU's APIC ID
+					; shift left 10 bits for a 1024byte stack
+	add eax, 0x50400		; stacks decrement when you "push", start at 1024 bytes in
+	mov esp, eax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
 	lgdt [GDTR64]			; Load the GDT
 	lidt [IDTR64]			; load IDT register
 
 ; Enable Local APIC on AP
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
-	mov rdi, rsi
-	lodsd
+	lea edi ,[esi+0x00f0]		; Offset to Spurious Interrupt Register
+	mov eax, [edi]
 	or eax, 0000000100000000b
-	stosd
+	mov [edi], eax
 
 	call init_cpu			; Setup CPU
 
@@ -152,17 +150,15 @@ clearcs64_ap:
 ;	div rax
 
 	lock inc word [cpu_activated]
-	xor eax, eax
-	mov rsi, [os_LocalAPICAddress]
 	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov rdi, 0x00005700		; The location where the cpu values are stored
-	add rdi, rax			; RDI points to infomap CPU area + APIC ID. ex F701 would be APIC ID 1
+	mov eax [esi+0x20]		; APIC ID is stored in bits 31:24
+	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+	lea edi, [eax+0x05700]		; The location where the cpu values are stored
+	xor eax, eax			; RDI points to infomap CPU area + APIC ID. ex F701 would be APIC ID 1
 	mov al, 1
-	stosb
+	mov [edi], al
 	sti				; Activate interrupts for SMP
-	jmp ap_sleep
+	
 
 
 align 16
