@@ -35,12 +35,11 @@ keyboard:
 	push rdi
 	push rax
 
-	xor rax, rax
+	xor eax, eax
 
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
-	jz keydown
-	jmp keyboard_done
+	jnz keyboard_done
 
 keydown:
 	mov [0x000B8088], al		; Dump the scancode to the screen
@@ -51,9 +50,8 @@ keydown:
 
 keyboard_done:
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
+	mov [rdi+0xB0], eax
 
 	pop rax
 	pop rdi
@@ -69,23 +67,22 @@ rtc:
 	push rdi
 	push rax
 
-	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
-
-	mov al, 'R'
-	mov [0x000B8092], al
+	xor edi, edi
+	mov dil, 'R'
+	mov [0x000B8092], dil
 	mov rax, [os_Counter_RTC]
-	and al, 1			; Clear all but lowest bit (Can only be 0 or 1)
-	add al, 48
+	inc rax
+	mov [os_Counter_RTC], rax
+	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
+	add eax, 48
 	mov [0x000B8094], al
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
 
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
-
+	mov [rdi+0xB0], eax
 	pop rax
 	pop rdi
 	iretq
