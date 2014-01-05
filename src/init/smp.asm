@@ -21,24 +21,26 @@ init_smp:
 	xor edx, edx
 	mov rsi, [os_LocalAPICAddress]
 	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the BSP CPU's APIC ID
-	mov dl, al			; Store BSP APIC ID in DL
+	mov eax, [rsi+0x20]		; APIC ID is stored in bits 31:24
+	shr eax, 24			; AL now holds the BSP CPU's APIC ID
+	movzx edx, al			; Store BSP APIC ID in DL
 
 	mov al, '8'			; Start the AP's
 	mov [0x000B809E], al
 
-	mov rsi, 0x0000000000005100
+	mov esi, 0x5100
 	xor eax, eax
-	xor ecx, ecx
-	mov cx, [cpu_detected]
+	xor ebx, ebx
+	movzx ecx, word [cpu_detected]
 smp_send_INIT:
-	cmp cx, 0
+	test ecx, ecx
 	je smp_send_INIT_done
-	lodsb
+	movzx eax, byte [rsi]
 
 	cmp al, dl			; Is it the BSP?
-	je smp_send_INIT_skipcore
+	sete bl
+	lea ecx, [ecx-ebx]
+	je smp_send_INIT
 
 	; Broadcast 'INIT' IPI to APIC ID in AL
 	mov rdi, [os_LocalAPICAddress]
