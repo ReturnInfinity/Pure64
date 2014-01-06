@@ -35,14 +35,12 @@ keyboard:
 	push rdi
 	push rax
 
-	xor rax, rax
+	xor eax, eax
 
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
-	jz keydown
-	jmp keyboard_done
+	jnz keyboard_done
 
-keydown:
 	mov [0x000B8088], al		; Dump the scancode to the screen
 
 	mov rax, [os_Counter_RTC]
@@ -51,9 +49,8 @@ keydown:
 
 keyboard_done:
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
+	mov [rdi+0xB0], eax
 
 	pop rax
 	pop rdi
@@ -82,9 +79,8 @@ rtc:
 	in al, 0x71			; Read the value in register C
 
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	add rdi, 0xB0
 	xor eax, eax
-	stosd
+	mov [rdi+0xB0], eax
 
 	pop rax
 	pop rdi
@@ -190,9 +186,8 @@ exception_gate_main:
 	call os_print_string
 	mov rsi, exc_string00
 	and rax, 0xFF			; Clear out everything in RAX except for AL
-	mov bl, 8
-	mul bl				; AX = AL x BL
-	add rsi, rax			; Use the value in RAX as an offset to get to the right message
+	shl eax, 3				; Quick multiply by 3
+	add rsi, rax				; Use the value in RAX as an offset to get to the right message
 	call os_print_string
 	mov rsi, adr_string
 	call os_print_string
