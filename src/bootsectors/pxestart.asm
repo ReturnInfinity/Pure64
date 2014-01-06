@@ -40,15 +40,15 @@ start:
 	jmp 0x0000:0x8000
 
 ;------------------------------------------------------------------------------
-; 16-bit Function to print a sting to the screen
+; 16-bit Function to print a string to the screen
 ; input: SI - Address of start of string
 print_string_16:			; Output string in SI to screen
 	pusha
 	mov ah, 0x0E			; int 0x10 teletype function
 .repeat:
 	lodsb				; Get char from string
-	cmp al, 0
-	je .done			; If char is zero, end of string
+	test al, al
+	jz .done			; If char is zero, end of string
 	int 0x10			; Otherwise, print it
 	jmp short .repeat
 .done:

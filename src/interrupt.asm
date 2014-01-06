@@ -41,7 +41,6 @@ keyboard:
 	test al, 0x80
 	jnz keyboard_done
 
-keydown:
 	mov [0x000B8088], al		; Dump the scancode to the screen
 
 	mov rax, [os_Counter_RTC]
@@ -83,6 +82,7 @@ rtc:
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
 	xor eax, eax
 	mov [rdi+0xB0], eax
+
 	pop rax
 	pop rdi
 	iretq
