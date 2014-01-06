@@ -7,52 +7,74 @@
 
 
 init_ioapic:
+	xor eax, eax
 	mov al, 0x70			; IMCR access
 	out 0x22, al
 	mov al, 0x01			; set bit 1 for SMP mode
 	out 0x23, al
 
 	xor eax, eax
-	mov rcx, 1			; Register 1 - IOAPIC VERSION REGISTER
+	lea ecx, [eax+1]		; Register 1 - IOAPIC VERSION REGISTER
 	call ioapic_reg_read
 	shr eax, 16			; Extract bytes 16-23 (Maximum Redirection Entry)
 	and eax, 0xFF			; Clear bits 16-31
-	add eax, 1
-	mov rcx, rax
-	xor rax, rax
-	bts rax, 16			; Interrupt Mask Enabled
+	mov ecx, eax
+	xor eax, eax
+	bts eax, 16			; Interrupt Mask Enabled
+	xor edx, edx
 initentry:				; Initialize all entries 1:1
-	dec rcx
-	call ioapic_entry_write
-	cmp rcx, 0
-	jne initentry
+	mov ebx, ecx
+	shl ebx, 2
+	add ebx, 0x10			; offset
+	mov [rsi], ebx
+	mov [rsi+0x10], eax
+	add ebx, 1
+	mov [rsi], ebx
+	mov [rsi+0x10], edx
+	dec ecx
+	jnz initentry
 
 	; Get the BSP APIC ID
 	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
-	shl rax, 56
+	mov eax, [rsi+0x20]		; Load a 32-bit value. We only want the high 8 bits
+	xor ebx, ebx
+	shr eax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+	shl eax, 56
 
 	; Enable the Keyboard
-	mov rcx, 1			; IRQ value
-	mov al, 0x21			; Interrupt value
-	call ioapic_entry_write
+	xor ecx, ecx
+	mov cl, 0x12			; IRQ 1 <<2 +0x10 =0x12
+	mov bl, 0x21			; Interrupt value
+	or rbx, rax
+	mov [rsi], ecx
+	mov [rsi+0x10], ebx
+	shr rbx, 32
+	add ecx, 1
+	mov [rsi], ecx			
+	mov [rsi+0x10], ebx		; high-dword
 
 	; Enable the RTC
-	mov rcx, 8			; IRQ value
-	mov al, 0x28			; Interrupt value
-	call ioapic_entry_write
+	xor ebx, ebx
+	mov bl, 0x28			; Interrupt value
+	or rbx, rax
+	mov [rsi], ecx
+	mov [rsi+0x10], ebx
+	shr rbx, 32
+	add ecx, 1
+	mov [rsi], ecx			
+	mov [rsi+0x10], ebx		; high-dword
+
 
 	; Set the periodic flag in the RTC
+	xor eax, eax
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the current settings
-	push rax
+	movzx ebx, al
+	bts ebx, 6			; Set Periodic(6)
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
-	pop rax
-	bts ax, 6			; Set Periodic(6)
+	mov eax, ebx
 	out 0x71, al			; Write the new settings
 
 	sti				; Enable interrupts
@@ -106,15 +128,18 @@ ioapic_entry_write:
 
 	; Calculate index for lower DWORD
 	shl rcx, 1			; Quick multiply by 2
-	add rcx, 0x10			; IO Redirection tables start at 0x10
+	add ecx, 0x10			; IO Redirection tables start at 0x10
 
 	; Write lower DWORD
-	call ioapic_reg_write
+	mov rsi, [os_IOAPICAddress]
+	mov dword [rsi], ecx		; Write index to register selector
+	mov dword [rsi + 0x10], eax	; Write data to window register
 
 	; Write higher DWORD
 	shr rax, 32
-	add rcx, 1
-	call ioapic_reg_write
+	add ecx, 1
+	mov dword [rsi], ecx		; Write index to register selector
+	mov dword [rsi + 0x10], eax	; Write data to window register
 
 	pop rcx
 	pop rax

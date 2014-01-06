@@ -21,12 +21,13 @@ os_pci_read_reg:
 
 	shl ebx, 16			; Move Bus to bits 23 - 16
 	shl ecx, 8			; Move Device/Function to bits 15 - 8
-	mov bx, cx
+	or ebx, ecx
+	movzx edx, dl
 	shl edx, 2			; Move Register to bits 7 - 2
-	mov bl, dl
-	and ebx, 0x00ffffff		; Clear bits 31 - 24
-	or ebx, 0x80000000		; Set bit 31
-	mov eax, ebx
+	or edx, ebx
+	bts edx, 31			; Set bit 31
+	mov eax, edx
+	xor edx, edx
 	mov dx, PCI_CONFIG_ADDRESS
 	out dx, eax
 	mov dx, PCI_CONFIG_DATA

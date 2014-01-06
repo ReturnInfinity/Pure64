@@ -42,22 +42,15 @@ os_move_cursor:
 ;  IN:	Nothing
 ; OUT:	Nothing, all registers perserved
 os_print_newline:
-	push rax
-
-	mov ah, 0			; Set the cursor x value to 0
-	mov al, [screen_cursor_y]	; Grab the cursor y value
-	cmp al, 24			; Compare to see if we are on the last line
-	je os_print_newline_scroll	; If so then we need to scroll the sreen
-	
-	inc al				; If not then we can go ahead an increment the y value
-	jmp os_print_newline_done
-	
-os_print_newline_scroll:
-	mov ax, 0x0000			; If we have reached the end then wrap back to the front
-
-os_print_newline_done:
-	call os_move_cursor		; update the cursor
-
+	mov r8, rax
+	mov r9, rbx
+;	mov ah, 0				; Set the cursor x value to 0
+	movzx eax, byte [screen_cursor_y]	; Grab the cursor y value
+	xor ebx, ebx
+	cmp al, 24				; Compare to see if we are on the last line
+	lea eax, [eax+1]
+	cmove eax, ebx
+	call os_move_cursor
 	pop rax
 	ret
 ; -----------------------------------------------------------------------------
@@ -75,7 +68,7 @@ os_print_string:
 
 os_print_string_nextchar:
 	lodsb				; Get char from string and store in AL
-	cmp al, 0			; Strings are Zero terminated.
+	test al, 0			; Strings are Zero terminated.
 	je os_print_string_done		; If char is Zero then it is the end of the string
 
 	cmp al, 13			; Check if there was a newline character in the string
@@ -104,8 +97,9 @@ os_print_char:
 	push rdi
 
 	mov rdi, [screen_cursor_offset]
-	stosb
-	add qword [screen_cursor_offset], 2	; Add 2 (1 byte for char and 1 byte for attribute)
+	mov [rdi], al
+	add rdi, 2
+	mov [screen_cursor_offset], rdi	; Add 2 (1 byte for char and 1 byte for attribute)
 
 	pop rdi
 	ret
@@ -263,13 +257,12 @@ os_dump_mem:
 
 	push rsi
 
-	mov rcx, 512
+	mov ecx, 512
 dumpit:
 	lodsb
 	call os_print_char_hex
-	dec rcx
-	cmp rcx, 0
-	jne dumpit
+	dec ecx
+	jnz dumpit
 	
 	pop rsi
 	

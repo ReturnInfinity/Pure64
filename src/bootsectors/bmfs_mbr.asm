@@ -35,7 +35,6 @@ entry:
 load_nextsector:
 	call readsector			; Load 512 bytes
 	dec eax
-	cmp eax, 0
 	jnz load_nextsector
 	
 	mov eax, [0x8000]

@@ -32,8 +32,8 @@ interrupt_gate:				; handler for all other interrupts
 ; This IRQ runs whenever there is input on the keyboard
 align 16
 keyboard:
-	push rdi
-	push rax
+	mov r8, rdi
+	mov r9, rax
 
 	xor eax, eax
 
@@ -53,8 +53,8 @@ keyboard_done:
 	xor eax, eax
 	mov [rdi+0xB0], eax
 
-	pop rax
-	pop rdi
+	mov rax, r9
+	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -186,9 +186,8 @@ exception_gate_main:
 	mov rsi, int_string
 	call os_print_string
 	mov rsi, exc_string00
-	and rax, 0xFF			; Clear out everything in RAX except for AL
-	mov bl, 8
-	mul bl				; AX = AL x BL
+	movzx eax, al			; Clear out everything in RAX except for AL
+	shl eax, 3 				; EAX = AL x 8
 	add rsi, rax			; Use the value in RAX as an offset to get to the right message
 	call os_print_string
 	mov rsi, adr_string

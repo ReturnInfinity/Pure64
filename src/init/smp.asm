@@ -20,7 +20,6 @@ init_smp:
 	xor eax, eax
 	xor edx, edx
 	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID location
 	mov eax, [rsi+0x20]		; APIC ID is stored in bits 31:24
 	shr eax, 24			; AL now holds the BSP CPU's APIC ID
 	movzx edx, al			; Store BSP APIC ID in DL
