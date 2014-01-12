@@ -11,28 +11,24 @@
 ;  IN:	AH, AL = row, column
 ; OUT:	Nothing. All registers preserved
 os_move_cursor:
-	push rcx
 	push rbx
 	push rax
 
-	xor ebx, ebx
-	mov [screen_cursor_x], ah
-	mov [screen_cursor_y], al
-	mov bl, ah
+	mov [screen_cursor_y], ax
+;	mov [screen_cursor_y], al
+	movzx ebx, al
 	
 	; Calculate the new offset
-	and rax, 0x00000000000000FF	; only keep the low 8 bits
-	mov cl, 80
-	mul cl				; AX = AL * CL
-	add ax, bx
-	shl ax, 1			; multiply by 2
+	shl eax, 8
+	movzx eax, al			; only keep the low 8 bits
+	imul al, 160			; EAX = (80*AL+BL)*2=160*AL+2*BL
+	lea eax, [eax+ebx*2]
 
-	add rax, 0x00000000000B8000
+	add eax, 0xB8000
 	mov [screen_cursor_offset], rax
 	
 	pop rax
 	pop rbx
-	pop rcx
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -51,7 +47,8 @@ os_print_newline:
 	lea eax, [eax+1]
 	cmove eax, ebx
 	call os_move_cursor
-	pop rax
+	mov rax, r8
+	mov rbx, r9
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -63,29 +60,46 @@ os_print_newline:
 os_print_string:
 	push rsi
 	push rax
-
-	cld				; Clear the direction flag.. we want to increment through the string
-
-os_print_string_nextchar:
-	lodsb				; Get char from string and store in AL
-	test al, 0			; Strings are Zero terminated.
-	je os_print_string_done		; If char is Zero then it is the end of the string
-
+	mov rdi, [screen_cursor_offset]
+os_print_string_nextreg:
+	mov r8,  [rsi]
+	xor r9, r9
+	xor ecx, ecx
+	mov cl, -8
+os_print_string_nextchar_reg:
+	movzx eax, r8b				; Get char from string and store in AL
+	shl r8, 8
 	cmp al, 13			; Check if there was a newline character in the string
-	je os_print_string_newline	; If so then we print a new line
-
-	call os_print_char
-
-	jmp os_print_string_nextchar
-
-os_print_string_newline:
-	call os_print_newline
-	jmp os_print_string_nextchar
+	jne os_print_string_char	; If not newline, skip to the standard part
+	movzx edx, word [screen_cursor_y]
+	movzx ebx, dl
+	shl  edx, 8
+	cmp bl, 24
+	lea ebx, [ebx+1]
+	cmove rbx, r9			; if ebx<=24 increment it, otherwise set it to 0
+	imul dl, 160
+	lea  edx, [edx+ebx*2]
+	add edx, 0xB8000
+	mov edi, edx
+os_print_string_char	
+	mov [rdi], al
+	add rdi, 2
+	dec ecx
+	test eax, eax
+	cmovz rcx, r9
+	test ecx, ecx
+	jnz os_print_string_nextchar_reg
+	add rsi, 8
+	test eax,eax
+	jnz os_print_string_nextreg
 
 os_print_string_done:
+	mov [screen_cursor_offset], rdi
 	pop rax
 	pop rsi
 	ret
+
+
 ; -----------------------------------------------------------------------------
 
 
@@ -111,23 +125,28 @@ os_print_char:
 ;  IN:	AL = char to display
 ; OUT:	Nothing. All registers preserved
 os_print_char_hex:
-	push rbx
-	push rax
+	mov r8, rbx
+	mov r9, rax
+	mov r10, rcx
+	mov r11, rdi
 
+	shr eax, 4			; we want to work on the high part so shift right by 4 bits
+	mov rdi, [screen_cursor_offset]
 	mov rbx, hextable
+	movzx ecx, al			; save rax for the next part
+	movzx eax, byte [rbx+rax]
+	and cl, 0x0f
+	movzx ecx, byte [rbx+rcx]
+	shl ecx, 8			; 2 bytes for char
+	or eax, ecx
+	mov [rdi], eax
+	add rdi, 4
+	mov [screen_cursor_offset], rdi
 
-	push rax			; save rax for the next part
-	shr al, 4			; we want to work on the high part so shift right by 4 bits
-	xlatb
-	call os_print_char
-
-	pop rax
-	and al, 0x0f			; we want to work on the low part so clear the high part
-	xlatb
-	call os_print_char
-
-	pop rax
-	pop rbx
+	mov rax, r9
+	mov rbx, r8
+	mov rcx, r10
+	mov rdi, r11
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -293,13 +312,13 @@ os_int_to_string:
 	push rax
 
 	mov rbx, 10				; base of the decimal system
-	xor rcx, rcx				; number of digits generated
+	xor ecx, ecx				; number of digits generated
 os_int_to_string_next_divide:
-	xor rdx, rdx				; RAX extended to (RDX,RAX)
+	xor edx, edx				; RAX extended to (RDX,RAX)
 	div rbx					; divide by the number-base
 	push rdx				; save remainder on the stack
 	inc rcx					; and count this remainder
-	cmp rax, 0x0				; was the quotient zero?
+	test rax, rax 				; was the quotient zero?
 	jne os_int_to_string_next_divide	; no, do another division
 os_int_to_string_next_digit:
 	pop rdx					; else pop recent remainder
@@ -307,8 +326,8 @@ os_int_to_string_next_digit:
 	mov [rdi], dl				; store to memory-buffer
 	inc rdi
 	loop os_int_to_string_next_digit	; again for other remainders
-	mov al, 0x00
-	stosb					; Store the null terminator at the end of the string
+	xor eax, eax
+	mov [rdi], al				; Store the null terminator at the end of the string
 
 	pop rax
 	pop rbx
