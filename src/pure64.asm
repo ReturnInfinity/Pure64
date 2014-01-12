@@ -318,6 +318,7 @@ clearcs64:
 	mov edi, 0x14000
 buildem:
 	mov [rdi], rax
+	add rdi, 8
 	add rax, 0x200000
 	dec rcx
 	jnz buildem
