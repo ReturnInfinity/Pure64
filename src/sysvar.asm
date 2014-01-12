@@ -43,8 +43,8 @@ cpu_activated:		equ SystemVariables + 258
 cpu_detected:		equ SystemVariables + 260
 
 ; DB - Starting at offset 384, increments by 1
-screen_cursor_x:	equ SystemVariables + 386
-screen_cursor_y:	equ SystemVariables + 387
+screen_cursor_y:	equ SystemVariables + 386
+screen_cursor_x:	equ SystemVariables + 387
 memtempstring:		equ SystemVariables + 390
 speedtempstring:	equ SystemVariables + 400
 cpu_amount_string:	equ SystemVariables + 410
