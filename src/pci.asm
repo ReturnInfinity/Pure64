@@ -22,7 +22,6 @@ os_pci_read_reg:
 	shl ebx, 16			; Move Bus to bits 23 - 16
 	shl ecx, 8			; Move Device/Function to bits 15 - 8
 	or ebx, ecx
-	movzx edx, dl
 	shl edx, 2			; Move Register to bits 7 - 2
 	or edx, ebx
 	bts edx, 31			; Set bit 31
