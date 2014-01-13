@@ -35,24 +35,20 @@ keyboard:
 	mov r8, rdi
 	mov r9, rax
 
+	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
 	xor eax, eax
-	xor edi, edi
-	mov dil, 10			; RTC increment
-
+	mov [rdi+0xB0], eax
+	mov rdi, [os_Counter_RTC]
+	add rdi, 10
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
 	jnz keyboard_done
 
 	mov [0x000B8088], al		; Dump the scancode to the screen
-
-	add rdi, [os_Counter_RTC]
 	mov [os_Counter_RTC], rdi
 
 keyboard_done:
-	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	xor eax, eax
-	mov [rdi+0xB0], eax
-
+	
 	mov rax, r9
 	mov rdi, r8
 	iretq
@@ -71,6 +67,7 @@ rtc:
 	mov dil, 'R'
 	mov [0x000B8092], dil
 	mov rax, [os_Counter_RTC]
+	mov rdi, [os_LocalAPICAddress]
 	inc rax
 	mov [os_Counter_RTC], rax
 	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
@@ -79,9 +76,7 @@ rtc:
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
-
-	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	xor eax, eax
+	xor eax, eax			; Acknowledge the IRQ on APIC
 	mov [rdi+0xB0], eax
 
 	pop rax
