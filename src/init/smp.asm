@@ -35,12 +35,12 @@ smp_send_INIT:
 	test ecx, ecx
 	jz smp_send_INIT_done
 	movzx eax, byte [rsi]
-
+	xor ebx, ebx
 	cmp al, dl			; Is it the BSP?
 	sete bl
 	neg ebx
 	lea ecx, [ecx+ebx]
-	je smp_send_INIT
+	jnz smp_send_INIT
 
 	; Broadcast 'INIT' IPI to APIC ID in AL
 	mov rdi, [os_LocalAPICAddress]
