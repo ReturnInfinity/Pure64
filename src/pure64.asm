@@ -417,8 +417,8 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov [0x000B809E], al
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
-	xor eax, eax
 	bts ecx, 8			; ecx=256
+	xor eax, eax
 	mov edi, 0xF000
 clearmapnext:
 	rep stosq
