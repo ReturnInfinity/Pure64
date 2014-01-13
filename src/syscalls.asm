@@ -58,11 +58,15 @@ os_print_newline:
 ;  IN:	RSI = message location (zero-terminated string)
 ; OUT:	Nothing, all registers perserved
 os_print_string:
-	push rsi
-	push rax
+	mov r10, rdi
 	mov rdi, [screen_cursor_offset]
+	mov r15, rsi
+	mov r14, rax
+	mov r13, rbx
+	mov r12, rcx
+	mov r11, rdx
 os_print_string_nextreg:
-	mov r8,  [rsi]
+	mov r8, [rsi]
 	xor r9, r9
 	xor ecx, ecx
 	mov cl, -8
@@ -78,9 +82,8 @@ os_print_string_nextchar_reg:
 	lea ebx, [ebx+1]
 	cmove rbx, r9			; if ebx<=24 increment it, otherwise set it to 0
 	imul dx, 160
-	lea  edx, [edx+ebx*2]
-	add edx, 0xB8000
-	mov edi, edx
+	lea  edi, [edx+ebx*2]
+	add edi, 0xB8000
 os_print_string_char:	
 	mov [rdi], al
 	add rdi, 2
@@ -95,8 +98,12 @@ os_print_string_char:
 
 os_print_string_done:
 	mov [screen_cursor_offset], rdi
-	pop rax
-	pop rsi
+	mov rdi, r10
+	mov rdx, r11
+	mov rcx, r12
+	mov rbx, r13
+	mov rax, r14
+	mov rsi, r15
 	ret
 
 
