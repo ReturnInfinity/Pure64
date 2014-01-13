@@ -36,6 +36,8 @@ keyboard:
 	mov r9, rax
 
 	xor eax, eax
+	xor edi, edi
+	mov dil, 10			; RTC increment
 
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
@@ -43,9 +45,8 @@ keyboard:
 
 	mov [0x000B8088], al		; Dump the scancode to the screen
 
-	mov rax, [os_Counter_RTC]
-	add rax, 10
-	mov [os_Counter_RTC], rax
+	add rdi, [os_Counter_RTC]
+	mov [os_Counter_RTC], rdi
 
 keyboard_done:
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
