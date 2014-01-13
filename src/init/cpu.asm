@@ -94,7 +94,7 @@ init_cpu:
 
 	mov eax, 0x01000000		; Set bits 31-24 for all cores to be in Group 1
 	shl rax, 32
-	mov dword [rsi+0x80], rax	; Task Priority Register (TPR)
+	mov dword [rsi+0x80], eax	; Task Priority Register (TPR)
 
 	xor eax, eax
 	not eax				; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode

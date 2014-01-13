@@ -21,7 +21,7 @@ os_move_cursor:
 	; Calculate the new offset
 	shl eax, 8
 	movzx eax, al			; only keep the low 8 bits
-	imul al, 160			; EAX = (80*AL+BL)*2=160*AL+2*BL
+	imul ax, 160			; EAX = (80*AL+BL)*2=160*AL+2*BL
 	lea eax, [eax+ebx*2]
 
 	add eax, 0xB8000
@@ -77,11 +77,11 @@ os_print_string_nextchar_reg:
 	cmp bl, 24
 	lea ebx, [ebx+1]
 	cmove rbx, r9			; if ebx<=24 increment it, otherwise set it to 0
-	imul dl, 160
+	imul dx, 160
 	lea  edx, [edx+ebx*2]
 	add edx, 0xB8000
 	mov edi, edx
-os_print_string_char	
+os_print_string_char:	
 	mov [rdi], al
 	add rdi, 2
 	dec ecx

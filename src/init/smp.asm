@@ -33,12 +33,13 @@ init_smp:
 	movzx ecx, word [cpu_detected]
 smp_send_INIT:
 	test ecx, ecx
-	je smp_send_INIT_done
+	jz smp_send_INIT_done
 	movzx eax, byte [rsi]
 
 	cmp al, dl			; Is it the BSP?
 	sete bl
-	lea ecx, [ecx-ebx]
+	neg ebx
+	lea ecx, [ecx+ebx]
 	je smp_send_INIT
 
 	; Broadcast 'INIT' IPI to APIC ID in AL

@@ -70,8 +70,8 @@ nextchecksum:
 ;	lodsd				; OEMID (First 4 bytes)
 ;	lodsw				; OEMID (Last 2 bytes)
 ;	lodsb				; Grab the Revision value (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
-	movzx eax, [rsi]
-	lea ebx  [eax+49]
+	movzx eax, byte [rsi]
+	lea ebx, [eax+49]
 	mov [0x000B8098], al		; Print the ACPI version number
 	test eax, eax
 	jnz foundACPIv2			; Otherwise it is v2.0 or higher

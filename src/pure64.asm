@@ -203,7 +203,7 @@ create_pdpe:
 	mov [edi], eax
 	mov [edi+4], ebx	
 	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
-	lea edi, edi+8
+	lea edi, [edi+8]
 	dec ecx
 	jnz create_pdpe
 
@@ -314,7 +314,7 @@ clearcs64:
 
 ; Build the rest of the page tables (4GiB+)
 	mov ecx, 30720
-	mov rax, 010000008F
+	mov rax, 0x10000008F
 	mov edi, 0x14000
 buildem:
 	mov [rdi], rax
