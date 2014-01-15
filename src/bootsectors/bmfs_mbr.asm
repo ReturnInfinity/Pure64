@@ -1,12 +1,12 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
 ;
 ; In this code we are expecting a BMFS-formatted drive. With BMFS the Pure64
-; binary is required to start at sector 8 (8192 bytes from the start). A small
+; binary is required to start at sector 16 (8192 bytes from the start). A small
 ; ckeck is made to make sure Pure64 was loaded by comparing a signiture.
 ; =============================================================================
 
@@ -141,6 +141,11 @@ msg_Load db "BMFS MBR v1.0 - Loading Pure64", 0
 msg_LoadDone db " - done.", 13, 10, "Executing...", 0
 msg_MagicFail db " - Not found!", 0
 DriveNumber db 0x00
+
+times 446-$+$$ db 0
+
+; False partition table entry required by some BIOS vendors.
+db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
 
 times 510-$+$$ db 0
 
