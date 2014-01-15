@@ -18,7 +18,7 @@ searchingforACPI:
 	jne searchingforACPI
 
 foundACPI:				; Found a Pointer Structure, verify the checksum
-	push rsi
+	mov r8, rsi
 	xor ebx, ebx
 	mov ecx, -8
 nextchecksum:
@@ -49,7 +49,7 @@ nextchecksum:
 	shl rax, 8
 	add ecx, 8
 	jz nextchecksum
-	mov eax, [rsi+16]
+	mov eax, [rsi+8]
 	movzx edx, al
 	add ebx, edx
 	shl eax, 8
@@ -65,14 +65,14 @@ nextchecksum:
 	
 	cmp ebx, ebx
 	jne searchingforACPI		; Checksum didn't check out? Then keep looking.
-	add rsi, 27 
 ;	lodsb				; Checksum
 ;	lodsd				; OEMID (First 4 bytes)
 ;	lodsw				; OEMID (Last 2 bytes)
 ;	lodsb				; Grab the Revision value (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
+	lea rsi, [r8+8]
 	movzx eax, byte [rsi]
 	lea ebx, [eax+49]
-	mov [0x000B8098], al		; Print the ACPI version number
+	mov [0x000B8098], bl		; Print the ACPI version number
 	test eax, eax
 	jnz foundACPIv2			; Otherwise it is v2.0 or higher
 
@@ -184,7 +184,8 @@ readAPICstructures:
 ;	mov al, ' '
 ;	call os_print_char
 ;	pop rax
-	je APICapic
+;	je APICapic
+	inc rsi
 	cmp al, 0x01			; I/O APIC
 	je APICioapic
 	cmp al, 0x02			; Interrupt Source Override
@@ -204,15 +205,14 @@ readAPICstructures:
 
 APICapic:
 	xor eax, eax
-	xor edx, edx
-	mov edx, [rsi]			; Length (will be set to 8)
+	mov edx, [rsi]		; Length (will be set to 8)
 	movzx eax, dl
 	shl edx, 24
-	add rsi, 4
 	add ebx, eax
-	movzx eax, byte [rsi]		; Flags (Bit 0 set if enabled/usable)
+	movzx eax, byte [rsi+4]		; Flags (Bit 0 set if enabled/usable)
+	add rsi, 8
 	test al, 1			; Test to see if usable
-	jnz readAPICstructures		; Read the next structure if CPU not usable
+	jne readAPICstructures		; Read the next structure if CPU not usable
 	mov eax, edx			; Restore the APIC ID back to EAX
 	movzx edx, word [cpu_detected]
 	add edx, 1
@@ -221,25 +221,19 @@ APICapic:
 	jmp readAPICstructures		; Read the next structure
 
 APICioapic:
-	xor eax, eax
-	lodsb				; Length (will be set to 12)
+	movzx eax, byte [rsi]		; Length (will be set to 12)
 	add ebx, eax
-	lodsb				; IO APIC ID
-	lodsb				; Reserved
-	xor eax, eax
-	lodsd				; IO APIC Address
-	push rdi
-	push rcx
-	mov rdi, os_IOAPICAddress
-	movzx ecx, byte [os_IOAPICCount]
-	shl ecx, 3			; Quick multiply by 8
-	add rdi, rcx
-	pop rcx
-	stosd				; Store the IO APIC Address
-	lodsd				; System Vector Base
-	stosd				; Store the IO APIC Vector Base
-	pop rdi
+;	lodsb				; IO APIC ID
+;	lodsb				; Reserved
+	mov eax, [rsi+4]		; IO APIC Address
+	mov edx, [rsi+8]		; System Vector Base
+	mov r8, os_IOAPICAddress
+	movzx r9, byte [os_IOAPICCount]
+	lea r8, [r8+r9*8]
+	mov [r8], eax			; Store the IO APIC Address
+	mov [r8+4], edx			; Store the IO APIC Vector Base
 	inc byte [os_IOAPICCount]
+	add rsi, 12
 	jmp readAPICstructures		; Read the next structure
 
 APICinterruptsourceoverride:
@@ -254,7 +248,7 @@ APICinterruptsourceoverride:
 ;	call os_print_char
 	lodsd				; Global System Interrupt
 ;	call os_debug_dump_eax
-	lodsw				; Flags
+	add rsi, 10
 	jmp readAPICstructures		; Read the next structure
 
 APICx2apic:
@@ -262,7 +256,7 @@ APICx2apic:
 	xor edx, edx
 	movzx eax, byte [rsi]		; Length (will be set to 16)
 	add ebx, eax
-	mov rdx, [rsi+7]		; Save the x2APIC ID to EDX
+	mov rdx, [rsi+8]		; Save the x2APIC ID to EDX
 	mov eax, edx
 	shr rdx, 32	
 	test al, 1			; Test to see if usable
@@ -272,7 +266,7 @@ APICx2apic:
 	call os_print_newline
 	; Save the ID's somewhere
 APICx2apicEnd:
-	add rsi, 15			; ACPI Processor UID
+	add rsi, 16			; ACPI Processor UID
 	jmp readAPICstructures		; Read the next structure
 
 APICignore:

@@ -472,8 +472,7 @@ readnextrecord:
 	or ebx, edx
 	cmp eax, 6			; BIOS Reclaimable
 	sete dl
-	or ebx, edx
-	test ebx, ebx
+	add ebx, edx
 	jz badmem
 	add rcx, [rsi+8]
 	add esi, 16

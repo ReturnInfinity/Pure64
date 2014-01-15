@@ -7,6 +7,9 @@
 
 
 init_ioapic:
+	mov rsi, [os_IOAPICAddress]
+	xor edx, edx
+	mov dl, 0x10			; offset
 	xor eax, eax
 	mov al, 0x70			; IMCR access
 	out 0x22, al
@@ -15,27 +18,23 @@ init_ioapic:
 
 	xor eax, eax
 	lea ecx, [eax+1]		; Register 1 - IOAPIC VERSION REGISTER
-	call ioapic_reg_read
-	shr eax, 16			; Extract bytes 16-23 (Maximum Redirection Entry)
-	and eax, 0xFF			; Clear bits 16-31
-	mov ecx, eax
+	mov dword [rsi], ecx            ; Write index to register selector
+	mov eax, dword [rsi + rdx]     ; Read data from window register
+	shr eax, 16			; Extract byte 16-23 (Maximum Redirection Entry)
+	movzx ecx, ax
 	xor eax, eax
 	bts eax, 16			; Interrupt Mask Enabled
-	xor edx, edx
 initentry:				; Initialize all entries 1:1
-	mov ebx, ecx
-	shl ebx, 2
-	add ebx, 0x10			; offset
+	lea ebx, [edx+ecx*4]
 	mov [rsi], ebx
-	mov [rsi+0x10], eax
+	mov [rsi+rdx], eax
 	add ebx, 1
 	mov [rsi], ebx
-	mov [rsi+0x10], edx
+	mov [rsi+rdx], edx
 	dec ecx
 	jnz initentry
 
 	; Get the BSP APIC ID
-	mov rsi, [os_LocalAPICAddress]
 	mov eax, [rsi+0x20]		; Load a 32-bit value. We only want the high 8 bits
 	xor ebx, ebx
 	shr eax, 24			; Shift to the right and AL now holds the CPU's APIC ID
@@ -47,22 +46,22 @@ initentry:				; Initialize all entries 1:1
 	mov bl, 0x21			; Interrupt value
 	or rbx, rax
 	mov [rsi], ecx
-	mov [rsi+0x10], ebx
+	mov [rsi+rdx], ebx
 	shr rbx, 32
 	add ecx, 1
 	mov [rsi], ecx			
-	mov [rsi+0x10], ebx		; high-dword
+	mov [rsi+rdx], ebx		; high-dword
 
 	; Enable the RTC
 	xor ebx, ebx
 	mov bl, 0x28			; Interrupt value
 	or rbx, rax
 	mov [rsi], ecx
-	mov [rsi+0x10], ebx
+	mov [rsi+rdx], ebx
 	shr rbx, 32
 	add ecx, 1
 	mov [rsi], ecx			
-	mov [rsi+0x10], ebx		; high-dword
+	mov [rsi+rdx], ebx		; high-dword
 
 
 	; Set the periodic flag in the RTC

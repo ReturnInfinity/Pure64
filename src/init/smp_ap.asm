@@ -121,12 +121,11 @@ startap64:
 	jmp rax
 	nop
 clearcs64_ap:
-	xor eax, eax
 
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
 	mov esi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
 	mov eax, [rsi+0x20]		; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 14			; Shift to the right and AL now holds the CPU's APIC ID
+	shr eax, 14			; Shift to the right and AL now holds the CPU's APIC ID
 					; shift left 10 bits for a 1024byte stack
 	lea esp, [eax+0x50400]		; stacks decrement when you "push", start at 1024 bytes in
 					; Pure64 leaves 0x50000-0x9FFFF free so we use that
@@ -150,10 +149,9 @@ clearcs64_ap:
 ;	div rax
 
 	lock inc word [cpu_activated]
-	xor eax, eax
 	mov rsi, [os_LocalAPICAddress]
 	mov eax, [rsi+0x20]		; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 					; The location where the cpu values are stored
 	lea edi, [eax+0x05700]		; RDI points to infomap CPU area + APIC ID. ex F701 would be APIC ID 1
 	xor eax, eax

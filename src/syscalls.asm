@@ -46,7 +46,10 @@ os_print_newline:
 	cmp al, 24				; Compare to see if we are on the last line
 	lea eax, [eax+1]
 	cmove eax, ebx
-	call os_move_cursor
+	mov ebx, 0xB8000
+	mov [screen_cursor_y], ax
+	lea eax, [ebx+eax*2]
+	mov [screen_cursor_offset], rax
 	mov rax, r8
 	mov rbx, r9
 	ret
@@ -87,7 +90,7 @@ os_print_string_nextchar_reg:
 os_print_string_char:	
 	mov [rdi], al
 	add rdi, 2
-	dec ecx
+	inc ecx
 	test eax, eax
 	cmovz rcx, r9
 	test ecx, ecx
@@ -209,27 +212,22 @@ os_dump_regs:
 	push rbx
 	push rax
 
-	mov byte [os_dump_reg_stage], 0x00	; Reset the stage to 0 since we are starting
+	xor edx, edx
 	mov rcx, rsp
 	call os_print_newline
+	mov rsi, os_dump_reg_string00
 
 os_dump_regs_again:
-	mov rsi, os_dump_reg_string00
-	xor rax, rax
-	xor rbx, rbx
-	mov al, [os_dump_reg_stage]
-	mov bl, 5				; each string is 5 bytes
-	mul bl					; ax = bl x al
+	lea eax, [edx+edx*4] 			; each string is 5 bytes
 	add rsi, rax
 	call os_print_string			; Print the register name
 
 	mov rax, [rcx]
 	add rcx, 8
 	call os_debug_dump_rax
-
-	add byte [os_dump_reg_stage], 1
-	cmp byte [os_dump_reg_stage], 0x10
-	jne os_dump_regs_again
+	inc edx
+	cmp dl, 0x10
+	jnz os_dump_regs_again
 
 	pop rax
 	pop rbx
@@ -349,19 +347,19 @@ os_int_to_string_next_digit:
 ; rax = address of handler
 ; rdi = gate # to configure
 create_gate:
-	push rdi
-	push rax
+	mov r8, rdi
+	mov r9, rax
 	
 	shl rdi, 4			; quickly multiply rdi by 16
-	stosw				; store the low word (15..0)
+	mov [rdi], ax			; store the low word (15..0)
 	shr rax, 16
-	add rdi, 4			; skip the gate marker
-	stosw				; store the high word (31..16)
+;	add rdi, 4			; skip the gate marker
+	mov [rdi+6], ax			; store the high word (31..16)
 	shr rax, 16
-	stosd				; store the high dword (63..32)
+	mov [rdi+8], eax		; store the high dword (63..32)
 
-	pop rax
-	pop rdi
+	mov r9, rax
+	mov r8, rdi
 ret
 ; -----------------------------------------------------------------------------
 
