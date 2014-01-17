@@ -11,24 +11,23 @@
 ;  IN:	AH, AL = row, column
 ; OUT:	Nothing. All registers preserved
 os_move_cursor:
-	push rbx
-	push rax
-
+	mov r8, rbx
+	mov r9, rax
+	movzx eax, ax
 	mov [screen_cursor_y], ax
 ;	mov [screen_cursor_y], al
 	movzx ebx, al
 	
 	; Calculate the new offset
-	shl eax, 8
-	movzx eax, al			; only keep the low 8 bits
+	shr eax, 8			; only keep the low 8 bits
 	imul ax, 160			; EAX = (80*AL+BL)*2=160*AL+2*BL
 	lea eax, [eax+ebx*2]
 
 	add eax, 0xB8000
 	mov [screen_cursor_offset], rax
 	
-	pop rax
-	pop rbx
+	mov rax, r9
+	mov rbx, r8
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -80,12 +79,12 @@ os_print_string_nextchar_reg:
 	jne os_print_string_char	; If not newline, skip to the standard part
 	movzx edx, word [screen_cursor_y]
 	movzx ebx, dl
-	shl  edx, 8
+	shr  edx, 8
 	cmp bl, 24
 	lea ebx, [ebx+1]
 	cmove rbx, r9			; if ebx<=24 increment it, otherwise set it to 0
 	imul dx, 160
-	lea  edi, [edx+ebx*2]
+	lea edi, [edx+ebx*2]
 	add edi, 0xB8000
 os_print_string_char:	
 	mov [rdi], al
@@ -118,14 +117,14 @@ os_print_string_done:
 ;  IN:	AL = char to display
 ; OUT:	Nothing. All registers preserved
 os_print_char:
-	push rdi
+	mov r8, rdi
 
 	mov rdi, [screen_cursor_offset]
 	mov [rdi], al
 	add rdi, 2
 	mov [screen_cursor_offset], rdi	; Add 2 (1 byte for char and 1 byte for attribute)
 
-	pop rdi
+	mov rdi, r8
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -316,8 +315,10 @@ os_int_to_string:
 	push rbx
 	push rax
 
-	mov rbx, 10				; base of the decimal system
+
 	xor ecx, ecx				; number of digits generated
+	xor ebx, ebx
+	mov bl, 10				; base of the decimal system
 os_int_to_string_next_divide:
 	xor edx, edx				; RAX extended to (RDX,RAX)
 	div rbx					; divide by the number-base
@@ -330,7 +331,8 @@ os_int_to_string_next_digit:
 	add dl, '0'				; and convert to a numeral
 	mov [rdi], dl				; store to memory-buffer
 	inc rdi
-	loop os_int_to_string_next_digit	; again for other remainders
+	dec ecx
+	jnz os_int_to_string_next_digit		; again for other remainders
 	xor eax, eax
 	mov [rdi], al				; Store the null terminator at the end of the string
 
