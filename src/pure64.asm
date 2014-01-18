@@ -500,7 +500,7 @@ badmem:
 
 endmemcalc:
 	shr rcx, 20			; Value is in bytes so do a quick divide by 1048576 to get MiB's
-	inc ecx, 1			; The BIOS will usually report actual memory minus 1
+	inc ecx				; The BIOS will usually report actual memory minus 1
 	and ecx, 0xFE			; Make sure it is an even number (in case we added 1 to an even number)
 	mov dword [mem_amount], ecx
 

@@ -141,7 +141,7 @@ speedtest:
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the current settings
-	mov ebx, eax 
+	mov ebx, eax
 	btc ebx, 6			; Set Periodic(6)
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
