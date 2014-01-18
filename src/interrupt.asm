@@ -34,21 +34,22 @@ align 16
 keyboard:
 	mov r8, rdi
 	mov r9, rax
-
+	mov r10, rbx
+	xor ebx, ebx
+	mov bl, 10
+	add rbx, [os_Counter_RTC]
 	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
 	xor eax, eax
 	mov [rdi+0xB0], eax
-	mov rdi, [os_Counter_RTC]
-	add rdi, 10
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
 	jnz keyboard_done
 
 	mov [0x000B8088], al		; Dump the scancode to the screen
-	mov [os_Counter_RTC], rdi
+	mov [os_Counter_RTC], rbx
 
 keyboard_done:
-	
+	mov rbx, r10
 	mov rax, r9
 	mov rdi, r8
 	iretq
@@ -60,14 +61,14 @@ keyboard_done:
 ; Real-time clock interrupt. IRQ 0x08, INT 0x28
 align 16
 rtc:
-	push rdi
-	push rax
+	mov  r8, rdi 
+	mov  r9, rax
 
+	mov rax, [os_Counter_RTC]
+	mov rdi, [os_LocalAPICAddress]
 	xor edi, edi
 	mov dil, 'R'
 	mov [0x000B8092], dil
-	mov rax, [os_Counter_RTC]
-	mov rdi, [os_LocalAPICAddress]
 	inc rax
 	mov [os_Counter_RTC], rax
 	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
@@ -79,8 +80,8 @@ rtc:
 	xor eax, eax			; Acknowledge the IRQ on APIC
 	mov [rdi+0xB0], eax
 
-	pop rax
-	pop rdi
+	mov rax, r9
+	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -183,8 +184,7 @@ exception_gate_main:
 	call os_print_string
 	mov rsi, exc_string00
 	movzx eax, al			; Clear out everything in RAX except for AL
-	shl eax, 3 				; EAX = AL x 8
-	add rsi, rax			; Use the value in RAX as an offset to get to the right message
+	lea rsi, [rsi+rax*8]		; Use the value in RAX as an offset to get to the right message
 	call os_print_string
 	mov rsi, adr_string
 	call os_print_string

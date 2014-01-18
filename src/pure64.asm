@@ -21,13 +21,13 @@ USE16
 ORG 0x00008000
 start:
 	cli				; Disable all interrupts
-	xor eax, eax
-	xor ebx, ebx
-	xor ecx, ecx
-	xor edx, edx
-	xor esi, esi
-	xor edi, edi
-	xor ebp, ebp
+	xor ax, ax
+	xor bx, bx
+	xor cx, cx
+	xor dx, dx
+	xor si, si
+	xor di, di
+	xor bp, bp
 	mov ds, ax
 	mov es, ax
 	mov ss, ax
@@ -62,7 +62,7 @@ clearcs:
 
 ; Disable blinking
 	mov ax, 0x1003
-	mov bx, 0x0000
+	xor bx, bx
 	int 0x10
 
 ; Print message
@@ -167,7 +167,7 @@ start32:
 	rep stosd
 
 ; Clear memory for the Page Descriptor Entries (0x10000 - 0x4FFFF)
-	mov edi, 0x00010000
+	mov edi, 0x10000
 	mov ecx, 65536
 	rep stosd
 
@@ -203,7 +203,7 @@ create_pdpe:
 	mov [edi], eax
 	mov [edi+4], ebx	
 	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
-	lea edi, [edi+8]
+	add edi, 8
 	dec ecx
 	jnz create_pdpe
 
@@ -218,7 +218,7 @@ pd_again:				; Create a 2 MiB page
 	mov [edi+4], ebx
 	add edi, 8
 	add eax, 0x00200000
-	dec ecx, 
+	dec ecx 
 	jnz pd_again			; Create 2048 2 MiB page maps.
 
 ; Load the GDT
@@ -334,13 +334,11 @@ make_exception_gates: 			; make gates for exception handlers
 	mov rbx, rax			; save the exception gate to the stack for later use
 	movzx edx, ax
 	mov [rdi], word ax				; store the low word (15..0) of the address
-	mov ax, SYS64_CODE_SEL
-	movzx eax, ax
+	mov eax, SYS64_CODE_SEL
 	shl eax, 16
 	or  edx, eax
 	mov [rdi+2], word ax				; store the segment selector
-	mov ax, 0x8E00
-	movzx eax, ax
+	mov eax, 0x8E00
 	shl rax, 32
 	or rdx, rax
 	mov [rdi], rdx				; store exception gate marker
@@ -361,9 +359,9 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov rbx, interrupt_gate
 					; save the interrupt gate to the stack for later use
 	mov [rdi], word bx		; store the low word (15..0) of the address
-	mov ax, SYS64_CODE_SEL
+	mov eax, SYS64_CODE_SEL
 	mov [rdi+2], word ax		; store the segment selector
-	mov ax, 0x8F00
+	mov eax, 0x8F00
 	mov [rdi+4], word ax		; store interrupt gate marker
 					; get the interrupt gate back
 	shr rbx, 16
@@ -371,7 +369,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	shr rbx, 16
 	mov eax, ebx
 	mov [rdi+8], rax		; store the extra high dword (63..32) of the address.
-	xor rax, rax
+	xor eax, eax
 	add edi, 16
 	dec ecx
 	jnz make_interrupt_gates
@@ -400,15 +398,32 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov word [0x13*16], exception_gate_19
 
 	xor edi, edi
-	mov edi, 0x21			; Set up Keyboard IRQ handler
+	mov dil, 0x21			; Set up Keyboard IRQ handler
 	mov eax, keyboard
-	call create_gate
-	mov edi, 0x28			; Set up RTC IRQ handler
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax			; set to zero instead of another shr 16
+	mov [rdi+8], eax
+	mov al, 0x28
+	movzx edi, al			; Set up RTC IRQ handler
 	mov eax, rtc
-	call create_gate
-	mov edi, 0xF8			; Set up Spurious handler
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax                    ; set to zero instead of another shr 16
+	mov [rdi+8], eax
+	mov al 0xF8
+	movzx edi, al			; Set up Spurious handler
 	mov eax, spurious
-	call create_gate
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax                    ; set to zero instead of another shr 16
+	mov [rdi+8], eax
 
 	lidt [IDTR64]			; load IDT register
 
@@ -420,7 +435,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	bts ecx, 8			; ecx=256
 	xor eax, eax
 	mov edi, 0xF000
-clearmapnext:
 	rep stosq
 
 	call init_acpi			; Find and process the ACPI tables
@@ -465,12 +479,12 @@ clearmapnext:
 	mov esi, 0x4000	; E820 Map location
 readnextrecord:
 	mov eax, [rsi+20]
-	cmp eax, 1			; Useable RAM
+	cmp al, 1			; Useable RAM
 	sete bl
-	cmp eax, 3			; ACPI Reclaimable
+	cmp al, 3			; ACPI Reclaimable
 	sete dl
 	or ebx, edx
-	cmp eax, 6			; BIOS Reclaimable
+	cmp al, 6			; BIOS Reclaimable
 	sete dl
 	add ebx, edx
 	jz badmem
@@ -486,7 +500,7 @@ badmem:
 
 endmemcalc:
 	shr rcx, 20			; Value is in bytes so do a quick divide by 1048576 to get MiB's
-	add ecx, 1			; The BIOS will usually report actual memory minus 1
+	inc ecx, 1			; The BIOS will usually report actual memory minus 1
 	and ecx, 0xFE			; Make sure it is an even number (in case we added 1 to an even number)
 	mov dword [mem_amount], ecx
 
@@ -510,8 +524,7 @@ endmemcalc:
 	call os_int_to_string
 
 ; Build the infomap
-	xor edi, edi
-	mov di, 0x5000
+	mov edi, 0x5000
 	mov rax, [os_ACPITableAddress]
 	mov [rdi], rax
 	mov eax, [os_BSP]
@@ -557,7 +570,7 @@ nextIOAPIC:
 	mov [0x000B809E], al
 
 ; Print info on CPU and MEM
-	mov ax, 0x0004
+	mov al, 0x4
 	call os_move_cursor
 	mov rsi, msg_CPU
 	call os_print_string
@@ -575,22 +588,23 @@ nextIOAPIC:
 	call os_print_string
 
 ; Move the trailing binary to its final location
-	mov rsi, 0x8000+6144		; Memory offset to end of pure64.sys
-	mov rdi, 0x100000		; Destination address at the 1MiB mark
-	mov rcx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
+	mov esi, 0x8000+6144		; Memory offset to end of pure64.sys
+	mov edi, 0x100000		; Destination address at the 1MiB mark
+	mov ecx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
 	rep movsq			; Copy 8 bytes at a time
 
 ; Print a message that the kernel is being started
-	mov ax, 0x0006
+	xor eax, eax
+	mov al, 0x6
 	call os_move_cursor
 	mov rsi, msg_startingkernel
 	call os_print_string
 
 ; Debug
 	mov rdi, 0x000B8092		; Clear the debug messages
-	mov ax, 0x0720
-	mov cx, 7
-	movzx  ecx, cx
+	mov eax, 0x0720
+	xor ecx, ecx
+	mov cl, 7
 clearnext:
 	mov [rdi], word ax
 	add rdi, 2
