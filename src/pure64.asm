@@ -415,7 +415,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov [rdi+6], word ax
 	xor eax, eax                    ; set to zero instead of another shr 16
 	mov [rdi+8], eax
-	mov al 0xF8
+	mov al, 0xF8
 	movzx edi, al			; Set up Spurious handler
 	mov eax, spurious
 	shl edi, 4
