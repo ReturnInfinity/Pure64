@@ -432,6 +432,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov [0x000B809E], al
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
+	xor ecx, ecx
 	bts ecx, 8			; ecx=256
 	xor eax, eax
 	mov edi, 0xF000
@@ -476,9 +477,14 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	xor ecx, ecx
 	xor ebx, ebx
 	xor edx, edx
+	xor edi, edi
+	xor ebp, ebp
 	mov esi, 0x4000	; E820 Map location
+	mov bpl, 32	
 readnextrecord:
 	mov eax, [rsi+20]
+	add rcx, [rsi+8]
+	mov dil, 16
 	cmp al, 1			; Useable RAM
 	sete bl
 	cmp al, 3			; ACPI Reclaimable
@@ -486,16 +492,10 @@ readnextrecord:
 	or ebx, edx
 	cmp al, 6			; BIOS Reclaimable
 	sete dl
-	add ebx, edx
-	jz badmem
-	add rcx, [rsi+8]
-	add esi, 16
+	or ebx, edx
+	cmovz edi, ebp	
+	add rsi, rdi 
 	test eax, eax			; Are we at the end?
-	jnz readnextrecord
-badmem:
-	add rcx, [rsi+8]
-	add esi, 32
-	test eax, eax
 	jnz readnextrecord
 
 endmemcalc:
@@ -601,15 +601,14 @@ nextIOAPIC:
 	call os_print_string
 
 ; Debug
-	mov rdi, 0x000B8092		; Clear the debug messages
-	mov eax, 0x0720
-	xor ecx, ecx
-	mov cl, 7
-clearnext:
-	mov [rdi], word ax
-	add rdi, 2
-	dec ecx
-	jnz clearnext
+	mov edi, 0xB8092		; Clear the debug messages
+	mov eax, 0x07200720
+	mov ecx, 0x07200720
+	shl rcx, 32
+	or  rax, rcx
+	mov [rdi], rax
+	shr rax, 16
+	mov [rdi+8], rax
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax
