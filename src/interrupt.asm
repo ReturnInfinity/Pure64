@@ -48,15 +48,26 @@ keyboard:
 	mov [os_Counter_RTC], rax
 
 keyboard_done:
-	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	xor eax, eax
-	mov [rdi+0xB0], eax
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
 
 	pop rax
 	pop rdi
 	iretq
 ; -----------------------------------------------------------------------------
 
+
+; -----------------------------------------------------------------------------
+; Cascade interrupt. IRQ 0x02, INT 0x22
+cascade:
+	push rax
+
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
+
+	pop rax
+	iretq
+; -----------------------------------------------------------------------------
 
 
 ; -----------------------------------------------------------------------------
@@ -78,9 +89,9 @@ rtc:
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
 
-	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
-	xor eax, eax
-	mov [rdi+0xB0], eax
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0xA0, al
+	out 0x20, al
 
 	pop rax
 	pop rdi

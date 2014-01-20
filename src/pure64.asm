@@ -393,14 +393,14 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov word [0x12*16], exception_gate_18
 	mov word [0x13*16], exception_gate_19
 
-	mov rdi, 0x21			; Set up Keyboard IRQ handler
+	mov rdi, 0x21			; Set up Keyboard handler
 	mov rax, keyboard
 	call create_gate
-	mov rdi, 0x28			; Set up RTC IRQ handler
-	mov rax, rtc
+	mov rdi, 0x22			; Set up Cascade handler
+	mov rax, cascade
 	call create_gate
-	mov rdi, 0xF8			; Set up Spurious handler
-	mov rax, spurious
+	mov rdi, 0x28			; Set up RTC handler
+	mov rax, rtc
 	call create_gate
 
 	lidt [IDTR64]			; load IDT register
@@ -423,7 +423,7 @@ clearmapnext:
 
 	call init_cpu			; Configure the BSP CPU
 
-	call init_ioapic		; Configure the IO-APIC(s), also activate interrupts
+	call init_pic			; Configure the PIC(s), also activate interrupts
 
 ; Debug
 	mov al, '6'			; CPU Init complete
@@ -627,7 +627,7 @@ clearnext:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/ioapic.asm"
+%include "init/pic.asm"
 %include "init/smp.asm"
 %include "syscalls.asm"
 %include "interrupt.asm"
