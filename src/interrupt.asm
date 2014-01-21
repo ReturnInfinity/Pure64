@@ -56,6 +56,18 @@ keyboard_done:
 ; -----------------------------------------------------------------------------
 
 
+; -----------------------------------------------------------------------------
+; Cascade interrupt. IRQ 0x02, INT 0x22
+cascade:
+	push rax
+
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
+
+	pop rax
+	iretq
+; -----------------------------------------------------------------------------
+
 
 ; -----------------------------------------------------------------------------
 ; Real-time clock interrupt. IRQ 0x08, INT 0x28
@@ -77,8 +89,15 @@ rtc:
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
+<<<<<<< HEAD
 	xor eax, eax			; Acknowledge the IRQ on APIC
 	mov [rdi+0xB0], eax
+=======
+
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0xA0, al
+	out 0x20, al
+>>>>>>> 983df23d90dcbc3413ce669ca901f5da7533a1ec
 
 	mov rax, r9
 	mov rdi, r8

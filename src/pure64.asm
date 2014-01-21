@@ -478,7 +478,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 
 	call init_cpu			; Configure the BSP CPU
 
-	call init_ioapic		; Configure the IO-APIC(s), also activate interrupts
+	call init_pic			; Configure the PIC(s), also activate interrupts
 
 ; Debug
 	mov al, '6'			; CPU Init complete
@@ -668,7 +668,7 @@ nextIOAPIC:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/ioapic.asm"
+%include "init/pic.asm"
 %include "init/smp.asm"
 %include "syscalls.asm"
 %include "interrupt.asm"
