@@ -83,7 +83,7 @@ clearcs:
 
 ; Hide the hardware cursor (interferes with print_string_16 if called earlier)
 	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
-	mov bx, 0x0000			; Page number
+	xor bx, bx			; Page number
 	mov dx, 0x2000			; Row / Column
 	int 0x10
 
@@ -99,7 +99,7 @@ clearcs:
 ; 16-bit function to print a sting to the screen
 print_string_16:			; Output string in SI to screen
 	pusha
-	mov ah, 0x0E			; http://www.ctyme.com/intr/rb-0106.htm
+	mov ax, 0x0E00			; http://www.ctyme.com/intr/rb-0106.htm
 print_string_16_repeat:
 	lodsb				; Get char from string
 	cmp al, 0
@@ -173,7 +173,7 @@ start32:
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
-	mov edi, 0x00001000		; GDT address
+	mov edi, 0x1000		; GDT address
 	mov ecx, (gdt64_end - gdt64)
 	rep movsb			; Move it to final pos.
 
@@ -182,13 +182,13 @@ start32:
 ; PML4 is stored at 0x0000000000002000, create the first entry there
 ; A single PML4 entry can map 512GB with 2MB pages.
 	cld
-	mov edi, 0x00002000		; Create a PML4 entry for the first 4GB of RAM
-	mov eax, 0x00003007
+	mov edi, 0x2000		; Create a PML4 entry for the first 4GB of RAM
+	mov eax, 0x3007
 	mov [edi], eax
 	xor ecx, ecx
 	mov [edi+4], ecx
 
-	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
+	mov edi, 0x2800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
 	mov [edi], eax
 	mov [edi+4], ecx
 
@@ -196,13 +196,13 @@ start32:
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
 	mov cl, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00003000
+	mov edi, 0x3000
 	xor ebx, ebx
-	mov eax, 0x00010007		; location of first PD
+	mov eax, 0x10007		; location of first PD
 create_pdpe:
 	mov [edi], eax
 	mov [edi+4], ebx	
-	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+	add eax, 0x1000		; 4K later (512 records x 8 bytes)
 	add edi, 8
 	dec ecx
 	jnz create_pdpe
@@ -210,14 +210,36 @@ create_pdpe:
 ; Create the PD entries.
 ; PD entries are stored starting at 0x0000000000010000 and ending at 0x000000000004FFFF (256 KiB)
 ; This gives us room to map 64 GiB with 2 MiB pages
-	mov edi, 0x00010000
-	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
-	mov ecx, 2048	
-pd_again:				; Create a 2 MiB page
+	mov edi, 0x10000
+	xor eax, eax
+	mov al, 0x8F		; Bit 7 must be set to 1 as we have 2 MiB pages
+	mov edx, 0x200000	; 2Mib page
+	mov ecx, 256		; 2048/8
+pd_again:				; Create a 2 MiB page 1 cacheline of data for loop
 	mov [edi], eax
 	mov [edi+4], ebx
-	add edi, 8
-	add eax, 0x00200000
+	add eax, edx
+	mov [edi+8], eax
+	mov [edi+12], ebx
+	add eax, edx
+	mov [edi+16], eax
+	mov [edi+20], ebx
+	add eax, edx
+	mov [edi+24], eax
+	mov [edi+28], ebx
+	add eax, edx
+	mov [edi+32], eax
+	mov [edi+36], ebx
+	add eax, edx
+	mov [edi+40], eax
+	mov [edi+44], ebx
+	add eax, edx
+	mov [edi+48], eax
+	mov [edi+52], ebx
+	add eax, edx
+	mov [edi+56], eax
+	mov [edi+60], ebx
+	add edi, 64
 	dec ecx 
 	jnz pd_again			; Create 2048 2 MiB page maps.
 
@@ -313,13 +335,27 @@ clearcs64:
 	mov [rdi], eax
 
 ; Build the rest of the page tables (4GiB+)
-	mov ecx, 30720
+	mov ecx, 3840 			; 30720/8
+	mov edx, 0x200000 
 	mov rax, 0x10000008F
 	mov edi, 0x14000
 buildem:
 	mov [rdi], rax
-	add rdi, 8
-	add rax, 0x200000
+	add rax, rdx
+	mov [rdi+8], rax
+	add rax, rdx
+	mov [rdi+16], rax
+	add rax, rdx
+	mov [rdi+24], rax
+	add rax, rdx
+	mov [rdi+32], rax
+	add rax, rdx
+	mov [rdi+40], rax
+	add rax, rdx
+	mov [rdi+48], rax
+	add rax, rdx
+	mov [rdi+56], rax
+	add rdi, 64
 	dec rcx
 	jnz buildem
 	; We have 64 GiB mapped now

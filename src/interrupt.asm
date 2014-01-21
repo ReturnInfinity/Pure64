@@ -65,10 +65,10 @@ rtc:
 	mov  r9, rax
 
 	mov rax, [os_Counter_RTC]
-	mov rdi, [os_LocalAPICAddress]
 	xor edi, edi
 	mov dil, 'R'
 	mov [0x000B8092], dil
+	mov rdi, [os_LocalAPICAddress]
 	inc rax
 	mov [os_Counter_RTC], rax
 	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
@@ -99,7 +99,7 @@ spurious:				; handler for spurious interrupts
 ; -----------------------------------------------------------------------------
 ; CPU Exception Gates
 exception_gate_00:
-	mov al, 0x00
+	xor eax, eax
 	jmp exception_gate_main
 
 exception_gate_01:

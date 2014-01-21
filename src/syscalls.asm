@@ -70,11 +70,10 @@ os_print_string:
 os_print_string_nextreg:
 	mov r8, [rsi]
 	xor r9, r9
-	xor ecx, ecx
-	mov cl, -8
+	mov ecx, -8
 os_print_string_nextchar_reg:
 	movzx eax, r8b				; Get char from string and store in AL
-	shl r8, 8
+	shr r8, 8
 	cmp al, 13			; Check if there was a newline character in the string
 	jne os_print_string_char	; If not newline, skip to the standard part
 	movzx edx, word [screen_cursor_y]
@@ -325,13 +324,14 @@ os_int_to_string_next_divide:
 	push rdx				; save remainder on the stack
 	inc rcx					; and count this remainder
 	test rax, rax 				; was the quotient zero?
-	jne os_int_to_string_next_divide	; no, do another division
+	jnz os_int_to_string_next_divide	; no, do another division
 os_int_to_string_next_digit:
 	pop rdx					; else pop recent remainder
+	movzx edx, dl
 	add dl, '0'				; and convert to a numeral
 	mov [rdi], dl				; store to memory-buffer
 	inc rdi
-	dec ecx
+	dec rcx
 	jnz os_int_to_string_next_digit		; again for other remainders
 	xor eax, eax
 	mov [rdi], al				; Store the null terminator at the end of the string
