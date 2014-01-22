@@ -32,15 +32,12 @@ interrupt_gate:				; handler for all other interrupts
 ; This IRQ runs whenever there is input on the keyboard
 align 16
 keyboard:
-	mov r8, rdi
 	mov r9, rax
 	mov r10, rbx
 	xor ebx, ebx
 	mov bl, 10
 	add rbx, [os_Counter_RTC]
-	mov rdi, [os_LocalAPICAddress]	; Acknowledge the IRQ on APIC
 	xor eax, eax
-	mov [rdi+0xB0], eax
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
 	jnz keyboard_done
@@ -49,9 +46,10 @@ keyboard:
 	mov [os_Counter_RTC], rbx
 
 keyboard_done:
+	mov al, 0x20
+	out 0x20, al
 	mov rbx, r10
 	mov rax, r9
-	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -59,12 +57,12 @@ keyboard_done:
 ; -----------------------------------------------------------------------------
 ; Cascade interrupt. IRQ 0x02, INT 0x22
 cascade:
-	push rax
+	mov r9, rax
 
 	mov al, 0x20			; Acknowledge the IRQ
 	out 0x20, al
 
-	pop rax
+	mov rax, r9
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -80,24 +78,18 @@ rtc:
 	xor edi, edi
 	mov dil, 'R'
 	mov [0x000B8092], dil
-	mov rdi, [os_LocalAPICAddress]
 	inc rax
 	mov [os_Counter_RTC], rax
 	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
 	add eax, 48
 	mov [0x000B8094], al
+	xor eax, eax
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
-<<<<<<< HEAD
-	xor eax, eax			; Acknowledge the IRQ on APIC
-	mov [rdi+0xB0], eax
-=======
-
 	mov al, 0x20			; Acknowledge the IRQ
 	out 0xA0, al
 	out 0x20, al
->>>>>>> 983df23d90dcbc3413ce669ca901f5da7533a1ec
 
 	mov rax, r9
 	mov rdi, r8
