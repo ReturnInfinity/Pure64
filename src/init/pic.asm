@@ -8,6 +8,7 @@
 
 init_pic:
 	; Enable specific interrupts
+	xor eax, eax
 	in al, 0x21
 	mov al, 11111001b		; Enable Cascade, Keyboard
 	out 0x21, al
@@ -19,11 +20,11 @@ init_pic:
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the current settings
-	push rax
+	movzx ebx al
 	mov al, 0x0B			; Status Register B
 	out 0x70, al			; Select the address
-	pop rax
-	bts ax, 6			; Set Periodic(6)
+	or  ebx, 0x40			; Set Periodic(6)
+	mov eax, ebx
 	out 0x71, al			; Write the new settings
 
 	sti				; Enable interrupts
