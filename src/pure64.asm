@@ -335,27 +335,35 @@ clearcs64:
 	mov [rdi], eax
 
 ; Build the rest of the page tables (4GiB+)
-	mov ecx, 3840 			; 30720/8
+	mov ecx, 960 			; 30720/32
 	mov edx, 0x200000 
 	mov rax, 0x10000008F
 	mov edi, 0x14000
+	movq xmm0, rax
+	add rax, rdx
+	movd xmm1, edx
+	pshufd xmm1, xmm1, 0		; xmm1=rdx,rdx
+	movq xmm2, rax
+	punpcklqdq xmm0,xmm2		; xmm0=rax+rdx,rax
+
 buildem:
-	mov [rdi], rax
-	add rax, rdx
-	mov [rdi+8], rax
-	add rax, rdx
-	mov [rdi+16], rax
-	add rax, rdx
-	mov [rdi+24], rax
-	add rax, rdx
-	mov [rdi+32], rax
-	add rax, rdx
-	mov [rdi+40], rax
-	add rax, rdx
-	mov [rdi+48], rax
-	add rax, rdx
-	mov [rdi+56], rax
-	add rdi, 64
+	movntdqa [rdi], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+16], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+32], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+48], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+64], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+80], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+96], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+112], xmm0
+	paddq xmm0, xmm1
+	add rdi, 128
 	dec rcx
 	jnz buildem
 	; We have 64 GiB mapped now
@@ -468,8 +476,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov [0x000B809E], al
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
-	xor ecx, ecx
-	bts ecx, 8			; ecx=256
+	mov ecx, 256		; ecx=256
 	xor eax, eax
 	mov edi, 0xF000
 	rep stosq
