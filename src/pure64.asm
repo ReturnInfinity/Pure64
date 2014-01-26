@@ -21,13 +21,13 @@ USE16
 ORG 0x00008000
 start:
 	cli				; Disable all interrupts
-	xor eax, eax
-	xor ebx, ebx
-	xor ecx, ecx
-	xor edx, edx
-	xor esi, esi
-	xor edi, edi
-	xor ebp, ebp
+	xor ax, ax
+	xor bx, bx
+	xor cx, cx
+	xor dx, dx
+	xor si, si
+	xor di, di
+	xor bp, bp
 	mov ds, ax
 	mov es, ax
 	mov ss, ax
@@ -62,7 +62,7 @@ clearcs:
 
 ; Disable blinking
 	mov ax, 0x1003
-	mov bx, 0x0000
+	xor bx, bx
 	int 0x10
 
 ; Print message
@@ -83,7 +83,7 @@ clearcs:
 
 ; Hide the hardware cursor (interferes with print_string_16 if called earlier)
 	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
-	mov bx, 0x0000			; Page number
+	xor bx, bx			; Page number
 	mov dx, 0x2000			; Row / Column
 	int 0x10
 
@@ -99,7 +99,7 @@ clearcs:
 ; 16-bit function to print a sting to the screen
 print_string_16:			; Output string in SI to screen
 	pusha
-	mov ah, 0x0E			; http://www.ctyme.com/intr/rb-0106.htm
+	mov ax, 0x0E00			; http://www.ctyme.com/intr/rb-0106.htm
 print_string_16_repeat:
 	lodsb				; Get char from string
 	cmp al, 0
@@ -139,7 +139,8 @@ align 16
 USE32
 
 start32:
-	mov eax, 16			; load 4 GB data descriptor
+	xor eax, eax
+	mov al, 16			; load 4 GB data descriptor
 	mov ds, ax			; to all data segment registers
 	mov es, ax
 	mov fs, ax
@@ -162,17 +163,17 @@ start32:
 ; Clear out the first 4096 bytes of memory. This will store the 64-bit IDT, GDT, PML4, and PDP
 	mov ecx, 1024
 	xor eax, eax
-	mov edi, eax
+	xor edi, edi
 	rep stosd
 
 ; Clear memory for the Page Descriptor Entries (0x10000 - 0x4FFFF)
-	mov edi, 0x00010000
+	mov edi, 0x10000
 	mov ecx, 65536
 	rep stosd
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
-	mov edi, 0x00001000		; GDT address
+	mov edi, 0x1000		; GDT address
 	mov ecx, (gdt64_end - gdt64)
 	rep movsb			; Move it to final pos.
 
@@ -181,51 +182,66 @@ start32:
 ; PML4 is stored at 0x0000000000002000, create the first entry there
 ; A single PML4 entry can map 512GB with 2MB pages.
 	cld
-	mov edi, 0x00002000		; Create a PML4 entry for the first 4GB of RAM
-	mov eax, 0x00003007
-	stosd
-	xor eax, eax
-	stosd
+	mov edi, 0x2000		; Create a PML4 entry for the first 4GB of RAM
+	mov eax, 0x3007
+	mov [edi], eax
+	xor ecx, ecx
+	mov [edi+4], ecx
 
-	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00003007		; The higher half is identity mapped to the lower half
-	stosd
-	xor eax, eax
-	stosd
+	mov edi, 0x2800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
+	mov [edi], eax
+	mov [edi+4], ecx
 
 ; Create the PDP entries.
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
-	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00003000
-	mov eax, 0x00010007		; location of first PD
+	mov cl, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov edi, 0x3000
+	xor ebx, ebx
+	mov eax, 0x10007		; location of first PD
 create_pdpe:
-	stosd
-	push eax
-	xor eax, eax
-	stosd
-	pop eax
-	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+	mov [edi], eax
+	mov [edi+4], ebx	
+	add eax, 0x1000		; 4K later (512 records x 8 bytes)
+	add edi, 8
 	dec ecx
-	cmp ecx, 0
-	jne create_pdpe
+	jnz create_pdpe
 
 ; Create the PD entries.
 ; PD entries are stored starting at 0x0000000000010000 and ending at 0x000000000004FFFF (256 KiB)
 ; This gives us room to map 64 GiB with 2 MiB pages
-	mov edi, 0x00010000
-	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
-	xor ecx, ecx
-pd_again:				; Create a 2 MiB page
-	stosd
-	push eax
+	mov edi, 0x10000
 	xor eax, eax
-	stosd
-	pop eax
-	add eax, 0x00200000
-	inc ecx
-	cmp ecx, 2048
-	jne pd_again			; Create 2048 2 MiB page maps.
+	mov al, 0x8F		; Bit 7 must be set to 1 as we have 2 MiB pages
+	mov edx, 0x200000	; 2Mib page
+	mov ecx, 256		; 2048/8
+pd_again:				; Create a 2 MiB page 1 cacheline of data for loop
+	mov [edi], eax
+	mov [edi+4], ebx
+	add eax, edx
+	mov [edi+8], eax
+	mov [edi+12], ebx
+	add eax, edx
+	mov [edi+16], eax
+	mov [edi+20], ebx
+	add eax, edx
+	mov [edi+24], eax
+	mov [edi+28], ebx
+	add eax, edx
+	mov [edi+32], eax
+	mov [edi+36], ebx
+	add eax, edx
+	mov [edi+40], eax
+	mov [edi+44], ebx
+	add eax, edx
+	mov [edi+48], eax
+	mov [edi+52], ebx
+	add eax, edx
+	mov [edi+56], eax
+	mov [edi+60], ebx
+	add edi, 64
+	dec ecx 
+	jnz pd_again			; Create 2048 2 MiB page maps.
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -246,6 +262,7 @@ pd_again:				; Create a 2 MiB page
 	wrmsr				; Write EFER
 
 ; Debug
+	xor eax, eax
 	mov al, '1'			; About to make the jump into 64-bit mode
 	mov [0x000B809C], al
 	mov al, 'E'
@@ -253,7 +270,7 @@ pd_again:				; Create a 2 MiB page
 
 ; Enable paging to activate long mode
 	mov eax, cr0
-	or eax, 0x80000000		; PG (Bit 31)
+	bts eax, 31		; PG (Bit 31)
 	mov cr0, eax
 
 	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
@@ -268,23 +285,23 @@ USE64
 
 start64:
 ; Debug
+	xor eax, eax
 	mov al, '4'			; Now in 64-bit mode (0x40 = 64)
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
-
-	mov al, 2
-	mov ah, 22
+	
+	mov eax, 0x1602
 	call os_move_cursor
 
-	xor rax, rax			; aka r0
-	xor rbx, rbx			; aka r3
-	xor rcx, rcx			; aka r1
-	xor rdx, rdx			; aka r2
-	xor rsi, rsi			; aka r6
-	xor rdi, rdi			; aka r7
-	xor rbp, rbp			; aka r5
-	mov rsp, 0x8000			; aka r4
+	xor eax, eax			; aka r0
+	xor ebx, ebx			; aka r3
+	xor ecx, ecx			; aka r1
+	xor edx, edx			; aka r2
+	xor esi, esi			; aka r6
+	xor edi, edi			; aka r7
+	xor ebp, ebp			; aka r5
+	mov esp, 0x8000			; aka r4
 	xor r8, r8
 	xor r9, r9
 	xor r10, r10
@@ -304,7 +321,7 @@ start64:
 	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
 	nop				; out of compatibility mode and into 64-bit mode
 clearcs64:
-	xor rax, rax
+	xor eax, eax
 
 	lgdt [GDTR64]			; Reload the GDT
 
@@ -315,59 +332,90 @@ clearcs64:
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, ap_modify		; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
-	stosd
+	mov [rdi], eax
 
 ; Build the rest of the page tables (4GiB+)
-	mov rcx, 0x0000000000000000
-	mov rax, 0x000000010000008F
-	mov rdi, 0x0000000000014000
+	mov ecx, 960 			; 30720/32
+	mov edx, 0x200000 
+	mov rax, 0x10000008F
+	mov edi, 0x14000
+	movq xmm0, rax
+	add rax, rdx
+	movd xmm1, edx
+	pshufd xmm1, xmm1, 0		; xmm1=rdx,rdx
+	movq xmm2, rax
+	punpcklqdq xmm0,xmm2		; xmm0=rax+rdx,rax
+
 buildem:
-	stosq
-	add rax, 0x0000000000200000
-	add rcx, 1
-	cmp rcx, 30720			; Another 60 GiB (We already mapped 4 GiB)
-	jne buildem
+	movntdqa [rdi], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+16], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+32], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+48], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+64], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+80], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+96], xmm0
+	paddq xmm0, xmm1
+	movntdqa [rdi+112], xmm0
+	paddq xmm0, xmm1
+	add rdi, 128
+	dec rcx
+	jnz buildem
 	; We have 64 GiB mapped now
 
 ; Build a temporary IDT
-	xor rdi, rdi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
+	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
-	mov rcx, 32
+	xor ecx, ecx
+	mov cl, 32
 make_exception_gates: 			; make gates for exception handlers
 	mov rax, exception_gate
-	push rax			; save the exception gate to the stack for later use
-	stosw				; store the low word (15..0) of the address
-	mov ax, SYS64_CODE_SEL
-	stosw				; store the segment selector
-	mov ax, 0x8E00
-	stosw				; store exception gate marker
-	pop rax				; get the exception gate back
+	mov rbx, rax			; save the exception gate to the stack for later use
+	movzx edx, ax
+	mov [rdi], word ax				; store the low word (15..0) of the address
+	mov eax, SYS64_CODE_SEL
+	shl eax, 16
+	or  edx, eax
+	mov [rdi+2], word ax				; store the segment selector
+	mov eax, 0x8E00
+	shl rax, 32
+	or rdx, rax
+	mov [rdi], rdx				; store exception gate marker
+	mov rax, rbx			; get the exception gate back
 	shr rax, 16
-	stosw				; store the high word (31..16) of the address
+	mov [rdi+6], word ax			; store the high word (31..16) of the address
 	shr rax, 16
-	stosd				; store the extra high dword (63..32) of the address.
-	xor rax, rax
-	stosd				; reserved
-	dec rcx
+	mov ebx, eax
+	mov [rdi+8], rbx			; store the extra high dword (63..32) of the address.
+	add edi, 16
+	dec ecx
 	jnz make_exception_gates
 
-	mov rcx, 256-32
+	xor ecx, ecx
+	mov cl, 256-32
 make_interrupt_gates: 			; make gates for the other interrupts
-	mov rax, interrupt_gate
-	push rax			; save the interrupt gate to the stack for later use
-	stosw				; store the low word (15..0) of the address
-	mov ax, SYS64_CODE_SEL
-	stosw				; store the segment selector
-	mov ax, 0x8F00
-	stosw				; store interrupt gate marker
-	pop rax				; get the interrupt gate back
-	shr rax, 16
-	stosw				; store the high word (31..16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63..32) of the address.
-	xor rax, rax
-	stosd				; reserved
-	dec rcx
+	xor eax, eax
+	mov rbx, interrupt_gate
+					; save the interrupt gate to the stack for later use
+	mov [rdi], word bx		; store the low word (15..0) of the address
+	mov eax, SYS64_CODE_SEL
+	mov [rdi+2], word ax		; store the segment selector
+	mov eax, 0x8F00
+	mov [rdi+4], word ax		; store interrupt gate marker
+					; get the interrupt gate back
+	shr rbx, 16
+	mov [rdi+6], word bx		; store the high word (31..16) of the address
+	shr rbx, 16
+	mov eax, ebx
+	mov [rdi+8], rax		; store the extra high dword (63..32) of the address.
+	xor eax, eax
+	add edi, 16
+	dec ecx
 	jnz make_interrupt_gates
 
 	; Set up the exception gates for all of the CPU exceptions
@@ -393,15 +441,33 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov word [0x12*16], exception_gate_18
 	mov word [0x13*16], exception_gate_19
 
-	mov rdi, 0x21			; Set up Keyboard handler
-	mov rax, keyboard
-	call create_gate
-	mov rdi, 0x22			; Set up Cascade handler
-	mov rax, cascade
-	call create_gate
-	mov rdi, 0x28			; Set up RTC handler
-	mov rax, rtc
-	call create_gate
+	xor edi, edi
+	mov dil, 0x21			; Set up Keyboard IRQ handler
+	mov eax, keyboard
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax			; set to zero instead of another shr 16
+	mov [rdi+8], eax
+	mov al, 0x28
+	movzx edi, al			; Set up RTC IRQ handler
+	mov eax, rtc
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax                    ; set to zero instead of another shr 16
+	mov [rdi+8], eax
+	mov al, 0xF8
+	movzx edi, al			; Set up Spurious handler
+	mov eax, spurious
+	shl edi, 4
+	mov [rdi], word ax
+	shr eax, 16
+	mov [rdi+6], word ax
+	xor eax, eax                    ; set to zero instead of another shr 16
+	mov [rdi+8], eax
 
 	lidt [IDTR64]			; load IDT register
 
@@ -410,14 +476,10 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov [0x000B809E], al
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
-	xor rax, rax
-	mov rcx, 256
-	mov rdi, 0x000000000000F000
-clearmapnext:
-	stosq
-	dec rcx
-	cmp rcx, 0
-	jne clearmapnext
+	mov ecx, 256		; ecx=256
+	xor eax, eax
+	mov edi, 0xF000
+	rep stosq
 
 	call init_acpi			; Find and process the ACPI tables
 
@@ -440,50 +502,49 @@ clearmapnext:
 	call init_smp
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
-	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
-	shl rax, 10			; shift left 10 bits for a 1024byte stack
-	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
-	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
+	mov esi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
+	mov eax, [rsi+0x20]
+	shr eax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+	shl eax, 10			; shift left 10 bits for a 1024byte stack
+	add eax, 0x50400		; stacks decrement when you "push", start at 1024 bytes in
+	mov esp, eax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
 ; Debug
+	xor eax, eax
 	mov al, '6'			; SMP Init complete
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
 
 ; Calculate amount of usable RAM from Memory Map
-	xor rcx, rcx
-	mov rsi, 0x0000000000004000	; E820 Map location
+	xor ecx, ecx
+	xor ebx, ebx
+	xor edx, edx
+	xor edi, edi
+	xor ebp, ebp
+	mov esi, 0x4000	; E820 Map location
+	mov bpl, 32	
 readnextrecord:
-	lodsq
-	lodsq
-	lodsd
-	cmp eax, 0			; Are we at the end?
-	je endmemcalc
-	cmp eax, 1			; Useable RAM
-	je goodmem
-	cmp eax, 3			; ACPI Reclaimable
-	je goodmem
-	cmp eax, 6			; BIOS Reclaimable
-	je goodmem
-	lodsd
-	lodsq
-	jmp readnextrecord
-goodmem:
-	sub rsi, 12
-	lodsq
-	add rcx, rax
-	lodsq
-	lodsq
-	jmp readnextrecord
+	mov eax, [rsi+20]
+	add rcx, [rsi+8]
+	mov dil, 16
+	cmp al, 1			; Useable RAM
+	sete bl
+	cmp al, 3			; ACPI Reclaimable
+	sete dl
+	or ebx, edx
+	cmp al, 6			; BIOS Reclaimable
+	sete dl
+	or ebx, edx
+	cmovz edi, ebp	
+	add rsi, rdi 
+	test eax, eax			; Are we at the end?
+	jnz readnextrecord
 
 endmemcalc:
 	shr rcx, 20			; Value is in bytes so do a quick divide by 1048576 to get MiB's
-	add ecx, 1			; The BIOS will usually report actual memory minus 1
-	and ecx, 0xFFFFFFFE		; Make sure it is an even number (in case we added 1 to an even number)
+	inc ecx				; The BIOS will usually report actual memory minus 1
+	and ecx, 0xFE			; Make sure it is an even number (in case we added 1 to an even number)
 	mov dword [mem_amount], ecx
 
 ; Debug
@@ -491,71 +552,57 @@ endmemcalc:
 	mov [0x000B809E], al
 
 ; Convert CPU speed value to string
-	xor rax, rax
-	mov ax, [cpu_speed]
+	movzx eax, word [cpu_speed]
 	mov rdi, speedtempstring
 	call os_int_to_string
 
 ; Convert CPU amount value to string
-	xor rax, rax
-	mov ax, [cpu_activated]
+	movzx eax, word [cpu_activated]
 	mov rdi, cpu_amount_string
 	call os_int_to_string
 
 ; Convert RAM amount value to string
-	xor rax, rax
 	mov eax, [mem_amount]
 	mov rdi, memtempstring
 	call os_int_to_string
 
 ; Build the infomap
-	xor rdi, rdi
-	mov di, 0x5000
+	mov edi, 0x5000
 	mov rax, [os_ACPITableAddress]
-	stosq
+	mov [rdi], rax
 	mov eax, [os_BSP]
-	stosd
+	mov [rdi+8], eax
 
-	mov di, 0x5010
-	mov ax, [cpu_speed]
-	stosw
-	mov ax, [cpu_activated]
-	stosw
-	mov ax, [cpu_detected]
-	stosw
+	add edi, 0x10
+	mov rax, [cpu_speed]
+	mov [rdi], rax
 
-	mov di, 0x5020
-	mov ax, [mem_amount]
-	stosd
+	movzx eax, word [mem_amount]
+	mov [rdi+0x20], eax
 
-	mov di, 0x5030
-	mov al, [os_IOAPICCount]
-	stosb
+	movzx eax, byte [os_IOAPICCount]
+	mov [rdi+0x30], al
 
-	mov di, 0x5040
 	mov rax, [os_HPETAddress]
-	stosq
+	mov [rdi+0x40], rax
 
-	mov di, 0x5060
 	mov rax, [os_LocalAPICAddress]
-	stosq
+	mov [rdi+0x60], rax
+	add edi, 0x68
 	xor ecx, ecx
 	mov cl, [os_IOAPICCount]
-	mov rsi, os_IOAPICAddress
+	mov esi, os_IOAPICAddress
 nextIOAPIC:
-	lodsq
-	stosq
-	sub cl, 1
-	cmp cl, 0
-	jne nextIOAPIC
-
+	rep movsq
+	xor edi, edi
 	mov di, 0x5080
 	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
-	stosd
-	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
-	stosd
-	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
-	stosb
+	mov ebx, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
+	shl rbx, 32
+	or rax, rbx
+	mov [rdi], rax
+	movzx eax, byte [VBEModeInfoBlock.BitsPerPixel]		; Color depth
+	mov [rdi+8], al
 
 ; Initialization is now complete... write a message to the screen
 	mov rsi, msg_done
@@ -566,7 +613,7 @@ nextIOAPIC:
 	mov [0x000B809E], al
 
 ; Print info on CPU and MEM
-	mov ax, 0x0004
+	mov al, 0x4
 	call os_move_cursor
 	mov rsi, msg_CPU
 	call os_print_string
@@ -584,35 +631,36 @@ nextIOAPIC:
 	call os_print_string
 
 ; Move the trailing binary to its final location
-	mov rsi, 0x8000+6144		; Memory offset to end of pure64.sys
-	mov rdi, 0x100000		; Destination address at the 1MiB mark
-	mov rcx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
+	mov esi, 0x8000+6144		; Memory offset to end of pure64.sys
+	mov edi, 0x100000		; Destination address at the 1MiB mark
+	mov ecx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
 	rep movsq			; Copy 8 bytes at a time
 
 ; Print a message that the kernel is being started
-	mov ax, 0x0006
+	xor eax, eax
+	mov al, 0x6
 	call os_move_cursor
 	mov rsi, msg_startingkernel
 	call os_print_string
 
 ; Debug
-	mov rdi, 0x000B8092		; Clear the debug messages
-	mov ax, 0x0720
-	mov cx, 7
-clearnext:
-	stosw
-	sub cx, 1
-	cmp cx, 0
-	jne clearnext
+	mov edi, 0xB8092		; Clear the debug messages
+	mov eax, 0x07200720
+	mov ecx, 0x07200720
+	shl rcx, 32
+	or  rax, rcx
+	mov [rdi], rax
+	shr rax, 16
+	mov [rdi+8], rax
 
 ; Clear all registers (skip the stack pointer)
-	xor rax, rax
-	xor rbx, rbx
-	xor rcx, rcx
-	xor rdx, rdx
-	xor rsi, rsi
-	xor rdi, rdi
-	xor rbp, rbp
+	xor eax, eax
+	xor ebx, ebx
+	xor ecx, ecx
+	xor edx, edx
+	xor esi, esi
+	xor edi, edi
+	xor ebp, ebp
 	xor r8, r8
 	xor r9, r9
 	xor r10, r10

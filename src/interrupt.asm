@@ -32,27 +32,24 @@ interrupt_gate:				; handler for all other interrupts
 ; This IRQ runs whenever there is input on the keyboard
 align 16
 keyboard:
-	push rdi
-	push rax
-
+	mov r9, rax
+	mov r10, rbx
+	xor ebx, ebx
+	mov bl, 10
+	add rbx, [os_Counter_RTC]
 	xor eax, eax
-
 	in al, 0x60			; Get the scancode from the keyboard
 	test al, 0x80
 	jnz keyboard_done
 
 	mov [0x000B8088], al		; Dump the scancode to the screen
-
-	mov rax, [os_Counter_RTC]
-	add rax, 10
-	mov [os_Counter_RTC], rax
+	mov [os_Counter_RTC], rbx
 
 keyboard_done:
-	mov al, 0x20			; Acknowledge the IRQ
+	mov al, 0x20
 	out 0x20, al
-
-	pop rax
-	pop rdi
+	mov rbx, r10
+	mov rax, r9
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -60,12 +57,12 @@ keyboard_done:
 ; -----------------------------------------------------------------------------
 ; Cascade interrupt. IRQ 0x02, INT 0x22
 cascade:
-	push rax
+	mov r9, rax
 
 	mov al, 0x20			; Acknowledge the IRQ
 	out 0x20, al
 
-	pop rax
+	mov rax, r9
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -74,27 +71,28 @@ cascade:
 ; Real-time clock interrupt. IRQ 0x08, INT 0x28
 align 16
 rtc:
-	push rdi
-	push rax
+	mov  r8, rdi 
+	mov  r9, rax
 
-	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
-
-	mov al, 'R'
-	mov [0x000B8092], al
 	mov rax, [os_Counter_RTC]
-	and al, 1			; Clear all but lowest bit (Can only be 0 or 1)
-	add al, 48
+	xor edi, edi
+	mov dil, 'R'
+	mov [0x000B8092], dil
+	inc rax
+	mov [os_Counter_RTC], rax
+	and eax, 1			; Clear all but lowest bit (Can only be 0 or 1)
+	add eax, 48
 	mov [0x000B8094], al
+	xor eax, eax
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
-
 	mov al, 0x20			; Acknowledge the IRQ
 	out 0xA0, al
 	out 0x20, al
 
-	pop rax
-	pop rdi
+	mov rax, r9
+	mov rdi, r8
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -112,7 +110,7 @@ spurious:				; handler for spurious interrupts
 ; -----------------------------------------------------------------------------
 ; CPU Exception Gates
 exception_gate_00:
-	mov al, 0x00
+	xor eax, eax
 	jmp exception_gate_main
 
 exception_gate_01:
@@ -196,9 +194,8 @@ exception_gate_main:
 	mov rsi, int_string
 	call os_print_string
 	mov rsi, exc_string00
-	and rax, 0xFF			; Clear out everything in RAX except for AL
-	shl eax, 3				; Quick multiply by 3
-	add rsi, rax				; Use the value in RAX as an offset to get to the right message
+	movzx eax, al			; Clear out everything in RAX except for AL
+	lea rsi, [rsi+rax*8]		; Use the value in RAX as an offset to get to the right message
 	call os_print_string
 	mov rsi, adr_string
 	call os_print_string

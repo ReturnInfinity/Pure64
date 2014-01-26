@@ -7,7 +7,7 @@
 
 
 init_isa:
-	mov edi, 0x00004000		; Clear out memory for the E820 map
+	mov edi, 0x4000		; Clear out memory for the E820 map
 	xor eax, eax
 	mov ecx, 2048
 	rep stosd
@@ -17,13 +17,14 @@ init_isa:
 ; inputs: es:di -> destination buffer for 24 byte entries
 ; outputs: bp = entry count, trashes all registers except esi
 do_e820:
-	mov edi, 0x00004000		; location that memory map will be stored to
+	mov edi, 0x4000			; location that memory map will be stored to
 	xor ebx, ebx			; ebx must be 0 to start
-	xor bp, bp			; keep an entry count in bp
+	xor ebp, ebp			; keep an entry count in bp
 	mov edx, 0x0534D4150		; Place "SMAP" into edx
 	mov eax, 0xe820
 	mov [es:di + 20], dword 1	; force a valid ACPI 3.X entry
-	mov ecx, 24			; ask for 24 bytes
+	xor ecx, ecx
+	mov cl, 24			; ask for 24 bytes
 	int 0x15
 	jc nomemmap			; carry set on first call means "unsupported function"
 	mov edx, 0x0534D4150		; Some BIOSes apparently trash this register?
@@ -40,7 +41,8 @@ e820lp:
 	jc memmapend			; carry set means "end of list already reached"
 	mov edx, 0x0534D4150		; repair potentially trashed register
 jmpin:
-	jcxz skipent			; skip any 0 length entries
+	test ecx, ecx
+	jz skipent			; skip any 0 length entries
 	cmp cl, 20			; got a 24 byte ACPI 3.X response?
 	jbe notext
 	test byte [es:di + 20], 1	; if so: is the "ignore this data" bit clear?
@@ -50,18 +52,21 @@ notext:
 	test ecx, ecx			; is the qword == 0?
 	jne goodent
 	mov ecx, [es:di + 12]		; get upper dword of memory region length
-	jecxz skipent			; if length qword is 0, skip entry
+	test ecx, ecx
+	jz skipent			; if length qword is 0, skip entry
 goodent:
-	inc bp				; got a good entry: ++count, move to next storage spot
-	add di, 32
+	inc ebp				; got a good entry: ++count, move to next storage spot
+	add edi, 32
 skipent:
 	test ebx, ebx			; if ebx resets to 0, list is complete
-	jne e820lp
+	jnz e820lp
 nomemmap:
-	mov byte [cfg_e820], 0		; No memory map function	
+	xor eax, eax
+	mov byte [cfg_e820], al		; No memory map function	
 memmapend:
 	xor eax, eax			; Create a blank record for termination (32 bytes)
-	mov ecx, 8
+	xor ecx, ecx
+	mov cl, 8
 	rep stosd
 
 ; Enable the A20 gate
@@ -113,37 +118,42 @@ rtc_poll:
 	mov al, 0xFF
 	out 0x21, al
 	out 0xA1, al
-
+	neg al				; AL was -1, set it to 1
 	; Configure graphics if requested
-	cmp byte [cfg_vesa], 1		; Check if VESA should be enabled
+	cmp al, byte [cfg_vesa]		; Check if VESA should be enabled
 	jne VBEdone			; If not then skip VESA init
 
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
-	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
+	mov eax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
 	; CX queries the mode, it should be in the form 0x41XX as bit 14 is set for LFB and bit 8 is set for VESA mode
 	; 0x4112 is 640x480x24bit, 0x4129 should be 32bit
 	; 0x4115 is 800x600x24bit, 0x412E should be 32bit
 	; 0x4118 is 1024x768x24bit, 0x4138 should be 32bit
 	; 0x411B is 1280x1024x24bit, 0x413D should be 32bit
-	mov cx, 0x4118			; Put your desired mode here
-	mov bx, cx			; Mode is saved to BX for the set command later
+	mov ecx, 0x4118			; Put your desired mode here
+	mov ebx, ecx			; Mode is saved to BX for the set command later
 	int 0x10
 
-	cmp ax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
-	jne VBEfail
-	cmp byte [VBEModeInfoBlock.BitsPerPixel], 24	; Make sure this matches the number of bits for the mode!
-	jne VBEfail			; If set bit mode was unsuccessful then bail out
-	or bx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
-	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
+	movzx ecx, byte [VBEModeInfoBlock.BitsPerPixel]	
+	xor edx, edx
+	cmp ecx, 24			; Make sure this matches the number of bits for the mode!
+	sete cl
+	cmp eax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
+	sete dl
+	add cl, dl
+	jz VBEfail			; If set bit mode was unsuccessful then bail out
+	or ebx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
+	mov eax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
 	jne VBEfail
-	jmp VBEdone
+	ret
 
 VBEfail:
 	mov si, msg_novesa
 	call print_string_16
-	mov byte [cfg_vesa], 0		; Clear the VESA config as it was not successful
+	xor eax, eax
+	mov byte [cfg_vesa], al		; Clear the VESA config as it was not successful
 
 VBEdone:
 
