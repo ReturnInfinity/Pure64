@@ -1,11 +1,11 @@
-# Pure64 - v0.6.1 Manual #
+# Pure64 - v0.6.1 Manual
 
 Pure64 must be loaded to the 16-bit memory address `0x0000:0x8000`
 
 Pure64 expects that the up to 26KiB of data after it is the software that will be loaded to address `0x0000000000100000`.
 
 
-## System Requirements ##
+## System Requirements
 
 A computer with at least one 64-bit Intel or AMD CPU (or anything else that uses the x86-64 architecture)
 
@@ -14,19 +14,19 @@ At least 2 MiB of RAM
 The ability to boot via a hard drive, USB stick, or the network
 
 
-## Hard disk / USB boot ##
+## Hard disk / USB boot
 
 `bmfs_mbr.asm` in the bootsectors folder shows how to boot via a BMFS formatted drive.
 
 *Note*: Once Pure64 has executed you will lose access the the USB drive unless you have written a driver for it. The BIOS was used to load from it and you can't use the BIOS in 64-bit mode.
 
 
-## Network boot ##
+## Network boot
 
 `pxestart.asm` in the bootsectors folder shows how to build a PXE image.
 
 
-## Memory Map ##
+## Memory Map
 
 This memory map shows how physical memory looks after Pure64 is finished.
 
@@ -50,7 +50,7 @@ This memory map shows how physical memory looks after Pure64 is finished.
 When creating your Operating System or Demo you can use the sections marked free, however it is the safest to use memory above 1 MiB.
 
 
-## Information Table ##
+## Information Table
 
 Pure64 stores an information table in memory that contains various pieces of data about the computer before it passes control over to the software you want it to load.
 
