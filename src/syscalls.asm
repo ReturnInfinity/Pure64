@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; System Calls
 ; =================================================================
@@ -19,7 +19,7 @@ os_move_cursor:
 	mov [screen_cursor_x], ah
 	mov [screen_cursor_y], al
 	mov bl, ah
-	
+
 	; Calculate the new offset
 	and rax, 0x00000000000000FF	; only keep the low 8 bits
 	mov cl, 80
@@ -29,7 +29,7 @@ os_move_cursor:
 
 	add rax, 0x00000000000B8000
 	mov [screen_cursor_offset], rax
-	
+
 	pop rax
 	pop rbx
 	pop rcx
@@ -48,10 +48,10 @@ os_print_newline:
 	mov al, [screen_cursor_y]	; Grab the cursor y value
 	cmp al, 24			; Compare to see if we are on the last line
 	je os_print_newline_scroll	; If so then we need to scroll the sreen
-	
+
 	inc al				; If not then we can go ahead an increment the y value
 	jmp os_print_newline_done
-	
+
 os_print_newline_scroll:
 	mov ax, 0x0000			; If we have reached the end then wrap back to the front
 
@@ -226,7 +226,7 @@ os_dump_regs_again:
 	pop r12
 	pop r13
 	pop r14
-	pop r15 
+	pop r15
 
 ret
 
@@ -254,7 +254,7 @@ os_dump_reg_stage: db 0x00
 ; -----------------------------------------------------------------------------
 ; os_dump_mem -- Dump some memory content to the screen (For debug purposes)
 ; IN: RSI = memory to dump (512bytes)
-;OUT: 
+;OUT:
 os_dump_mem:
 	push rdx
 	push rcx
@@ -270,9 +270,9 @@ dumpit:
 	dec rcx
 	cmp rcx, 0
 	jne dumpit
-	
+
 	pop rsi
-	
+
 ;	call os_print_newline
 
 	pop rax
@@ -332,7 +332,7 @@ os_int_to_string_next_digit:
 create_gate:
 	push rdi
 	push rax
-	
+
 	shl rdi, 4			; quickly multiply rdi by 16
 	stosw				; store the low word (15..0)
 	shr rax, 16

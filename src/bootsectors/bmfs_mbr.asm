@@ -37,7 +37,7 @@ load_nextsector:
 	dec eax
 	cmp eax, 0
 	jnz load_nextsector
-	
+
 	mov eax, [0x8000]
 	cmp eax, 0xC03166FA		; Match against the Pure64 binary
 	jne magic_fail

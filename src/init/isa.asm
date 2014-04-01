@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ISA
 ; =============================================================================
@@ -58,7 +58,7 @@ skipent:
 	test ebx, ebx			; if ebx resets to 0, list is complete
 	jne e820lp
 nomemmap:
-	mov byte [cfg_e820], 0		; No memory map function	
+	mov byte [cfg_e820], 0		; No memory map function
 memmapend:
 	xor eax, eax			; Create a blank record for termination (32 bytes)
 	mov ecx, 8

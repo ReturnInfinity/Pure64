@@ -1,10 +1,10 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; Loaded from the first stage. Gather information about the system while
 ; in 16-bit mode (BIOS is still accessible), setup a minimal 64-bit
-; environment, copy the 64-bit kernel from the end of the Pure64 binary to 
+; environment, copy the 64-bit kernel from the end of the Pure64 binary to
 ; the 1MiB memory mark and jump to it!
 ;
 ; Pure64 requires a payload for execution! The stand-alone pure64.sys file

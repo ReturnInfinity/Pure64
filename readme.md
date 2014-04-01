@@ -1,5 +1,5 @@
 # Pure64 -- The BareMetal OS kernel loader #
-Copyright (C) 2007-2013 Return Infinity -- see LICENSE.TXT
+Copyright (C) 2007-2014 Return Infinity -- see LICENSE.TXT
 
 Pure64 is a 64-bit software loader for BareMetal OS. The loader gets the computer into a full 64-bit state with no legacy compatibility layers and also enables all available CPU Cores in the computer. Pure64 keeps an information table in memory that stores important details about the computer (Amount of RAM and memory layout, number of CPU cores and their APIC IDs, etc).
 
@@ -20,6 +20,6 @@ Windows: `build.bat`
 
 ## Notes
 
-Pure64 requires at least NASM v2.10; the version included in the OS X 10.8 Developer Tools is not recent enough. - *Seriously Apple? NASM v0.98 is from 2007!!*
+Building Pure64 from source requires NASM v2.10 or higher; the version included in the OS X 10.9 Developer Tools is not recent enough. - *Seriously Apple? NASM v0.98 is from 2007!!*
 
 If you use [MacPorts](http://www.macports.org), you can install NASM v2.10+ by executing: `sudo port install nasm`

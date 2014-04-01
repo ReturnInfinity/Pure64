@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT CPU
 ; =============================================================================
@@ -116,7 +116,7 @@ init_cpu:
 ;	bts eax, 8			;Delivery Mode (111b==ExtlNT] (bits 10:8)
 ;	bts eax, 9
 ;	bts eax, 10
-;	bts eax, 15			;bit15:Set trigger mode to Level (0== Edge, 1== Level)  
+;	bts eax, 15			;bit15:Set trigger mode to Level (0== Edge, 1== Level)
 ;	btr eax, 16			;bit16:unmask interrupts (0==Unmasked, 1== Masked)
 ;	mov dword [rsi+0x350], eax
 

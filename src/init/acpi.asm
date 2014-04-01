@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2013 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ACPI
 ; =============================================================================
@@ -116,7 +116,7 @@ nextACPITable:
 foundAPICTable:
 	call parseAPICTable
 	jmp nextACPITable
-	
+
 foundHPETTable:
 	call parseHPETTable
 	jmp nextACPITable
@@ -127,7 +127,7 @@ init_smp_acpi_done:
 noACPI:
 novalidacpi:
 	mov al, 'X'
-	mov [0x000B809A], al	
+	mov [0x000B809A], al
 	jmp $
 
 
