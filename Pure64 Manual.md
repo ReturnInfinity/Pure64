@@ -79,11 +79,13 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5100...</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 </table>
 
-A copy of the E820 System Memory Map is stored at memory address `0x0000000000004000`. Each E820 record is 24 bytes in length and the memory map is terminated by a blank record.<p />
+A copy of the E820 System Memory Map is stored at memory address `0x0000000000004000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.<p />
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
 <tr><td>Starting Address</td><td>64-bit</td><td>The starting address for this record</td></tr>
 <tr><td>Length</td><td>64-bit</td><td>The length of memory for this record</td></tr>
 <tr><td>Memory Type</td><td>32-bit</td><td>Type 1 is usable memory, Type 2 is not usable</td></tr>
+<tr><td>Extended Attributes</td><td>32-bit</td><td>ACPI 3.0 Extended Attributes bitfield</td></tr>
+<tr><td>Padding</td><td>64-bit</td><td>Padding for 32-byte alignment</td></tr>
 </table>
 For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820">OSDev wiki on E820</a><p />
