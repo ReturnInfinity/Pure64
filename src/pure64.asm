@@ -622,32 +622,36 @@ clearnext:
 	xor r14, r14
 	xor r15, r15
 
+; Check binary that was loaded and execute
+; Raw binary and PE supported
+; ToDo - ELF
+
 ; PE loader header check
-	mov eax, [0x10003c]				; Get the e_lfanew value which is the address of the PE header (32bit).
-	mov cx, [eax + 0x100004]		; The machine type.
-	cmp cx, 0x8664					; Check to make sure the machine type is x64.
-	jne normal_start				; If it isn't equal jump to the normal starting address. (Commnet out to ignore result.)
+	mov eax, [0x10003c]			; Get the e_lfanew value which is the address of the PE header (32bit).
+	mov cx, [eax + 0x100004]			; The machine type.
+	cmp cx, 0x8664				; Check to make sure the machine type is x64.
+	jne normal_start				; If it isn't equal jump to the normal starting address. (Comment out to ignore result.)
 	mov ebx, [eax + 0x100000]		; The PE header signature is here.
-	cmp ebx, 0x00004550		;		; Compare the PE header signature to make sure it matches. (little endian)
+	cmp ebx, 0x00004550			; Compare the PE header signature to make sure it matches. (little endian)
 	jne normal_start				; If it isn't equal jump to the normal starting address.
 
 ; PE loeader starting address (RVA) parsing
-	add eax, 0x100028				; Add size of PE header (24 bytes) and offset to
-									; AddressOfEntryPoint (16 bytes) to image base 0x100000
-	mov ebx, [eax]					; AddressOfEntryPoint added to ImageBase to get entry point addreess
-	add eax, 0x08					; Add the offset to get the ImageBase
-	add ebx, [eax]					; Add ImageBase to AddressOfEntryPoint (ebx)
+	add eax, 0x100028			; Add size of PE header (24 bytes) and offset to
+						; AddressOfEntryPoint (16 bytes) to image base 0x100000
+	mov ebx, [eax]				; AddressOfEntryPoint added to ImageBase to get entry point address
+	add eax, 0x08				; Add the offset to get the ImageBase
+	add ebx, [eax]				; Add ImageBase to AddressOfEntryPoint (ebx)
 
-	xor rax, rax					; Clear rax and rcx; rbx has the jump location so don't clear it.
-	xor rcx, rcx
+	xor eax, eax				; Clear rax and rcx; rbx has the jump location so don't clear it.
+	xor ecx, ecx
 
 pe_start:
-	jmp rbx							; rbx has the compute RVA for the jmp
+	jmp rbx					; rbx has the compute RVA for the jmp
 
 normal_start:
-	xor rax, rax					; We can clear rax and rbx again
-	xor rbx, rbx
-	xor rcx, rcx
+	xor eax, eax				; Clear registers used earlier
+	xor ebx, ebx
+	xor ecx, ecx
 	jmp 0x0000000000100000
 
 
