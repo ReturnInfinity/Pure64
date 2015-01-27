@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2015 Return Infinity -- see LICENSE.TXT
 ;
 ; Loaded from the first stage. Gather information about the system while
 ; in 16-bit mode (BIOS is still accessible), setup a minimal 64-bit
@@ -41,8 +41,6 @@ ap_modify:
 
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
-
-;db '_16_'				; Debug
 align 16
 
 USE16
@@ -130,9 +128,7 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-;db '_32_'				; Debug
 align 16
-
 
 ; =============================================================================
 ; 32-bit mode
@@ -258,9 +254,7 @@ pd_again:				; Create a 2 MiB page
 
 	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
 
-;db '_64_'				; Debug
 align 16
-
 
 ; =============================================================================
 ; 64-bit mode

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2015 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
@@ -16,7 +16,7 @@ org 0x7C00
 entry:
 	cli				; Disable interrupts
 ;	xchg bx, bx			; Bochs magic debug
-	xor ax, ax
+	xor eax, eax
 	mov ss, ax
 	mov es, ax
 	mov ds, ax

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 PXE Start -- a 64-bit OS loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2014 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2015 Return Infinity -- see LICENSE.TXT
 ;
 ; This is a stub file for loading Pure64 and a kernel via PXE.
 ;
@@ -22,12 +22,13 @@ USE16
 org 0x7C00
 
 start:
+	cli				; Disable interrupts
 	xor eax, eax
-	xor esi, esi
-	xor edi, edi
-	mov ds, ax
+	mov ss, ax
 	mov es, ax
-	mov bp, 0x7c00
+	mov ds, ax
+	mov sp, 0x7C00
+	sti				; Enable interrupts
 
 ; Make sure the screen is set to 80x25 color text mode
 	mov ax, 0x0003			; Set to normal (80x25 text) video mode
