@@ -629,7 +629,7 @@ clearnext:
 	cmp ebx, 0x00004550		; Compare the PE header signature to make sure it matches. (little endian)
 	jne normal_start		; If it isn't equal jump to the normal starting address.
 
-; PE loeader starting address (RVA) parsing
+; PE loader starting address (RVA) parsing
 	add eax, 0x100028		; Add size of PE header (24 bytes) and offset to
 					; AddressOfEntryPoint (16 bytes) to image base 0x100000
 	mov ebx, [eax]			; AddressOfEntryPoint added to ImageBase to get entry point address
