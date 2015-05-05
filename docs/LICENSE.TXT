@@ -2,7 +2,7 @@
 Pure64 -- License
 ===============================================================================
 
-Copyright (C) 2007-2014 Return Infinity -- http://www.returninfinity.com
+Copyright (C) 2007-2015 Return Infinity -- http://www.returninfinity.com
 
 All rights reserved.
 
