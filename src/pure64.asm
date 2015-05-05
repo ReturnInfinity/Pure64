@@ -590,14 +590,10 @@ nextIOAPIC:
 	call os_print_string
 
 ; Debug
-	mov rdi, 0x000B8092		; Clear the debug messages
-	mov ax, 0x0720
-	mov cx, 7
-clearnext:
-	stosw
-	sub cx, 1
-	cmp cx, 0
-	jne clearnext
+	mov rdi, 0x000B8090		; Clear the debug messages in the top-right corner
+	mov rax, 0x0720072007200720
+	stosq
+	stosq
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
