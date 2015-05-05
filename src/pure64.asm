@@ -36,8 +36,7 @@ start:
 	mov esp, 0x8000			; Set a known free location for the stack
 
 ap_modify:
-	jmp start16			; This command will be overwritten with 'NOP's before the AP's are started
-	nop				; The 'jmp' is only 3 bytes
+	jmp 0x0000:start16		; This command will be overwritten with 'NOP's before the AP's are started
 
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
@@ -45,9 +44,6 @@ align 16
 
 USE16
 start16:
-	jmp 0x0000:clearcs
-
-clearcs:
 
 ; Configure serial port
 	xor dx, dx			; First serial port
@@ -310,9 +306,10 @@ clearcs64:
 	mov edi, ap_modify		; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
+	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
 ; Build the rest of the page tables (4GiB+)
-	mov rcx, 0x0000000000000000
+	xor ecx, ecx			; Clear the counter
 	mov rax, 0x000000010000008F
 	mov rdi, 0x0000000000014000
 buildem:
@@ -593,7 +590,7 @@ nextIOAPIC:
 	mov rdi, 0x000B8090		; Clear the debug messages in the top-right corner
 	mov rax, 0x0720072007200720
 	stosq
-	stosq
+	stosq				; Write a total of 8 characters (2 bytes each)
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
