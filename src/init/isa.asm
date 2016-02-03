@@ -114,6 +114,10 @@ rtc_poll:
 	out 0x21, al
 	out 0xA1, al
 
+	; Configure graphics if requested
+	cmp byte [cfg_vesa], 1		; Check if VESA should be enabled
+	jne VBEdone			; If not then skip VESA init
+
 	mov cx, 0x4000 - 1			; Start looking from here
 VBESearch:
     inc cx
