@@ -11,7 +11,7 @@
 ; =============================================================================
 
 %define SECTORS 64      ; Number of sectors to load. 64 sectors = 32768 bytes
-%define OFFSET 1        ; Start immediately after directory (offset 8192)
+%define OFFSET 16       ; Start immediately after directory (offset 8192)
 %define ADDRESS 0x8000  ; Pure64 expects to be loaded at 0x8000
 %define SEGMENT 0x0000
 
