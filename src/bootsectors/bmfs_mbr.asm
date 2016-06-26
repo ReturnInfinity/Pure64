@@ -10,6 +10,11 @@
 ; ckeck is made to make sure Pure64 was loaded by comparing a signiture.
 ; =============================================================================
 
+%define SECTORS 64      ; Number of sectors to load. 64 sectors = 32768 bytes
+%define OFFSET 1        ; Start immediately after directory (offset 8192)
+%define ADDRESS 0x8000  ; Pure64 expects to be loaded at 0x8000
+%define SEGMENT 0x0000
+
 USE16
 org 0x7C00
 
@@ -28,15 +33,9 @@ entry:
 	mov si, msg_Load
 	call print_string_16
 
-	mov eax, 64			; Number of sectors to load. 64 sectors = 32768 bytes
-	mov ebx, 16			; Start immediately after directory (offset 8192)
-	mov cx, 0x8000			; Pure64 expects to be loaded at 0x8000
-
-load_nextsector:
-	call readsector			; Load 512 bytes
-	dec eax
-	cmp eax, 0
-	jnz load_nextsector
+	mov ah, 0x42           ; extended read sectors from drive
+	mov si, DAP            ; disk address packet (https://en.wikipedia.org/wiki/INT_13H#INT_13h_AH.3D42h:_Extended_Read_Sectors_From_Drive)
+	int 0x13
 
 	mov eax, [0x8000]
 	cmp eax, 0xC03166FA		; Match against the Pure64 binary
@@ -53,70 +52,6 @@ magic_fail:
 halt:
 	hlt
 	jmp halt
-
-;------------------------------------------------------------------------------
-; Read a sector from a disk, using LBA
-; IN:	EAX - High word of 64-bit DOS sector number
-;	EBX - Low word of 64-bit DOS sector number
-;	ES:CX - destination buffer
-; OUT:	ES:CX points one byte after the last byte read
-;	EAX - High word of next sector
-;	EBX - Low word of sector
-readsector:
-	push eax
-	xor eax, eax			; We don't need to load from sectors > 32-bit
-	push dx
-	push si
-	push di
-
-read_it:
-	push eax			; Save the sector number
-	push ebx
-	mov di, sp			; remember parameter block end
-
-	push eax			; [C] sector number high 32bit
-	push ebx			; [8] sector number low 32bit
-	push es				; [6] buffer segment
-	push cx				; [4] buffer offset
-	push byte 1			; [2] 1 sector (word)
-	push byte 16			; [0] size of parameter block (word)
-
-	mov si, sp
-	mov dl, [DriveNumber]
-	mov ah, 42h			; EXTENDED READ
-	int 0x13			; http://hdebruijn.soo.dto.tudelft.nl/newpage/interupt/out-0700.htm#0651
-
-	mov sp, di			; remove parameter block from stack
-	pop ebx
-	pop eax				; Restore the sector number
-
-	jnc read_ok			; jump if no error
-
-	push ax
-	xor ah, ah			; else, reset and retry
-	int 0x13
-	pop ax
-	jmp read_it
-
-read_ok:
-	add ebx, 1			; increment next sector with carry
-	adc eax, 0
-	add cx, 512			; Add bytes per sector
-	jnc no_incr_es			; if overflow...
-
-incr_es:
-	mov dx, es
-	add dh, 0x10			; ...add 1000h to ES
-	mov es, dx
-
-no_incr_es:
-	pop di
-	pop si
-	pop dx
-	pop eax
-
-	ret
-;------------------------------------------------------------------------------
 
 
 ;------------------------------------------------------------------------------
@@ -141,6 +76,13 @@ msg_Load db "BMFS MBR v1.0 - Loading Pure64", 0
 msg_LoadDone db " - done.", 13, 10, "Executing...", 0
 msg_MagicFail db " - Not found!", 0
 DriveNumber db 0x00
+
+DAP:    db 0x10         ; structure size
+        db 0x00         ; unused, should be zero
+        dw SECTORS      ; number of sectors to be read
+        dw ADDRESS      ; offset pointer to memory
+        dw SEGMENT      ; segment where system will be loaded
+        dq OFFSET       ; block offset on disk
 
 times 446-$+$$ db 0
 
