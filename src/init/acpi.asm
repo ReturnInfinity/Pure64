@@ -195,7 +195,7 @@ APICapic:
 	bt eax, 0			; Test to see if usable
 	jnc readAPICstructures		; Read the next structure if CPU not usable
 	inc word [cpu_detected]
-	xchg eax, edx			; Restore the APIC ID back to EAX
+	xchg edx, eax			; Restore the APIC ID back to EAX
 	stosb
 	jmp readAPICstructures		; Read the next structure
 
