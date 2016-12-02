@@ -17,9 +17,15 @@
 ; =============================================================================
 
 
-USE16
+USE32
 ORG 0x00008000
 start:
+	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
+	nop
+	nop
+	nop
+
+USE16
 	cli				; Disable all interrupts
 	xor eax, eax
 	xor ebx, ebx
@@ -35,108 +41,27 @@ start:
 	mov gs, ax
 	mov esp, 0x8000			; Set a known free location for the stack
 
-ap_modify:
-	jmp 0x0000:start16		; This command will be overwritten with 'NOP's before the AP's are started
-
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
-align 16
-
-USE16
-start16:
-
-; Configure serial port
-	xor dx, dx			; First serial port
-	mov ax, 0000000011100011b	; 9600 baud, no parity, 1 stop bit, 8 data bits
-	int 0x14
-
-; Make sure the screen is set to 80x25 color text mode
-	mov ax, 0x0003			; Set to normal (80x25 text) video mode
-	int 0x10
-
-; Disable blinking
-	mov ax, 0x1003
-	mov bx, 0x0000
-	int 0x10
-
-; Print message
-	mov si, msg_initializing
-	call print_string_16
-
-; Check to make sure the CPU supports 64-bit mode... If not then bail out
-	mov eax, 0x80000000		; Extended-function 8000000h.
-	cpuid				; Is largest extended function
-	cmp eax, 0x80000000		; any function > 80000000h?
-	jbe no_long_mode		; If not, no long mode.
-	mov eax, 0x80000001		; Extended-function 8000001h.
-	cpuid				; Now EDX = extended-features flags.
-	bt edx, 29			; Test if long mode is supported.
-	jnc no_long_mode		; Exit if not supported.
-
-	call init_isa			; Setup legacy hardware
-
-; Hide the hardware cursor (interferes with print_string_16 if called earlier)
-	mov ax, 0x0200			; VIDEO - SET CURSOR POSITION
-	mov bx, 0x0000			; Page number
-	mov dx, 0x2000			; Row / Column
-	int 0x10
-
-; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
-	lgdt [cs:GDTR32]		; Load GDT register
-
-	mov eax, cr0
-	or al, 0x01			; Set protected mode bit
-	mov cr0, eax
-
-	jmp 8:start32			; Jump to 32-bit protected mode
-
-; 16-bit function to print a sting to the screen
-print_string_16:			; Output string in SI to screen
-	pusha
-	mov ah, 0x0E			; http://www.ctyme.com/intr/rb-0106.htm
-print_string_16_repeat:
-	lodsb				; Get char from string
-	cmp al, 0
-	je print_string_16_done		; If char is zero, end of string
-	int 0x10			; Otherwise, print it
-	jmp print_string_16_repeat
-print_string_16_done:
-	popa
-	ret
-
-; Display an error message that the CPU does not support 64-bit mode
-no_long_mode:
-	mov si, msg_no64
-	call print_string_16
-	jmp $
-
-%include "init/isa.asm"
-
-align 16
-GDTR32:					; Global Descriptors Table Register
-dw gdt32_end - gdt32 - 1		; limit of GDT (size minus one)
-dq gdt32				; linear address of GDT
-
-align 16
-gdt32:
-dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
-dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
-dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
-gdt32_end:
 
 align 16
 
 ; =============================================================================
 ; 32-bit mode
 USE32
-
 start32:
-	mov eax, 16			; load 4 GB data descriptor
-	mov ds, ax			; to all data segment registers
+	mov eax, 16
+	mov ds, ax
 	mov es, ax
+	mov ss, ax
 	mov fs, ax
 	mov gs, ax
-	mov ss, ax
+
+	mov edi, 0xb8000		; Clear the screen
+	mov ax, 0x0720
+	mov cx, 2000
+	rep stosw
+
 	xor eax, eax
 	xor ebx, ebx
 	xor ecx, ecx
@@ -150,6 +75,79 @@ start32:
 	mov [0x000B809C], al
 	mov al, '0'
 	mov [0x000B809E], al
+
+; Set up RTC
+; Port 0x70 is RTC Address, and 0x71 is RTC Data
+; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
+rtc_poll:
+	mov al, 0x0A			; Status Register A
+	out 0x70, al			; Select the address
+	in al, 0x71			; Read the data
+	test al, 0x80			; Is there an update in process?
+	jne rtc_poll			; If so then keep polling
+	mov al, 0x0A			; Status Register A
+	out 0x70, al			; Select the address
+	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
+	out 0x71, al			; Write the data
+
+	; Remap PIC IRQ's
+	mov al, 00010001b		; begin PIC 1 initialization
+	out 0x20, al
+	mov al, 00010001b		; begin PIC 2 initialization
+	out 0xA0, al
+	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
+	out 0x21, al
+	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
+	out 0xA1, al
+	mov al, 4
+	out 0x21, al
+	mov al, 2
+	out 0xA1, al
+	mov al, 1
+	out 0x21, al
+	out 0xA1, al
+
+	; Mask all PIC interrupts
+	mov al, 0xFF
+	out 0x21, al
+	out 0xA1, al
+
+; Hide VGA hardware cursor
+	mov al, 0x0F		; Cursor Low Port
+	mov dx, 0x03D4
+	out dx, al
+	mov al, 0xFF
+	mov dx, 0x03D5
+	out dx, al
+	mov al, 0x0E		; Cursor High Port
+	mov dx, 0x03D4
+	out dx, al
+	mov al, 0xFF
+	mov dx, 0x03D5
+	out dx, al
+
+; Configure serial port
+	mov dx, 0x03F9
+	mov al, 0x00
+	out dx, al
+	mov al, 0x80
+	add dx, 2
+	out dx, al
+	mov al, 0x01		; Set divisor to 1 for 115200 baud
+	sub dx, 4
+	out dx, al
+	mov al, 0x00
+	add dx, 1
+	out dx, al
+	mov al, 0x03
+	add dx, 2
+	out dx, al
+	mov al, 0xC7
+	sub dx, 1
+	out dx, al
+	mov al, 0x0B
+	add dx, 2
+	out dx, al
 
 ; Clear out the first 4096 bytes of memory. This will store the 64-bit IDT, GDT, PML4, and PDP
 	mov ecx, 1024
@@ -303,7 +301,7 @@ clearcs64:
 	mov [0x000B809E], al
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
-	mov edi, ap_modify		; We need to remove the BSP Jump call to get the AP's
+	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
@@ -540,17 +538,9 @@ nextIOAPIC:
 	cmp cl, 0
 	jne nextIOAPIC
 
-	mov di, 0x5080
-	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
-	stosd
-	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
-	stosd
-	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
-	stosb
-
 ; Initialization is now complete... write a message to the screen
-	mov rsi, msg_done
-	call os_print_string
+;	mov rsi, msg_done
+;	call os_print_string
 
 ; Debug
 	mov al, '4'
