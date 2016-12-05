@@ -89,7 +89,7 @@ init_cpu:
 
 ; Enable and Configure Local APIC
 	mov rsi, [os_LocalAPICAddress]
-	cmp rsi, 0x00000000
+	test rsi, rsi
 	je noMP				; Skip MP init if we didn't get a valid LAPIC address
 
 	xor eax, eax			; Clear Task Priority (bits 7:4) and Priority Sub-Class (bits 3:0)
@@ -99,7 +99,7 @@ init_cpu:
 	mov dword [rsi+0xD0], eax	; Logical Destination Register
 
 	xor eax, eax
-	sub eax, 1			; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
+	not eax				; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
 	mov dword [rsi+0xE0], eax	; Destination Format Register
 
 	mov eax, dword [rsi+0xF0]	; Spurious Interrupt Vector Register
