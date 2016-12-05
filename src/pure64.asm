@@ -62,6 +62,11 @@ start32:
 	mov cx, 2000
 	rep stosw
 
+	mov edi, 0x5000			; Clear the info map
+	xor eax, eax
+	mov cx, 1024
+	rep stosd
+
 	xor eax, eax			; Clear all registers
 	xor ebx, ebx
 	xor ecx, ecx
