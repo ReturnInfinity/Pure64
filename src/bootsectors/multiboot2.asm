@@ -19,6 +19,12 @@ multiboot_header:
 	dd ARCHITECHTURE
 	dd HEADER_LENGTH
 	dd CHECKSUM
+entry_address_tag_start:
+	dw 3
+	dw 0
+	dd entry_address_tag_end - entry_address_tag_start
+	dd multiboot_entry
+entry_address_tag_end:	
 multiboot_header_end:
 
 multiboot_entry:
