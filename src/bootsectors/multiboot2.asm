@@ -1,4 +1,4 @@
-; Multiboot 2 for BareMetal/Pure64
+; Multiboot 2 for Pure64
 ; http://nongnu.askapache.com/grub/phcoder/multiboot.pdf
 
 [BITS 32]
