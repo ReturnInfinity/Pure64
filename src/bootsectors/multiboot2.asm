@@ -24,7 +24,10 @@ entry_address_tag_start:
 	dw 0
 	dd entry_address_tag_end - entry_address_tag_start
 	dd multiboot_entry
-entry_address_tag_end:	
+entry_address_tag_end:
+	dw 0			; End type
+	dw 0
+	dd 8
 multiboot_header_end:
 
 multiboot_entry:
