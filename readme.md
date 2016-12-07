@@ -10,7 +10,7 @@ Ian Seyler (ian.seyler@returninfinity.com)
 
 ## Building
 
-The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler). In Linux you can probably download it from the distro's repository. If you are using Windows or Mac OS X you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.10.07/) in the `macosx` and `win32` directories, respectively.
+The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler). In Linux you can probably download it from the distro's repository. If you are using Windows or Mac OS X you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/) in the `macosx` and `win32` directories, respectively.
 
 Build scripts are included for Unix/Linux and Windows systems.
 
