@@ -20,6 +20,6 @@ Windows: `build.bat`
 
 ## Notes
 
-Building Pure64 from source requires NASM v2.10 or higher; the version included in the OS X 10.10 Developer Tools is not recent enough. - *Seriously, Apple? NASM v0.98 is from 2007!!*
+Building Pure64 from source requires NASM v2.10 or higher; the version included in the OS X 10.12 Developer Tools is not recent enough. - *Seriously, Apple? NASM v0.98 is from 2007!!*
 
 If you use [MacPorts](http://www.macports.org), you can install NASM v2.10+ by executing: `sudo port install nasm`
