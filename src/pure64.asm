@@ -19,6 +19,9 @@
 
 USE32
 ORG 0x00008000
+
+PURE64SIZE	equ 6144		; Pad Pure64 to this length
+
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
@@ -571,9 +574,9 @@ nextIOAPIC:
 	call os_print_string
 
 ; Move the trailing binary to its final location
-	mov rsi, 0x8000+6144		; Memory offset to end of pure64.sys
+	mov rsi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
-	mov rcx, 0x0D00			; For up to 26KiB kernel (26624 / 8)
+	mov rcx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
 ; Print a message that the kernel is being started
@@ -647,7 +650,7 @@ normal_start:
 %include "sysvar.asm"
 
 ; Pad to an even KB file (6 KiB)
-times 6144-($-$$) db 0x90
+times PURE64SIZE-($-$$) db 0x90
 
 
 ; =============================================================================
