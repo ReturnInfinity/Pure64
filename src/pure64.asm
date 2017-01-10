@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2016 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2017 Return Infinity -- see LICENSE.TXT
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
