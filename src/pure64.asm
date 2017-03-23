@@ -578,7 +578,7 @@ normal_start:
 %include "sysvar.asm"
 
 EOF:
-	dd 0xDEADC0DE
+	db 0xDE, 0xAD, 0xC0, 0xDE
 
 ; Pad to an even KB file
 times PURE64SIZE-($-$$) db 0x90
