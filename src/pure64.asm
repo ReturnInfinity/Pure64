@@ -28,6 +28,8 @@ start:
 	nop
 	nop
 
+; =============================================================================
+; Code for AP startup
 USE16
 	cli				; Disable all interrupts
 	xor eax, eax
@@ -45,9 +47,6 @@ USE16
 	mov esp, 0x8000			; Set a known free location for the stack
 
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
-
-
-align 16
 
 ; =============================================================================
 ; 32-bit mode
@@ -96,7 +95,7 @@ rtc_poll:
 	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
 	out 0x71, al			; Write the data
 
-	; Remap PIC IRQ's
+; Remap PIC IRQ's
 	mov al, 00010001b		; begin PIC 1 initialization
 	out 0x20, al
 	mov al, 00010001b		; begin PIC 2 initialization
@@ -113,7 +112,7 @@ rtc_poll:
 	out 0x21, al
 	out 0xA1, al
 
-	; Mask all PIC interrupts
+; Mask all PIC interrupts
 	mov al, 0xFF
 	out 0x21, al
 	out 0xA1, al
