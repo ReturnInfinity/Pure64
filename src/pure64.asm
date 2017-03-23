@@ -414,13 +414,6 @@ clearmapnext:
 ; Debug	
 	mov [0x000B809E], byte '6'	; CPU Init complete
 
-; Make sure exceptions are working.
-;	xor rax, rax
-;	xor rbx, rbx
-;	xor rcx, rcx
-;	xor rdx, rdx
-;	div rax
-
 ; Init of SMP
 	call init_smp
 
@@ -472,24 +465,6 @@ endmemcalc:
 ; Debug
 	mov [0x000B809E], byte '2'
 
-; Convert CPU speed value to string
-;	xor rax, rax
-;	mov ax, [cpu_speed]
-;	mov rdi, speedtempstring
-;	call os_int_to_string
-
-; Convert CPU amount value to string
-;	xor rax, rax
-;	mov ax, [cpu_activated]
-;	mov rdi, cpu_amount_string
-;	call os_int_to_string
-
-; Convert RAM amount value to string
-;	xor rax, rax
-;	mov eax, [mem_amount]
-;	mov rdi, memtempstring
-;	call os_int_to_string
-
 ; Build the infomap
 	xor rdi, rdi
 	mov di, 0x5000
@@ -531,30 +506,8 @@ nextIOAPIC:
 	cmp cl, 0
 	jne nextIOAPIC
 
-; Initialization is now complete... write a message to the screen
-;	mov rsi, msg_done
-;	call os_print_string
-
 ; Debug
 	mov [0x000B809E], byte '4'
-
-; Print info on CPU and MEM
-;	mov ax, 0x0004
-;	call os_move_cursor
-;	mov rsi, msg_CPU
-;	call os_print_string
-;	mov rsi, speedtempstring
-;	call os_print_string
-;	mov rsi, msg_mhz
-;	call os_print_string
-;	mov rsi, cpu_amount_string
-;	call os_print_string
-;	mov rsi, msg_MEM
-;	call os_print_string
-;	mov rsi, memtempstring
-;	call os_print_string
-;	mov rsi, msg_mb
-;	call os_print_string
 
 ; Move the trailing binary to its final location
 	mov rsi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
