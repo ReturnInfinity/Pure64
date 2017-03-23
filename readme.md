@@ -1,4 +1,4 @@
-# Pure64 -- The BareMetal OS kernel loader
+# Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
 Copyright (C) 2008-2017 Return Infinity -- see LICENSE.TXT
 
 Pure64 is a 64-bit software loader for the BareMetal kernel. The loader gets the computer into a full 64-bit state with no legacy compatibility layers and also enables all available CPU Cores in the computer. Pure64 keeps an information table in memory that stores important details about the computer (Amount of RAM and memory layout, number of CPU cores and their APIC IDs, etc).
