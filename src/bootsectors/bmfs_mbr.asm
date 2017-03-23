@@ -112,7 +112,7 @@ check_A20:
 	int 0x13
 
 	mov eax, [0x8000]
-	cmp eax, 0x00018BE9		; Match against the Pure64 binary
+	cmp eax, 0x00017EE9		; Match against the Pure64 binary
 	jne magic_fail
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
