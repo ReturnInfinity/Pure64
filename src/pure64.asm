@@ -20,7 +20,7 @@
 USE32
 ORG 0x00008000
 
-PURE64SIZE	equ 6144		; Pad Pure64 to this length
+PURE64SIZE	equ 4096		; Pad Pure64 to this length
 
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
@@ -78,11 +78,9 @@ start32:
 	xor edi, edi
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
-
-	mov al, '2'			; Now in 32-bit protected mode (0x20 = 32)
-	mov [0x000B809C], al
-	mov al, '0'
-	mov [0x000B809E], al
+	
+	mov [0x000B809C], byte '2'	; Now in 32-bit protected mode (0x20 = 32)
+	mov [0x000B809E], byte '0'
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -243,11 +241,9 @@ pd_again:				; Create a 2 MiB page
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
-; Debug
-	mov al, '1'			; About to make the jump into 64-bit mode
-	mov [0x000B809C], al
-	mov al, 'E'
-	mov [0x000B809E], al
+; Debug	
+	mov [0x000B809C], byte '1'	; About to make the jump into 64-bit mode
+	mov [0x000B809E], byte 'E'
 
 ; Enable paging to activate long mode
 	mov eax, cr0
@@ -265,14 +261,8 @@ USE64
 
 start64:
 ; Debug
-	mov al, '4'			; Now in 64-bit mode (0x40 = 64)
-	mov [0x000B809C], al
-	mov al, '0'
-	mov [0x000B809E], al
-
-	mov al, 2
-	mov ah, 22
-	call os_move_cursor
+	mov [0x000B809C], byte '4'	; Now in 64-bit mode (0x40 = 64)
+	mov [0x000B809E], byte '0'
 
 	xor eax, eax			; aka r0
 	xor ebx, ebx			; aka r3
@@ -306,8 +296,7 @@ clearcs64:
 	lgdt [GDTR64]			; Reload the GDT
 
 ; Debug
-	mov al, '2'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte '2'
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -404,8 +393,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	lidt [IDTR64]			; load IDT register
 
 ; Debug
-	mov al, '4'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte '4'
 
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
 	xor rax, rax
@@ -423,9 +411,8 @@ clearmapnext:
 
 	call init_pic			; Configure the PIC(s), also activate interrupts
 
-; Debug
-	mov al, '6'			; CPU Init complete
-	mov [0x000B809E], al
+; Debug	
+	mov [0x000B809E], byte '6'	; CPU Init complete
 
 ; Make sure exceptions are working.
 ;	xor rax, rax
@@ -446,11 +433,9 @@ clearmapnext:
 	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
-; Debug
-	mov al, '6'			; SMP Init complete
-	mov [0x000B809C], al
-	mov al, '0'
-	mov [0x000B809E], al
+; Debug		
+	mov [0x000B809C], byte '6'	; SMP Init complete
+	mov [0x000B809E], byte '0'
 
 ; Calculate amount of usable RAM from Memory Map
 	xor rcx, rcx
@@ -485,26 +470,25 @@ endmemcalc:
 	mov dword [mem_amount], ecx
 
 ; Debug
-	mov al, '2'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte '2'
 
 ; Convert CPU speed value to string
-	xor rax, rax
-	mov ax, [cpu_speed]
-	mov rdi, speedtempstring
-	call os_int_to_string
+;	xor rax, rax
+;	mov ax, [cpu_speed]
+;	mov rdi, speedtempstring
+;	call os_int_to_string
 
 ; Convert CPU amount value to string
-	xor rax, rax
-	mov ax, [cpu_activated]
-	mov rdi, cpu_amount_string
-	call os_int_to_string
+;	xor rax, rax
+;	mov ax, [cpu_activated]
+;	mov rdi, cpu_amount_string
+;	call os_int_to_string
 
 ; Convert RAM amount value to string
-	xor rax, rax
-	mov eax, [mem_amount]
-	mov rdi, memtempstring
-	call os_int_to_string
+;	xor rax, rax
+;	mov eax, [mem_amount]
+;	mov rdi, memtempstring
+;	call os_int_to_string
 
 ; Build the infomap
 	xor rdi, rdi
@@ -552,38 +536,31 @@ nextIOAPIC:
 ;	call os_print_string
 
 ; Debug
-	mov al, '4'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte '4'
 
 ; Print info on CPU and MEM
-	mov ax, 0x0004
-	call os_move_cursor
-	mov rsi, msg_CPU
-	call os_print_string
-	mov rsi, speedtempstring
-	call os_print_string
-	mov rsi, msg_mhz
-	call os_print_string
-	mov rsi, cpu_amount_string
-	call os_print_string
-	mov rsi, msg_MEM
-	call os_print_string
-	mov rsi, memtempstring
-	call os_print_string
-	mov rsi, msg_mb
-	call os_print_string
+;	mov ax, 0x0004
+;	call os_move_cursor
+;	mov rsi, msg_CPU
+;	call os_print_string
+;	mov rsi, speedtempstring
+;	call os_print_string
+;	mov rsi, msg_mhz
+;	call os_print_string
+;	mov rsi, cpu_amount_string
+;	call os_print_string
+;	mov rsi, msg_MEM
+;	call os_print_string
+;	mov rsi, memtempstring
+;	call os_print_string
+;	mov rsi, msg_mb
+;	call os_print_string
 
 ; Move the trailing binary to its final location
 	mov rsi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
 	mov rcx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
-
-; Print a message that the kernel is being started
-	mov ax, 0x0006
-	call os_move_cursor
-	mov rsi, msg_startingkernel
-	call os_print_string
 
 ; Debug
 	mov rdi, 0x000B8090		; Clear the debug messages in the top-right corner
@@ -645,11 +622,11 @@ normal_start:
 %include "init/cpu.asm"
 %include "init/pic.asm"
 %include "init/smp.asm"
-%include "syscalls.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
 
-; Pad to an even KB file (6 KiB)
+
+; Pad to an even KB file
 times PURE64SIZE-($-$$) db 0x90
 
 

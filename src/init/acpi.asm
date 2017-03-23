@@ -126,8 +126,7 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
-	mov al, 'X'
-	mov [0x000B809A], al
+	mov [0x000B809A], byte 'X'
 	jmp $
 
 
@@ -157,13 +156,7 @@ parseAPICTable:
 readAPICstructures:
 	cmp ebx, ecx
 	jge parseAPICTable_done
-;	call os_print_newline
 	lodsb				; APIC Structure Type
-;	call os_debug_dump_al
-;	push rax
-;	mov al, ' '
-;	call os_print_char
-;	pop rax
 	cmp al, 0x00			; Processor Local APIC
 	je APICapic
 	cmp al, 0x01			; I/O APIC
@@ -228,12 +221,7 @@ APICinterruptsourceoverride:
 	add ebx, eax
 	lodsb				; Bus
 	lodsb				; Source
-;	call os_print_newline
-;	call os_debug_dump_al
-;	mov al, ' '
-;	call os_print_char
 	lodsd				; Global System Interrupt
-;	call os_debug_dump_eax
 	lodsw				; Flags
 	jmp readAPICstructures		; Read the next structure
 
@@ -249,9 +237,7 @@ APICx2apic:
 	bt eax, 0			; Test to see if usable
 	jnc APICx2apicEnd		; Read the next structure if CPU not usable
 	xchg eax, edx			; Restore the x2APIC ID back to EAX
-	call os_debug_dump_eax
-	call os_print_newline
-	; Save the ID's somewhere
+	; TODO - Save the ID's somewhere
 APICx2apicEnd:
 	lodsd				; ACPI Processor UID
 	jmp readAPICstructures		; Read the next structure

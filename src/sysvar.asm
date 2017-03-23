@@ -45,24 +45,6 @@ cpu_amount_string:	equ SystemVariables + 410
 os_key:			equ SystemVariables + 421
 os_IOAPICCount:		equ SystemVariables + 424
 
-;MISC
-screen_cols:		db 80
-screen_rows:		db 25
-hextable: 		db '0123456789ABCDEF'
-
-;STRINGS
-msg_initializing:	db 'Pure64 v0.7.0 - www.returninfinity.com', 13, 10, 13, 10, 'Initializing system... ', 0
-msg_done:		db ' Done', 0
-msg_CPU:		db '[CPU: ', 0
-msg_mhz:		db 'MHz x', 0
-msg_MEM:		db ']  [MEM: ', 0
-msg_mb:			db ' MiB]', 0
-msg_startingkernel:	db 'Starting kernel...', 13, 13, 0
-msg_no64:		db 'ERROR: This computer does not support 64-bit mode.', 0
-msg_novesa:		db 'VESA error', 0
-
-
-
 
 align 16
 GDTR32:					; Global Descriptors Table Register

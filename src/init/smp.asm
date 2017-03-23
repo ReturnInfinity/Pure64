@@ -6,15 +6,13 @@
 ; =============================================================================
 
 
-init_smp:
-	mov al, '5'			; Start of MP init
-	mov [0x000B809C], al
-	mov al, '0'
-	mov [0x000B809E], al
+init_smp:	
+	mov [0x000B809C], byte '5'	; Start of MP init
+	mov [0x000B809E], byte '0'
 
 ; Check if we want the AP's to be enabled.. if not then skip to end
-;	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
-;	jne noMP			; If not then skip SMP init
+	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
+	jne noMP			; If not then skip SMP init
 
 ; Start the AP's one by one
 	xor eax, eax
@@ -24,8 +22,7 @@ init_smp:
 	shr rax, 24			; APIC ID is stored in bits 31:24
 	mov dl, al			; Store BSP APIC ID in DL
 
-	mov al, '8'			; Start the AP's
-	mov [0x000B809E], al
+	mov [0x000B809E], byte '8'	; Start the AP's
 
 	mov esi, 0x00005100
 	xor eax, eax
@@ -58,10 +55,10 @@ smp_send_INIT_done:
 
 	mov rax, [os_Counter_RTC]
 	add rax, 10
-wait1:
+smp_wait1:
 	mov rbx, [os_Counter_RTC]
 	cmp rax, rbx
-	jg wait1
+	jg smp_wait1
 
 	mov esi, 0x00005100
 	xor ecx, ecx
@@ -90,17 +87,15 @@ smp_send_SIPI_skipcore:
 	jmp smp_send_SIPI
 
 smp_send_SIPI_done:
-
-	mov al, 'A'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte 'A'
 
 ; Let things settle (Give the AP's some time to finish)
 	mov rax, [os_Counter_RTC]
 	add rax, 20
-wait3:
+smp_wait2:
 	mov rbx, [os_Counter_RTC]
 	cmp rax, rbx
-	jg wait3
+	jg smp_wait2
 
 ; Finish up
 noMP:
@@ -113,8 +108,7 @@ noMP:
 	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 	mov [os_BSP], eax		; Store the BSP APIC ID
 
-	mov al, 'C'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte 'C'
 
 ; Calculate speed of CPU (At this point the RTC is firing at 1024Hz)
 	cpuid
@@ -136,8 +130,7 @@ speedtest:
 	div rcx
 	mov [cpu_speed], ax
 
-	mov al, 'E'
-	mov [0x000B809E], al
+	mov [0x000B809E], byte 'E'
 
 	cli				; Disable Interrupts
 

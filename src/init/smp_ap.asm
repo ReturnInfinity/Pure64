@@ -144,13 +144,6 @@ clearcs64_ap:
 
 	call init_cpu			; Setup CPU
 
-; Make sure exceptions are working.
-;	xor rax, rax
-;	xor rbx, rbx
-;	xor rcx, rcx
-;	xor rdx, rdx
-;	div rax
-
 	lock inc word [cpu_activated]
 	xor eax, eax
 	mov rsi, [os_LocalAPICAddress]

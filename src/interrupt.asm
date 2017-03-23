@@ -9,10 +9,6 @@
 ; -----------------------------------------------------------------------------
 ; Default exception handler
 exception_gate:
-	mov rsi, int_string
-	call os_print_string
-	mov rsi, exc_string
-	call os_print_string
 exception_gate_halt:
 	cli				; Disable interrupts
 	hlt				; Halt the system
@@ -103,8 +99,7 @@ rtc:
 ; Spurious interrupt. INT 0xFF
 align 16
 spurious:				; handler for spurious interrupts
-	mov al, 'S'
-	mov [0x000B8080], al
+	mov [0x000B8080], byte 'S'
 	iretq
 ; -----------------------------------------------------------------------------
 
@@ -192,50 +187,32 @@ exception_gate_19:
 	jmp exception_gate_main
 
 exception_gate_main:
-	call os_print_newline
-	mov rsi, int_string
-	call os_print_string
-	mov rsi, exc_string00
-	and rax, 0xFF			; Clear out everything in RAX except for AL
-	shl eax, 3				; Quick multiply by 3
-	add rsi, rax				; Use the value in RAX as an offset to get to the right message
-	call os_print_string
-	mov rsi, adr_string
-	call os_print_string
-	mov rax, [rsp]
-	call os_debug_dump_rax
-	call os_print_newline
-	call os_dump_regs
-
 exception_gate_main_hang:
 	nop
 	jmp exception_gate_main_hang	; Hang. User must reset machine at this point
+; -----------------------------------------------------------------------------
 
-; Strings for the error messages
-int_string db 'Pure64 - Exception ', 0
-adr_string db ' @ 0x', 0
-exc_string db '?? - Unknown', 0
-align 16
-exc_string00 db '00 - DE', 0
-exc_string01 db '01 - DB', 0
-exc_string02 db '02     ', 0
-exc_string03 db '03 - BP', 0
-exc_string04 db '04 - OF', 0
-exc_string05 db '05 - BR', 0
-exc_string06 db '06 - UD', 0
-exc_string07 db '07 - NM', 0
-exc_string08 db '08 - DF', 0
-exc_string09 db '09     ', 0		; No longer generated on new CPU's
-exc_string10 db '10 - TS', 0
-exc_string11 db '11 - NP', 0
-exc_string12 db '12 - SS', 0
-exc_string13 db '13 - GP', 0
-exc_string14 db '14 - PF', 0
-exc_string15 db '15     ', 0
-exc_string16 db '16 - MF', 0
-exc_string17 db '17 - AC', 0
-exc_string18 db '18 - MC', 0
-exc_string19 db '19 - XM', 0
+
+; -----------------------------------------------------------------------------
+; create_gate
+; rax = address of handler
+; rdi = gate # to configure
+create_gate:
+	push rdi
+	push rax
+
+	shl rdi, 4			; quickly multiply rdi by 16
+	stosw				; store the low word (15..0)
+	shr rax, 16
+	add rdi, 4			; skip the gate marker
+	stosw				; store the high word (31..16)
+	shr rax, 16
+	stosd				; store the high dword (63..32)
+
+	pop rax
+	pop rdi
+	ret
+; -----------------------------------------------------------------------------
 
 
 ; =============================================================================
