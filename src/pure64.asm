@@ -577,6 +577,8 @@ normal_start:
 %include "interrupt.asm"
 %include "sysvar.asm"
 
+EOF:
+	dd 0xDEADC0DE
 
 ; Pad to an even KB file
 times PURE64SIZE-($-$$) db 0x90
