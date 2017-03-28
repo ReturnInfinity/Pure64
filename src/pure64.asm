@@ -118,13 +118,13 @@ rtc_poll:
 	out 0xA1, al
 
 ; Hide VGA hardware cursor
-	mov al, 0x0F		; Cursor Low Port
+	mov al, 0x0F			; Cursor Low Port
 	mov dx, 0x03D4
 	out dx, al
 	mov al, 0xFF
 	mov dx, 0x03D5
 	out dx, al
-	mov al, 0x0E		; Cursor High Port
+	mov al, 0x0E			; Cursor High Port
 	mov dx, 0x03D4
 	out dx, al
 	mov al, 0xFF
@@ -133,24 +133,24 @@ rtc_poll:
 
 ; Configure serial port @ 0x03F8
 	mov dx, 0x03F9
-	mov al, 0x00		; Disable all interrupts
+	mov al, 0x00			; Disable all interrupts
 	out dx, al
-	mov al, 0x80		; Enable DLAB (set baud rate divisor)
+	mov al, 0x80			; Enable DLAB (set baud rate divisor)
 	add dx, 2
 	out dx, al
-	mov al, 0x01		; Set divisor to 1 for 115200 baud
+	mov al, 0x01			; Set divisor to 1 for 115200 baud
 	sub dx, 4
 	out dx, al
 	mov al, 0x00
 	add dx, 1
 	out dx, al
-	mov al, 0x03		; 8 bits, no parity, one stop bit
+	mov al, 0x03			; 8 bits, no parity, one stop bit
 	add dx, 2
 	out dx, al
-	mov al, 0xC7		; Enable FIFO, clear them, with 14-byte threshold
+	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
 	sub dx, 1
 	out dx, al
-	mov al, 0x0B		; IRQs enabled, RTS/DSR set
+	mov al, 0x0B			; IRQs enabled, RTS/DSR set
 	add dx, 2
 	out dx, al
 
