@@ -131,11 +131,11 @@ rtc_poll:
 	mov dx, 0x03D5
 	out dx, al
 
-; Configure serial port
+; Configure serial port @ 0x03F8
 	mov dx, 0x03F9
-	mov al, 0x00
+	mov al, 0x00		; Disable all interrupts
 	out dx, al
-	mov al, 0x80
+	mov al, 0x80		; Enable DLAB (set baud rate divisor)
 	add dx, 2
 	out dx, al
 	mov al, 0x01		; Set divisor to 1 for 115200 baud
@@ -144,13 +144,13 @@ rtc_poll:
 	mov al, 0x00
 	add dx, 1
 	out dx, al
-	mov al, 0x03
+	mov al, 0x03		; 8 bits, no parity, one stop bit
 	add dx, 2
 	out dx, al
-	mov al, 0xC7
+	mov al, 0xC7		; Enable FIFO, clear them, with 14-byte threshold
 	sub dx, 1
 	out dx, al
-	mov al, 0x0B
+	mov al, 0x0B		; IRQs enabled, RTS/DSR set
 	add dx, 2
 	out dx, al
 
