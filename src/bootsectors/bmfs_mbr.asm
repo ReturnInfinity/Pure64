@@ -21,9 +21,8 @@ org 0x7C00
 
 entry:
 	cli				; Disable interrupts
+	cld				; Clear direction flag
 ;	xchg bx, bx			; Bochs magic debug
-
-	mov [DriveNumber], dl		; BIOS passes drive number in DL
 
 	xor eax, eax
 	mov ss, ax
@@ -31,6 +30,8 @@ entry:
 	mov ds, ax
 	mov sp, 0x7C00
 	sti				; Enable interrupts
+
+	mov [DriveNumber], dl		; BIOS passes drive number in DL
 
 ;	mov edi, 0x00004000		; Clear out memory for the E820 map
 ;	xor eax, eax
@@ -170,6 +171,7 @@ times 446-$+$$ db 0
 db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
 DriveNumber db 0x00
 
+align 4
 DAP:	db 0x10
 	db 0x00
 	dw SECTORS

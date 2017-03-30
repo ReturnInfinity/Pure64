@@ -56,6 +56,7 @@ align 16
 multiboot_entry:
 	push 0
 	popf
+	cld				; Clear direction flag
 
 ; Copy memory map
 	mov esi, ebx		; GRUB stores the Multiboot info table at the address in EBX

@@ -2,7 +2,7 @@
 ; Pure64 PXE Start -- a 64-bit OS/software loader written in Assembly for x86-64 systems
 ; Copyright (C) 2008-2017 Return Infinity -- see LICENSE.TXT
 ;
-; This is a stub file for loading Pure64 and a kernel via PXE.
+; This is a stub file for loading Pure64 and a kernel/software package via PXE.
 ;
 ; Windows - copy /b pxestart.bin + pure64.sys + kernel64.sys pxeboot.bin
 ; Unix - cat pxestart.bin pure64.sys kernel64.sys > pxeboot.bin
@@ -13,7 +13,7 @@
 ;
 ; File Sizes
 ; pxestart.bin	 1024 bytes
-; pure64.sys	 6144 bytes
+; pure64.sys	 4096 bytes
 ; kernel64.sys	16384 bytes (or so)
 ; =============================================================================
 
@@ -23,6 +23,7 @@ org 0x7C00
 
 start:
 	cli				; Disable interrupts
+	cld				; Clear direction flag
 	xor eax, eax
 	mov ss, ax
 	mov es, ax
