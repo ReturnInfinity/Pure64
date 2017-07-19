@@ -31,10 +31,6 @@ start:
 	mov sp, 0x7C00
 	sti				; Enable interrupts
 
-; Make sure the screen is set to 80x25 color text mode
-	mov ax, 0x0003			; Set to normal (80x25 text) video mode
-	int 0x10
-
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
 ; inputs: es:di -> destination buffer for 24 byte entries
@@ -143,9 +139,6 @@ print_string_16:			; Output string in SI to screen
 ;------------------------------------------------------------------------------
 
 
-msg_Load db "Loading via PXE... ", 0
-msg_MagicFail db "Error!", 0
-
 align 16
 GDTR32:					; Global Descriptors Table Register
 dw gdt32_end - gdt32 - 1		; limit of GDT (size minus one)
@@ -153,10 +146,13 @@ dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-dq 0x0000000000000000			; Null desciptor
-dq 0xFFFF00009A0000CF			; 32-bit code descriptor
-dq 0xFFFF0000920000CF			; 32-bit data descriptor
+dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
+dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
+dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
+
+msg_Load db "Loading via PXE... ", 0
+msg_MagicFail db "Error!", 0
 
 times 510-$+$$ db 0			; Pad out for a normal boot sector
 
