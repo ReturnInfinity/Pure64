@@ -22,8 +22,6 @@ org 0x7C00
 entry:
 	cli				; Disable interrupts
 	cld				; Clear direction flag
-;	xchg bx, bx			; Bochs magic debug
-
 	xor eax, eax
 	mov ss, ax
 	mov es, ax
