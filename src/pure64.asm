@@ -66,7 +66,7 @@ start32:
 
 	mov edi, 0x5000			; Clear the info map
 	xor eax, eax
-	mov cx, 1024
+	mov cx, 512
 	rep stosd
 
 	xor eax, eax			; Clear all registers
@@ -504,6 +504,14 @@ nextIOAPIC:
 	sub cl, 1
 	cmp cl, 0
 	jne nextIOAPIC
+
+	mov di, 0x5080
+	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
+	stosd
+	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
+	stosd
+	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
+	stosb
 
 ; Debug
 	mov [0x000B809E], byte '4'
