@@ -16,6 +16,7 @@
 
 FLAG_ALIGN		equ 1<<0   ; align loaded modules on page boundaries
 FLAG_MEMINFO		equ 1<<1   ; provide memory map
+FLAG_VIDEO		equ 1<<2   ; set video mode
 FLAG_AOUT_KLUDGE	equ 1<<16
 			;FLAGS[16] indicates to GRUB we are not
 			;an ELF executable and the fields
@@ -27,13 +28,13 @@ MAGIC			equ 0x1BADB002
 			;magic number GRUB searches for in the first 8k
 			;of the kernel file GRUB is told to load
 
-FLAGS			equ FLAG_AOUT_KLUDGE | FLAG_ALIGN | FLAG_MEMINFO
+FLAGS			equ FLAG_ALIGN | FLAG_MEMINFO | FLAG_VIDEO | FLAG_AOUT_KLUDGE
 CHECKSUM		equ -(MAGIC + FLAGS)
 
 mode_type		equ 1
 width			equ 1024
 height			equ 768
-depth			equ 32
+depth			equ 24
 
 _start:				; We need some code before the multiboot header
 	xor eax, eax		; Clear eax and ebx in the event
@@ -50,13 +51,17 @@ multiboot_header:
 	dd 0x00			; load end address : not necessary
 	dd 0x00			; bss end address : not necessary
 	dd multiboot_entry	; entry address GRUB will start at
+	dd mode_type
+	dd width
+	dd height
+	dd depth
 
 align 16
 
 multiboot_entry:
 	push 0
 	popf
-	cld				; Clear direction flag
+	cld			; Clear direction flag
 
 ; Copy memory map
 	mov esi, ebx		; GRUB stores the Multiboot info table at the address in EBX
