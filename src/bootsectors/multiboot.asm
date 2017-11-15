@@ -31,7 +31,7 @@ MAGIC			equ 0x1BADB002
 FLAGS			equ FLAG_ALIGN | FLAG_MEMINFO | FLAG_VIDEO | FLAG_AOUT_KLUDGE
 CHECKSUM		equ -(MAGIC + FLAGS)
 
-mode_type		equ 1
+mode_type		equ 0	; Linear
 width			equ 1024
 height			equ 768
 depth			equ 24
