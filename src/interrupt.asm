@@ -37,12 +37,6 @@ keyboard:
 	test al, 0x80
 	jnz keyboard_done
 
-	mov [0x000B8088], al		; Dump the scancode to the screen
-
-	mov rax, [os_Counter_RTC]
-	add rax, 10
-	mov [os_Counter_RTC], rax
-
 keyboard_done:
 	mov al, 0x20			; Acknowledge the IRQ
 	out 0x20, al
@@ -75,12 +69,6 @@ rtc:
 
 	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
 
-	mov al, 'R'
-	mov [0x000B8092], al
-	mov rax, [os_Counter_RTC]
-	and al, 1			; Clear all but lowest bit (Can only be 0 or 1)
-	add al, 48
-	mov [0x000B8094], al
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
 	in al, 0x71			; Read the value in register C
@@ -99,7 +87,6 @@ rtc:
 ; Spurious interrupt. INT 0xFF
 align 16
 spurious:				; handler for spurious interrupts
-	mov [0x000B8080], byte 'S'
 	iretq
 ; -----------------------------------------------------------------------------
 

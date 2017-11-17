@@ -117,20 +117,6 @@ rtc_poll:
 	out 0x21, al
 	out 0xA1, al
 
-; Hide VGA hardware cursor
-	mov al, 0x0F			; Cursor Low Port
-	mov dx, 0x03D4
-	out dx, al
-	mov al, 0xFF
-	mov dx, 0x03D5
-	out dx, al
-	mov al, 0x0E			; Cursor High Port
-	mov dx, 0x03D4
-	out dx, al
-	mov al, 0xFF
-	mov dx, 0x03D5
-	out dx, al
-
 ; Configure serial port @ 0x03F8
 	mov dx, 0x03F9
 	mov al, 0x00			; Disable all interrupts
@@ -240,10 +226,6 @@ pd_again:				; Create a 2 MiB page
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
-; Debug	
-	mov [0x000B809C], byte '1'	; About to make the jump into 64-bit mode
-	mov [0x000B809E], byte 'E'
-
 ; Enable paging to activate long mode
 	mov eax, cr0
 	or eax, 0x80000000		; PG (Bit 31)
@@ -259,10 +241,6 @@ align 16
 USE64
 
 start64:
-; Debug
-	mov [0x000B809C], byte '4'	; Now in 64-bit mode (0x40 = 64)
-	mov [0x000B809E], byte '0'
-
 	xor eax, eax			; aka r0
 	xor ebx, ebx			; aka r3
 	xor ecx, ecx			; aka r1
@@ -293,9 +271,6 @@ clearcs64:
 	xor rax, rax
 
 	lgdt [GDTR64]			; Reload the GDT
-
-; Debug
-	mov [0x000B809E], byte '2'
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -391,9 +366,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 
 	lidt [IDTR64]			; load IDT register
 
-; Debug
-	mov [0x000B809E], byte '4'
-
 ; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
 	xor rax, rax
 	mov rcx, 256
@@ -410,9 +382,6 @@ clearmapnext:
 
 	call init_pic			; Configure the PIC(s), also activate interrupts
 
-; Debug	
-	mov [0x000B809E], byte '6'	; CPU Init complete
-
 ; Init of SMP
 	call init_smp
 
@@ -424,10 +393,6 @@ clearmapnext:
 	shl rax, 10			; shift left 10 bits for a 1024byte stack
 	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
-
-; Debug		
-	mov [0x000B809C], byte '6'	; SMP Init complete
-	mov [0x000B809E], byte '0'
 
 ; Calculate amount of usable RAM from Memory Map
 	xor rcx, rcx
@@ -460,9 +425,6 @@ endmemcalc:
 	add ecx, 1			; The BIOS will usually report actual memory minus 1
 	and ecx, 0xFFFFFFFE		; Make sure it is an even number (in case we added 1 to an even number)
 	mov dword [mem_amount], ecx
-
-; Debug
-	mov [0x000B809E], byte '2'
 
 ; Build the infomap
 	xor rdi, rdi
@@ -513,20 +475,11 @@ nextIOAPIC:
 	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
 	stosb
 
-; Debug
-	mov [0x000B809E], byte '4'
-
 ; Move the trailing binary to its final location
 	mov rsi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
 	mov rcx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
-
-; Debug
-	mov rdi, 0x000B8090		; Clear the debug messages in the top-right corner
-	mov rax, 0x0720072007200720
-	stosq
-	stosq				; Write a total of 8 characters (2 bytes each)
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers

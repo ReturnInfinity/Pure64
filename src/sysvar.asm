@@ -19,7 +19,6 @@ VBEModeInfoBlock:	equ 0x0000000000005C00	; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
 os_ACPITableAddress:	equ SystemVariables + 0x00
-screen_cursor_offset:	equ SystemVariables + 0x08
 os_LocalX2APICAddress:	equ SystemVariables + 0x10
 os_Counter_Timer:	equ SystemVariables + 0x18
 os_Counter_RTC:		equ SystemVariables + 0x20
@@ -30,7 +29,6 @@ os_HPETAddress:		equ SystemVariables + 0x38
 ; DD - Starting at offset 128, increments by 4
 os_BSP:			equ SystemVariables + 128
 mem_amount:		equ SystemVariables + 132
-os_VideoBase:		equ SystemVariables + 136
 
 ; DW - Starting at offset 256, increments by 2
 cpu_speed:		equ SystemVariables + 256
@@ -38,13 +36,7 @@ cpu_activated:		equ SystemVariables + 258
 cpu_detected:		equ SystemVariables + 260
 
 ; DB - Starting at offset 384, increments by 1
-screen_cursor_x:	equ SystemVariables + 386
-screen_cursor_y:	equ SystemVariables + 387
-memtempstring:		equ SystemVariables + 390
-speedtempstring:	equ SystemVariables + 400
-cpu_amount_string:	equ SystemVariables + 410
-os_key:			equ SystemVariables + 421
-os_IOAPICCount:		equ SystemVariables + 424
+os_IOAPICCount:		equ SystemVariables + 384
 
 
 align 16

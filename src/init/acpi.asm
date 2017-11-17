@@ -126,7 +126,6 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
-	mov [0x000B809A], byte 'X'
 	jmp $
 
 
