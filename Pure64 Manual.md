@@ -81,7 +81,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5100...</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 </table>
 
-A copy of the E820 System Memory Map is stored at memory address `0x0000000000004000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.<p />
+A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.<p />
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
 <tr><td>Starting Address</td><td>64-bit</td><td>The starting address for this record</td></tr>
