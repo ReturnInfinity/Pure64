@@ -396,7 +396,7 @@ clearmapnext:
 
 ; Calculate amount of usable RAM from Memory Map
 	xor rcx, rcx
-	mov rsi, 0x0000000000004000	; E820 Map location
+	mov rsi, 0x0000000000006000	; E820 Map location
 readnextrecord:
 	lodsq
 	lodsq
