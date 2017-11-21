@@ -279,16 +279,16 @@ clearcs64:
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
 ; Build the rest of the page tables (4GiB+)
-	xor ecx, ecx			; Clear the counter
-	mov rax, 0x000000010000008F
-	mov rdi, 0x0000000000014000
-buildem:
-	stosq
-	add rax, 0x0000000000200000
-	add rcx, 1
-	cmp rcx, 30720			; Another 60 GiB (We already mapped 4 GiB)
-	jne buildem
-	; We have 64 GiB mapped now
+;	xor ecx, ecx			; Clear the counter
+;	mov rax, 0x000000010000008F
+;	mov rdi, 0x0000000000014000
+;buildem:
+;	stosq
+;	add rax, 0x0000000000200000
+;	add rcx, 1
+;	cmp rcx, 30720			; Another 60 GiB (We already mapped 4 GiB)
+;	jne buildem
+;	; We have 64 GiB mapped now
 
 ; Build a temporary IDT
 	xor rdi, rdi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
