@@ -36,7 +36,7 @@ start:
 ; inputs: es:di -> destination buffer for 24 byte entries
 ; outputs: bp = entry count, trashes all registers except esi
 do_e820:
-	mov edi, 0x00004000		; location that memory map will be stored to
+	mov edi, 0x00006000		; location that memory map will be stored to
 	xor ebx, ebx			; ebx must be 0 to start
 	xor bp, bp			; keep an entry count in bp
 	mov edx, 0x0534D4150		; Place "SMAP" into edx
