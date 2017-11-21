@@ -38,8 +38,9 @@ This memory map shows how physical memory looks after Pure64 is finished.
 <tr><td>0x0000000000003000</td><td>0x0000000000003FFF</td><td>4 KiB</td><td>PDP - 512 enties</td></tr>
 <tr><td>0x0000000000004000</td><td>0x0000000000007FFF</td><td>16 KiB</td><td>Pure64 Data</td></tr>
 <tr><td>0x0000000000008000</td><td>0x000000000000FFFF</td><td>32 KiB</td><td>Pure64 - After the OS is loaded and running this memory is free again</td></tr>
-<tr><td>0x0000000000010000</td><td>0x000000000004FFFF</td><td>256 KiB</td><td>PD - Room to map 64 GiB</td></tr>
-<tr><td>0x0000000000050000</td><td>0x000000000009FFFF</td><td>320 KiB</td><td>Free</td></tr>
+<tr><td>0x0000000000010000</td><td>0x000000000001FFFF</td><td>64 KiB</td><td>PD Low</td></tr>
+<tr><td>0x0000000000020000</td><td>0x000000000005FFFF</td><td>256 KiB</td><td>PD High</td></tr>
+<tr><td>0x0000000000060000</td><td>0x000000000009FFFF</td><td>256 KiB</td><td>Free</td></tr>
 <tr><td>0x00000000000A0000</td><td>0x00000000000FFFFF</td><td>384 KiB</td><td>ROM Area</td></tr>
 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>VGA mem at 0xA0000 (128 KiB) Color text starts at 0xB8000</td></tr>
 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>Video BIOS at 0xC0000 (64 KiB)</td></tr>
