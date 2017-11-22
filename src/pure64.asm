@@ -140,8 +140,8 @@ rtc_poll:
 	add dx, 2
 	out dx, al
 
-; Clear out the first 4096 bytes of memory. This will store the 64-bit IDT, GDT, PML4, and PDP
-	mov ecx, 1024
+; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
+	mov ecx, 5120
 	xor eax, eax
 	mov edi, eax
 	rep stosd
