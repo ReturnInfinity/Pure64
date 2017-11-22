@@ -177,19 +177,19 @@ rtc_poll:
 ; Create the PDP entries.
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
-;	mov ecx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00003000
 	mov eax, 0x00010007		; location of first low PD
-;create_pdpe_low:
+create_pdpe_low:
 	stosd
-;	push eax
+	push eax
 	xor eax, eax
 	stosd
-;	pop eax
-;	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
-;	dec ecx
-;	cmp ecx, 0
-;	jne create_pdpe_low
+	pop eax
+	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+	dec ecx
+	cmp ecx, 0
+	jne create_pdpe_low
 
 	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00004000
@@ -205,11 +205,11 @@ create_pdpe_high:
 	cmp ecx, 0
 	jne create_pdpe_high
 
-; Build the low PD entries.
+; Create the low PD entries.
 	mov edi, 0x00010000
 	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
 	xor ecx, ecx
-pd_again:				; Create a 2 MiB page
+pd_low:					; Create a 2 MiB page
 	stosd
 	push eax
 	xor eax, eax
@@ -218,7 +218,7 @@ pd_again:				; Create a 2 MiB page
 	add eax, 0x00200000
 	inc ecx
 	cmp ecx, 2048
-	jne pd_again			; Create 2048 2 MiB page maps.
+	jne pd_low			; Create 2048 2 MiB page maps.
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -290,16 +290,16 @@ clearcs64:
 	stosd
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
-; Build the high PD entries
+; Create the high PD entries
 	mov rax, 0x000000000000008F
 	mov rdi, 0x0000000000020000
 	xor ecx, ecx
-buildem:
+pd_high:
 	stosq
 	add rax, 0x0000000000200000
 	add rcx, 1
 	cmp rcx, 32768			; Map 64 GiB
-	jne buildem
+	jne pd_high
 	; We have 64 GiB mapped now
 
 ; Build a temporary IDT
