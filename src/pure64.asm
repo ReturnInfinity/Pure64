@@ -190,7 +190,7 @@ create_pdpe_low:
 
 	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00004000		; location of high PDPE
-	mov eax, 0x00020007		; location of first high PD
+	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
 create_pdpe_high:
 	stosd
 	push eax
@@ -204,7 +204,7 @@ create_pdpe_high:
 
 ; Create the low PD entries.
 	mov edi, 0x00010000
-	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 	xor ecx, ecx
 pd_low:					; Create a 2 MiB page
 	stosd
@@ -288,7 +288,7 @@ clearcs64:
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
 ; Create the high PD entries
-	mov rax, 0x000000000000008F
+	mov rax, 0x000000000000008F	; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 	mov rdi, 0x0000000000020000	; Location of high PD entries
 	add rax, 0x0000000000400000	; Add 4MiB offset
 	xor ecx, ecx
@@ -298,7 +298,6 @@ pd_high:
 	add rcx, 1
 	cmp rcx, 8192			; Map 16 GiB
 	jne pd_high
-	; We have 64 GiB mapped now
 
 ; Build a temporary IDT
 	xor rdi, rdi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
