@@ -77,9 +77,6 @@ start32:
 	xor edi, edi
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
-	
-	mov [0x000B809C], byte '2'	; Now in 32-bit protected mode (0x20 = 32)
-	mov [0x000B809E], byte '0'
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
