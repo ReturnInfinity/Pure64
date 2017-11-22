@@ -20,7 +20,7 @@
 USE32
 ORG 0x00008000
 
-PURE64SIZE	equ 4096		; Pad Pure64 to this length
+PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
@@ -146,10 +146,10 @@ rtc_poll:
 	mov edi, eax
 	rep stosd
 
-; Clear memory for the Page Descriptor Entries (0x10000 - 0x4FFFF)
+; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00010000
-	mov ecx, 65536
-	rep stosd
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
