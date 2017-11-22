@@ -163,13 +163,13 @@ rtc_poll:
 ; A single PML4 entry can map 512GB with 2MB pages.
 	cld
 	mov edi, 0x00002000		; Create a PML4 entry for the first 4GB of RAM
-	mov eax, 0x00003007
+	mov eax, 0x00003007		; location of low PDP
 	stosd
 	xor eax, eax
 	stosd
 
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00004007
+	mov eax, 0x00004007		; location of high PDP
 	stosd
 	xor eax, eax
 	stosd
@@ -178,7 +178,7 @@ rtc_poll:
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
 	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00003000
+	mov edi, 0x00003000		; location of low PDPE
 	mov eax, 0x00010007		; location of first low PD
 create_pdpe_low:
 	stosd
@@ -192,7 +192,7 @@ create_pdpe_low:
 	jne create_pdpe_low
 
 	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00004000
+	mov edi, 0x00004000		; location of high PDPE
 	mov eax, 0x00020007		; location of first high PD
 create_pdpe_high:
 	stosd
@@ -229,7 +229,7 @@ pd_low:					; Create a 2 MiB page
 	mov cr4, eax
 
 ; Point cr3 at PML4
-	mov eax, 0x00002008		; Write-thru (Bit 3)
+	mov eax, 0x00002008		; Write-thru enabled (Bit 3)
 	mov cr3, eax
 
 ; Enable long mode and SYSCALL/SYSRET
@@ -292,13 +292,14 @@ clearcs64:
 
 ; Create the high PD entries
 	mov rax, 0x000000000000008F
-	mov rdi, 0x0000000000020000
+	mov rdi, 0x0000000000020000	; Location of high PD entries
+	add rax, 0x0000000000400000	; Add 4MiB offset
 	xor ecx, ecx
 pd_high:
 	stosq
 	add rax, 0x0000000000200000
 	add rcx, 1
-	cmp rcx, 32768			; Map 64 GiB
+	cmp rcx, 8192			; Map 16 GiB
 	jne pd_high
 	; We have 64 GiB mapped now
 
