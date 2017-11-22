@@ -169,7 +169,7 @@ rtc_poll:
 	stosd
 
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00003007		; The higher half is identity mapped to the lower half
+	mov eax, 0x00004007
 	stosd
 	xor eax, eax
 	stosd
@@ -177,10 +177,24 @@ rtc_poll:
 ; Create the PDP entries.
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
-	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+;	mov ecx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00003000
-	mov eax, 0x00010007		; location of first PD
-create_pdpe:
+	mov eax, 0x00010007		; location of first low PD
+;create_pdpe_low:
+	stosd
+;	push eax
+	xor eax, eax
+	stosd
+;	pop eax
+;	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+;	dec ecx
+;	cmp ecx, 0
+;	jne create_pdpe_low
+
+	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov edi, 0x00004000
+	mov eax, 0x00020007		; location of first high PD
+create_pdpe_high:
 	stosd
 	push eax
 	xor eax, eax
@@ -189,11 +203,9 @@ create_pdpe:
 	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
 	dec ecx
 	cmp ecx, 0
-	jne create_pdpe
+	jne create_pdpe_high
 
-; Create the PD entries.
-; PD entries are stored starting at 0x0000000000010000 and ending at 0x000000000004FFFF (256 KiB)
-; This gives us room to map 64 GiB with 2 MiB pages
+; Build the low PD entries.
 	mov edi, 0x00010000
 	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
 	xor ecx, ecx
@@ -278,17 +290,17 @@ clearcs64:
 	stosd
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
-; Build the rest of the page tables (4GiB+)
-;	xor ecx, ecx			; Clear the counter
-;	mov rax, 0x000000010000008F
-;	mov rdi, 0x0000000000014000
-;buildem:
-;	stosq
-;	add rax, 0x0000000000200000
-;	add rcx, 1
-;	cmp rcx, 30720			; Another 60 GiB (We already mapped 4 GiB)
-;	jne buildem
-;	; We have 64 GiB mapped now
+; Build the high PD entries
+	mov rax, 0x000000000000008F
+	mov rdi, 0x0000000000020000
+	xor ecx, ecx
+buildem:
+	stosq
+	add rax, 0x0000000000200000
+	add rcx, 1
+	cmp rcx, 32768			; Map 64 GiB
+	jne buildem
+	; We have 64 GiB mapped now
 
 ; Build a temporary IDT
 	xor rdi, rdi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
