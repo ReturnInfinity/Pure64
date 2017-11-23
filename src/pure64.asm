@@ -20,7 +20,7 @@
 USE32
 ORG 0x00008000
 
-PURE64SIZE	equ 4096		; Pad Pure64 to this length
+PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
@@ -77,9 +77,6 @@ start32:
 	xor edi, edi
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
-	
-	mov [0x000B809C], byte '2'	; Now in 32-bit protected mode (0x20 = 32)
-	mov [0x000B809E], byte '0'
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -140,16 +137,16 @@ rtc_poll:
 	add dx, 2
 	out dx, al
 
-; Clear out the first 4096 bytes of memory. This will store the 64-bit IDT, GDT, PML4, and PDP
-	mov ecx, 1024
+; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
+	mov ecx, 5120
 	xor eax, eax
 	mov edi, eax
 	rep stosd
 
-; Clear memory for the Page Descriptor Entries (0x10000 - 0x4FFFF)
+; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00010000
-	mov ecx, 65536
-	rep stosd
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
@@ -163,13 +160,13 @@ rtc_poll:
 ; A single PML4 entry can map 512GB with 2MB pages.
 	cld
 	mov edi, 0x00002000		; Create a PML4 entry for the first 4GB of RAM
-	mov eax, 0x00003007
+	mov eax, 0x00003007		; location of low PDP
 	stosd
 	xor eax, eax
 	stosd
 
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00003007		; The higher half is identity mapped to the lower half
+	mov eax, 0x00004007		; location of high PDP
 	stosd
 	xor eax, eax
 	stosd
@@ -177,10 +174,10 @@ rtc_poll:
 ; Create the PDP entries.
 ; The first PDP is stored at 0x0000000000003000, create the first entries there
 ; A single PDP entry can map 1GB with 2MB pages
-	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00003000
-	mov eax, 0x00010007		; location of first PD
-create_pdpe:
+	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov edi, 0x00003000		; location of low PDPE
+	mov eax, 0x00010007		; location of first low PD
+create_pdpe_low:
 	stosd
 	push eax
 	xor eax, eax
@@ -189,15 +186,27 @@ create_pdpe:
 	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
 	dec ecx
 	cmp ecx, 0
-	jne create_pdpe
+	jne create_pdpe_low
 
-; Create the PD entries.
-; PD entries are stored starting at 0x0000000000010000 and ending at 0x000000000004FFFF (256 KiB)
-; This gives us room to map 64 GiB with 2 MiB pages
+	mov ecx, 64			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov edi, 0x00004000		; location of high PDPE
+	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
+create_pdpe_high:
+	stosd
+	push eax
+	xor eax, eax
+	stosd
+	pop eax
+	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+	dec ecx
+	cmp ecx, 0
+	jne create_pdpe_high
+
+; Create the low PD entries.
 	mov edi, 0x00010000
-	mov eax, 0x0000008F		; Bit 7 must be set to 1 as we have 2 MiB pages
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 	xor ecx, ecx
-pd_again:				; Create a 2 MiB page
+pd_low:					; Create a 2 MiB page
 	stosd
 	push eax
 	xor eax, eax
@@ -206,7 +215,7 @@ pd_again:				; Create a 2 MiB page
 	add eax, 0x00200000
 	inc ecx
 	cmp ecx, 2048
-	jne pd_again			; Create 2048 2 MiB page maps.
+	jne pd_low			; Create 2048 2 MiB page maps.
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -217,7 +226,7 @@ pd_again:				; Create a 2 MiB page
 	mov cr4, eax
 
 ; Point cr3 at PML4
-	mov eax, 0x00002008		; Write-thru (Bit 3)
+	mov eax, 0x00002008		; Write-thru enabled (Bit 3)
 	mov cr3, eax
 
 ; Enable long mode and SYSCALL/SYSRET
@@ -278,17 +287,17 @@ clearcs64:
 	stosd
 	stosb				; Write 5 bytes in total to overwrite the 'far jump'
 
-; Build the rest of the page tables (4GiB+)
-	xor ecx, ecx			; Clear the counter
-	mov rax, 0x000000010000008F
-	mov rdi, 0x0000000000014000
-buildem:
+; Create the high PD entries
+	mov rax, 0x000000000000008F	; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
+	mov rdi, 0x0000000000020000	; Location of high PD entries
+	add rax, 0x0000000000400000	; Add 4MiB offset
+	xor ecx, ecx
+pd_high:
 	stosq
 	add rax, 0x0000000000200000
 	add rcx, 1
-	cmp rcx, 30720			; Another 60 GiB (We already mapped 4 GiB)
-	jne buildem
-	; We have 64 GiB mapped now
+	cmp rcx, 8192			; Map 16 GiB
+	jne pd_high
 
 ; Build a temporary IDT
 	xor rdi, rdi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
@@ -396,7 +405,7 @@ clearmapnext:
 
 ; Calculate amount of usable RAM from Memory Map
 	xor rcx, rcx
-	mov rsi, 0x0000000000004000	; E820 Map location
+	mov rsi, 0x0000000000006000	; E820 Map location
 readnextrecord:
 	lodsq
 	lodsq

@@ -65,7 +65,7 @@ multiboot_entry:
 
 ; Copy memory map
 	mov esi, ebx		; GRUB stores the Multiboot info table at the address in EBX
-	mov edi, 0x4000		; We want the memory map stored here
+	mov edi, 0x6000		; We want the memory map stored here
 	add esi, 44		; Memory map address at this offset in the Mutliboot table
 	lodsd			; Grab the memory map size in bytes
 	mov ecx, eax
