@@ -36,6 +36,8 @@ int pure64_file_export(struct pure64_file *file, FILE *out);
 
 int pure64_file_import(struct pure64_file *file, FILE *in);
 
+int pure64_file_set_name(struct pure64_file *file, const char *name);
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
