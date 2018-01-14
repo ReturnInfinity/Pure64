@@ -5,3 +5,8 @@ build
 *.a
 *.img
 /src/util/pure64
+/src/util/rc
+/src/util/mbr-data.h
+/src/util/mbr-data.c
+/src/util/pure64-data.h
+/src/util/pure64-data.c

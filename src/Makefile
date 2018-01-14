@@ -20,6 +20,7 @@ install_files += $(PREFIX)/system/bootsectors/bmfs_mbr.sys
 install_files += $(PREFIX)/system/bootsectors/pxestart.sys
 install_files += $(PREFIX)/system/bootsectors/multiboot.sys
 
+targets += util/rc
 targets += util/pure64
 targets += lib/libpure64.a
 targets += pure64.sys
@@ -28,7 +29,25 @@ targets += $(bootsectors)
 .PHONY: all
 all: $(targets)
 
-util/pure64: util/pure64.o -lpure64
+util/rc: util/rc.o
+
+util/rc.o: util/rc.c
+
+util/pure64: util/pure64.o util/mbr-data.o util/pure64-data.o -lpure64
+
+util/mbr-data.o: CFLAGS+= -iquote .
+
+util/mbr-data.o: util/mbr-data.c
+
+util/pure64-data.o: CFLAGS+= -iquote .
+
+util/pure64-data.o: util/pure64-data.c
+
+util/mbr-data.c: bootsectors/bmfs_mbr.sys util/rc
+	util/rc --input $< --source $@ --header util/mbr-data.h --name mbr_data
+
+util/pure64-data.c: pure64.sys util/rc
+	util/rc --input $< --source $@ --header util/pure64-data.h --name pure64_data
 
 util/pure64.o: util/pure64.c
 

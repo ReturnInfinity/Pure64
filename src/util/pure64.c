@@ -7,6 +7,9 @@
 #include <pure64/dir.h>
 #include <pure64/file.h>
 
+#include "mbr-data.h"
+#include "pure64-data.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -84,9 +87,28 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
+	if (fwrite(mbr_data, 1, mbr_data_size, file) != mbr_data_size) {
+		fprintf(stderr, "Failed to write MBR to '%s'.\n", filename);
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	err = fseek(file, 16 * 512, SEEK_SET);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to Pure64 location.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	if (fwrite(pure64_data, 1, pure64_data_size, file) != pure64_data_size) {
+		fprintf(stderr, "Failed to write Pure64 to '%s'.\n", filename);
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
 	err = pure64_dir_export(root, file);
 	if (err != 0) {
-		fprintf(stderr, "Failed to export RamFS file system.\n");
+		fprintf(stderr, "Failed to export Pure64 file system.\n");
 		fclose(file);
 		return EXIT_FAILURE;
 	}
@@ -98,11 +120,19 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 
 static int ramfs_import(struct pure64_dir *root, const char *filename) {
 
+	int err;
 	FILE *file;
 
 	file = fopen(filename, "rb");
 	if (file == NULL ) {
 		fprintf(stderr, "Failed to open '%s' for reading.\n", filename);
+		return EXIT_FAILURE;
+	}
+
+	err = fseek(file, (16 * 512) + pure64_data_size, SEEK_SET);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to file system in '%s'.\n", filename);
+		fclose(file);
 		return EXIT_FAILURE;
 	}
 
