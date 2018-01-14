@@ -144,7 +144,7 @@ int pure64_dir_import(struct pure64_dir *dir, FILE *in) {
 
 	dir->name = malloc(dir->name_size + 1);
 	dir->subdirs = malloc(dir->subdir_count * sizeof(dir->subdirs[0]));
-	dir->files = malloc(dir->subdir_count * sizeof(dir->files[0]));
+	dir->files = malloc(dir->file_count * sizeof(dir->files[0]));
 	if ((dir->name == NULL)
 	 || (dir->subdirs == NULL)
 	 || (dir->files == NULL)) {
