@@ -113,6 +113,11 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
+	if (ftell(file) < (512 * 2048)) {
+		fseek(file, (512 * 2048) - 1, SEEK_SET);
+		fputc(0x00, file);
+	}
+
 	fclose(file);
 
 	return EXIT_SUCCESS;
