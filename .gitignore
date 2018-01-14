@@ -3,4 +3,5 @@ build
 *.sys
 *.o
 *.a
+*.img
 /src/util/pure64
