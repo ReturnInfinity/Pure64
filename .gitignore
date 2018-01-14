@@ -1,3 +1,6 @@
 .DS_Store
 build
 *.sys
+*.o
+*.a
+/src/util/pure64
