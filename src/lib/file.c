@@ -9,6 +9,7 @@
 #include "misc.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 void pure64_file_init(struct pure64_file *file) {
 	file->name_size = 0;
@@ -64,6 +65,30 @@ int pure64_file_import(struct pure64_file *file, FILE *in) {
 
 	if (fread(file->data, 1, file->data_size, in) != file->data_size)
 		return -1;
+
+	return 0;
+}
+
+int pure64_file_set_name(struct pure64_file *file, const char *name) {
+
+	char *tmp_name;
+	unsigned long int name_size;
+
+	name_size = strlen(name);
+
+	tmp_name = malloc(name_size + 1);
+	if (tmp_name == NULL) {
+		return -1;
+	}
+
+	memcpy(tmp_name, name, name_size);
+
+	tmp_name[name_size] = 0;
+
+	free(file->name);
+
+	file->name = tmp_name;
+	file->name_size = name_size;
 
 	return 0;
 }
