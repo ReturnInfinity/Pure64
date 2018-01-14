@@ -5,6 +5,7 @@ VPATH += lib
 VPATH += util
 
 CFLAGS += -I $(top)/include
+CFLAGS += -iquote $(top)/src
 
 bootsectors += bootsectors/bmfs_mbr.sys
 bootsectors += bootsectors/pxestart.sys
@@ -35,21 +36,17 @@ util/rc.o: util/rc.c
 
 util/pure64: util/pure64.o util/mbr-data.o util/pure64-data.o -lpure64
 
-util/mbr-data.o: CFLAGS+= -iquote .
+util/pure64.o: util/pure64.c util/mbr-data.h util/pure64-data.h
 
 util/mbr-data.o: util/mbr-data.c
 
-util/pure64-data.o: CFLAGS+= -iquote .
+util/mbr-data.c util/mbr-data.h: bootsectors/bmfs_mbr.sys util/rc
+	util/rc --input $< --source util/mbr-data.c --header util/mbr-data.h --name mbr_data
 
 util/pure64-data.o: util/pure64-data.c
 
-util/mbr-data.c: bootsectors/bmfs_mbr.sys util/rc
-	util/rc --input $< --source $@ --header util/mbr-data.h --name mbr_data
-
-util/pure64-data.c: pure64.sys util/rc
-	util/rc --input $< --source $@ --header util/pure64-data.h --name pure64_data
-
-util/pure64.o: util/pure64.c
+util/pure64-data.c util/pure64-data.h: pure64.sys util/rc
+	util/rc --input $< --source util/pure64-data.c --header util/pure64-data.h --name pure64_data
 
 lib/libpure64.a: $(libfiles)
 	$(AR) $(ARFLAGS) $@ $^
@@ -86,6 +83,8 @@ pure64.sys: \
 clean:
 	$(RM) pure64.sys $(bootsectors)
 	$(RM) $(libfiles) lib/libpure64.a
+	$(RM) util/mbr-data.h util/mbr-data.c util/mbr-data.o
+	$(RM) util/pure64-data.h util/pure64-data.c util/pure64-data.o
 	$(RM) util/pure64.o util/pure64
 
 .PHONY: test
