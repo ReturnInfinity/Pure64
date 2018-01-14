@@ -7,6 +7,7 @@
 #ifndef PURE64_DIR_H
 #define PURE64_DIR_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -41,6 +42,22 @@ void pure64_dir_free(struct pure64_dir *dir);
 int pure64_dir_export(struct pure64_dir *dir, FILE *out);
 
 int pure64_dir_import(struct pure64_dir *dir, FILE *in);
+
+int pure64_dir_add_file(struct pure64_dir *dir, const char *name);
+
+int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name);
+
+int pure64_dir_make_file(struct pure64_dir *dir, const char *path);
+
+int pure64_dir_make_subdir(struct pure64_dir *dir, const char *path);
+
+struct pure64_file *pure64_dir_open_file(struct pure64_dir *dir, const char *path);
+
+struct pure64_dir *pure64_dir_open_subdir(struct pure64_dir *dir, const char *path);
+
+bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name);
+
+int pure64_dir_set_name(struct pure64_dir *dir, const char *name);
 
 #ifdef __cplusplus
 } /* extern "C" { */
