@@ -41,4 +41,8 @@
 
 #define PURE64_ENOSYS  0x08
 
+/** Input/Output error occured. */
+
+#define PURE64_EIO 0x09
+
 #endif /* PURE64_ERROR_H */
