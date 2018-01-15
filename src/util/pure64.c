@@ -16,6 +16,18 @@
 #include <stdint.h>
 #include <string.h>
 
+void *pure64_malloc(uint64_t size) {
+	return malloc(size);
+}
+
+void *pure64_realloc(void *addr, uint64_t size) {
+	return realloc(addr, size);
+}
+
+void pure64_free(void *addr) {
+	free(addr);
+}
+
 /** Compares an option with a command
  * line argument. This function checks
  * both short and long options.
