@@ -5,8 +5,8 @@
  */
 
 #include <pure64/path.h>
+#include <pure64/memory.h>
 
-#include <stdlib.h>
 #include <string.h>
 
 static int
@@ -29,9 +29,9 @@ pure64_path_free(struct pure64_path *path) {
 	uint64_t i;
 
 	for (i = 0; i < path->name_count; i++)
-		free(path->name_array[i].data);
+		pure64_free(path->name_array[i].data);
 
-	free(path->name_array);
+	pure64_free(path->name_array);
 
 	path->name_array = NULL;
 	path->name_count = 0;
@@ -65,7 +65,7 @@ pure64_path_normalize(struct pure64_path *path) {
 
 		if (strcmp(path->name_array[i].data, ".") == 0) {
 
-			free(path->name_array[i].data);
+			pure64_free(path->name_array[i].data);
 
 			for (j = i + 1; j < path->name_count; j++) {
 				path->name_array[j - 1] = path->name_array[j];
@@ -75,7 +75,7 @@ pure64_path_normalize(struct pure64_path *path) {
 
 		} else if (strcmp(path->name_array[i].data, "..") == 0) {
 
-			free(path->name_array[i].data);
+			pure64_free(path->name_array[i].data);
 
 			if (i == 0) {
 				path->name_count--;
@@ -84,7 +84,7 @@ pure64_path_normalize(struct pure64_path *path) {
 
 			i--;
 
-			free(path->name_array[i].data);
+			pure64_free(path->name_array[i].data);
 
 			for (j = i + 2; j < path->name_count; j++)
 				path->name_array[j - 2] = path->name_array[j];
@@ -123,7 +123,7 @@ pure64_path_parse(struct pure64_path *path,
 
 			err = pure64_path_push_child(path, tmp);
 			if (err != 0) {
-				free(tmp);
+				pure64_free(tmp);
 				return -1;
 			}
 
@@ -133,9 +133,9 @@ pure64_path_parse(struct pure64_path *path,
 
 			if ((tmp_size + 1) >= tmp_res) {
 				tmp_res += 64;
-				tmp2 = realloc(tmp, tmp_res);
+				tmp2 = pure64_realloc(tmp, tmp_res);
 				if (tmp2 == NULL) {
-					free(tmp);
+					pure64_free(tmp);
 					return -1;
 				}
 				tmp = tmp2;
@@ -149,12 +149,12 @@ pure64_path_parse(struct pure64_path *path,
 	if (tmp_size > 0) {
 		err = pure64_path_push_child(path, tmp);
 		if (err != 0) {
-			free(tmp);
+			pure64_free(tmp);
 			return -1;
 		}
 	}
 
-	free(tmp);
+	pure64_free(tmp);
 
 	return 0;
 }
@@ -173,7 +173,7 @@ pure64_path_push_child(struct pure64_path *path,
 	name_array_size = path->name_count + 1;
 	name_array_size *= sizeof(path->name_array[0]);
 
-	name_array = realloc(name_array, name_array_size);
+	name_array = pure64_realloc(name_array, name_array_size);
 	if (name_array == NULL)
 		return -1;
 
@@ -181,7 +181,7 @@ pure64_path_push_child(struct pure64_path *path,
 
 	name_size = strlen(name);
 
-	tmp_name = malloc(name_size + 1);
+	tmp_name = pure64_malloc(name_size + 1);
 	if (tmp_name == NULL)
 		return -1;
 
