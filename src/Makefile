@@ -17,6 +17,7 @@ bootsectors += bootsectors/multiboot.sys
 
 libfiles += lib/dir.o
 libfiles += lib/file.o
+libfiles += lib/fs.o
 libfiles += lib/misc.o
 libfiles += lib/path.o
 
