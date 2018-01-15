@@ -20,6 +20,7 @@ libfiles += lib/file.o
 libfiles += lib/fs.o
 libfiles += lib/misc.o
 libfiles += lib/path.o
+libfiles += lib/stream.o
 
 install_files += $(PREFIX)/system/pure64.sys
 install_files += $(PREFIX)/system/bootsectors/bmfs_mbr.sys
@@ -63,6 +64,8 @@ lib/file.o: lib/file.c file.h misc.h
 lib/misc.o: lib/misc.c misc.h
 
 lib/path.o: lib/path.c path.h
+
+lib/stream.o: lib/stream.c stream.h
 
 pure64: pure64.o load.o pure64.ld
 	ld pure64.o load.o -T pure64.ld -o $@
