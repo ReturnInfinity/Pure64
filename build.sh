@@ -22,7 +22,7 @@ gcc -c lib/fs.c     -o lib/fs.o     -I ../include
 gcc -c lib/misc.c   -o lib/misc.o   -I ../include
 gcc -c lib/path.c   -o lib/path.o   -I ../include
 gcc -c lib/stream.c -o lib/stream.o -I ../include
-ar rcs lib/libpure64.a lib/dir.o lib/file.o lib/misc.o lib/path.o
+ar rcs lib/libpure64.a lib/dir.o lib/file.o lib/fs.o lib/misc.o lib/path.o lib/stream.o
 
 # Build util/rc
 gcc util/rc.c -o util/rc
