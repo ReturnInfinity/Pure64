@@ -93,7 +93,7 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 16 * 512, SEEK_SET);
+	err = fseek(file, 0x2000, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to Pure64 location.\n");
 		fclose(file);
@@ -102,6 +102,13 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 
 	if (fwrite(pure64_data, 1, pure64_data_size, file) != pure64_data_size) {
 		fprintf(stderr, "Failed to write Pure64 to '%s'.\n", filename);
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	err = fseek(file, 0x4000, SEEK_SET);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
 		return EXIT_FAILURE;
 	}
@@ -134,9 +141,9 @@ static int ramfs_import(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, (16 * 512) + pure64_data_size, SEEK_SET);
+	err = fseek(file, 0x4000, SEEK_SET);
 	if (err != 0) {
-		fprintf(stderr, "Failed to seek to file system in '%s'.\n", filename);
+		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
 		return EXIT_FAILURE;
 	}
@@ -278,7 +285,6 @@ static int pure64_mkdir(struct pure64_dir *dir, int argc, const char **argv) {
 	int err;
 
 	for (int i = 0; i < argc; i++) {
-		printf("%s\n", argv[i]);
 		err = pure64_dir_make_subdir(dir, argv[i]);
 		if (err != 0) {
 			fprintf(stderr, "Failed to create directory '%s'.\n", argv[i]);
