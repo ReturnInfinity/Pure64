@@ -7,6 +7,7 @@
 #include <pure64/dir.h>
 #include <pure64/file.h>
 #include <pure64/path.h>
+#include <pure64/stream.h>
 
 #include "misc.h"
 
@@ -141,7 +142,7 @@ int pure64_dir_export(struct pure64_dir *dir, struct pure64_stream *out) {
 	return 0;
 }
 
-int pure64_dir_import(struct pure64_dir *dir, FILE *in) {
+int pure64_dir_import(struct pure64_dir *dir, struct pure64_stream *in) {
 
 	int err;
 
