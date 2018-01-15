@@ -106,17 +106,25 @@ int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name) {
 	return 0;
 }
 
-int pure64_dir_export(struct pure64_dir *dir, FILE *out) {
+int pure64_dir_export(struct pure64_dir *dir, struct pure64_stream *out) {
 
-	int err = 0;
-	err |= encode_uint64(dir->name_size, out);
-	err |= encode_uint64(dir->subdir_count, out);
-	err |= encode_uint64(dir->file_count, out);
+	int err;
+
+	err = encode_uint64(dir->name_size, out);
 	if (err != 0)
-		return -1;
+		return err;
 
-	if (fwrite(dir->name, 1, dir->name_size, out) != dir->name_size)
-		return -1;
+	err = encode_uint64(dir->subdir_count, out);
+	if (err != 0)
+		return err;
+
+	err = encode_uint64(dir->file_count, out);
+	if (err != 0)
+		return err;
+
+	err = pure64_stream_write(out, dir->name, dir->name_size);
+	if (err != 0)
+		return err;
 
 	for (uint64_t i = 0; i < dir->subdir_count; i++) {
 		err = pure64_dir_export(&dir->subdirs[i], out);
@@ -135,12 +143,19 @@ int pure64_dir_export(struct pure64_dir *dir, FILE *out) {
 
 int pure64_dir_import(struct pure64_dir *dir, FILE *in) {
 
-	int err = 0;
-	err |= decode_uint64(&dir->name_size, in);
-	err |= decode_uint64(&dir->subdir_count, in);
-	err |= decode_uint64(&dir->file_count, in);
+	int err;
+
+	err = decode_uint64(&dir->name_size, in);
 	if (err != 0)
-		return -1;
+		return err;
+
+	err = decode_uint64(&dir->subdir_count, in);
+	if (err != 0)
+		return err;
+
+	err = decode_uint64(&dir->file_count, in);
+	if (err != 0)
+		return err;
 
 	dir->name = malloc(dir->name_size + 1);
 	dir->subdirs = malloc(dir->subdir_count * sizeof(dir->subdirs[0]));
@@ -154,8 +169,9 @@ int pure64_dir_import(struct pure64_dir *dir, FILE *in) {
 		return -1;
 	}
 
-	if (fread(dir->name, 1, dir->name_size, in) != dir->name_size)
-		return -1;
+	err = pure64_stream_read(in, dir->name, dir->name_size);
+	if (err != 0)
+		return err;
 
 	dir->name[dir->name_size] = 0;
 
@@ -168,13 +184,13 @@ int pure64_dir_import(struct pure64_dir *dir, FILE *in) {
 	for (uint64_t i = 0; i < dir->subdir_count; i++) {
 		err = pure64_dir_import(&dir->subdirs[i], in);
 		if (err != 0)
-			return -1;
+			return err;
 	}
 
 	for (uint64_t i = 0; i < dir->file_count; i++) {
 		err = pure64_file_import(&dir->files[i], in);
 		if (err != 0)
-			return -1;
+			return err;
 	}
 
 	return 0;

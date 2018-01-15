@@ -25,30 +25,40 @@ void pure64_file_free(struct pure64_file *file) {
 	file->data = NULL;
 }
 
-int pure64_file_export(struct pure64_file *file, FILE *out) {
+int pure64_file_export(struct pure64_file *file, struct pure64_stream *out) {
 
-	int err = 0;
-	err |= encode_uint64(file->name_size, out);
-	err |= encode_uint64(file->data_size, out);
+	int err;
+
+	err = encode_uint64(file->name_size, out);
 	if (err != 0)
-		return -1;
+		return err;
 
-	if (fwrite(file->name, 1, file->name_size, out) != file->name_size)
-		return -1;
+	err = encode_uint64(file->data_size, out);
+	if (err != 0)
+		return err;
 
-	if (fwrite(file->data, 1, file->data_size, out) != file->data_size)
-		return -1;
+	err = pure64_stream_write(out, file->name, file->name_size);
+	if (err != 0)
+		return err;
+
+	err = pure64_stream_write(out, file->data, file->data_size);
+	if (err != 0)
+		return err;
 
 	return 0;
 }
 
-int pure64_file_import(struct pure64_file *file, FILE *in) {
+int pure64_file_import(struct pure64_file *file, struct pure64_stream *in) {
 
-	int err = 0;
-	err |= decode_uint64(&file->name_size, in);
-	err |= decode_uint64(&file->data_size, in);
+	int err;
+
+	err = decode_uint64(&file->name_size, in);
 	if (err != 0)
-		return -1;
+		return err;
+
+	err = decode_uint64(&file->data_size, in);
+	if (err != 0)
+		return err;
 
 	file->name = malloc(file->name_size + 1);
 	file->data = malloc(file->data_size);
@@ -58,13 +68,15 @@ int pure64_file_import(struct pure64_file *file, FILE *in) {
 		return -1;
 	}
 
-	if (fread(file->name, 1, file->name_size, in) != file->name_size)
-		return -1;
+	err = pure64_stream_read(stream, file->name, file->name_size);
+	if (err != 0)
+		return err;
 
 	file->name[file->name_size] = 0;
 
-	if (fread(file->data, 1, file->data_size, in) != file->data_size)
-		return -1;
+	err = pure64_stream_read(stream, file->data, file->data_size);
+	if (err != 0)
+		return err;
 
 	return 0;
 }
