@@ -3,6 +3,8 @@
 # from http://unix.stackexchange.com/questions/9804/how-to-comment-multi-line-commands-in-shell-scripts
 
 cmd=( qemu-system-x86_64
+	-cpu core2duo
+	-display curses
 # Window title in graphics mode
 	-name "Pure64 Test"
 # Amount of CPU cores
@@ -15,6 +17,7 @@ cmd=( qemu-system-x86_64
 	-device ide-drive,drive=disk,bus=ahci.0
 # Enable GDB debugging
 	-s
+	-S
 )
 
 #execute the cmd string
