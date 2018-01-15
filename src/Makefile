@@ -1,11 +1,15 @@
 top ?= ..
 
+NASM ?= nasm
+NASMFLAGS = -f elf64 -F dwarf
+
 VPATH += $(top)/include/pure64
 VPATH += lib
-VPATH += util
 
 CFLAGS += -I $(top)/include
 CFLAGS += -iquote $(top)/src
+CFLAGS += -nostdlib
+CFLAGS += -g
 
 bootsectors += bootsectors/bmfs_mbr.sys
 bootsectors += bootsectors/pxestart.sys
@@ -59,13 +63,14 @@ lib/misc.o: lib/misc.c misc.h
 
 lib/path.o: lib/path.c path.h
 
-.PHONY: install
-install:
+pure64: pure64.o load.o pure64.ld
+	ld pure64.o load.o -T pure64.ld -o $@
+
 # The dependencies of pure64.sys can
 # be (and should be) generated with
 # the command: nasm -M pure64.asm 1>pure64.mk
 # and used to update this target.
-pure64.sys: \
+pure64.o: \
 	pure64.asm \
 	init/smp_ap.asm \
 	init/acpi.asm \
@@ -75,13 +80,22 @@ pure64.sys: \
 	interrupt.asm \
 	sysvar.asm
 
+load.o: load.c
+
+pure64.sys: pure64
+	objcopy -O binary $< $@
+
 %.sys: %.asm
 	@echo "NASM $@"
-	nasm $< -o $@
+	$(NASM) $< -o $@
+
+%.o: %.asm
+	@echo "NASM $@"
+	$(NASM) $(NASMFLAGS) $< -o $@
 
 .PHONY: clean
 clean:
-	$(RM) pure64.sys $(bootsectors)
+	$(RM) pure64 pure64.o load.o pure64.sys $(bootsectors)
 	$(RM) $(libfiles) lib/libpure64.a
 	$(RM) util/mbr-data.h util/mbr-data.c util/mbr-data.o
 	$(RM) util/pure64-data.h util/pure64-data.c util/pure64-data.o
