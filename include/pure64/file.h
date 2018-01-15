@@ -10,11 +10,12 @@
 #define PURE64_FILE_H
 
 #include <stdint.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+struct pure64_stream;
 
 /** A Pure64 file.
  * */
@@ -48,7 +49,7 @@ void pure64_file_free(struct pure64_file *file);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_file_export(struct pure64_file *file, FILE *out);
+int pure64_file_export(struct pure64_file *file, struct pure64_stream *out);
 
 /** Deserializes a file from a stream.
  * @param file An initialized file structure.
@@ -56,7 +57,7 @@ int pure64_file_export(struct pure64_file *file, FILE *out);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_file_import(struct pure64_file *file, FILE *in);
+int pure64_file_import(struct pure64_file *file, struct pure64_stream *in);
 
 /** Sets the name of the file.
  * @param file An initialized file structure.

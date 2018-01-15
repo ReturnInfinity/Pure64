@@ -23,6 +23,7 @@ extern "C" {
 #endif
 
 struct pure64_file;
+struct pure64_stream;
 
 /** Pure64 file system.
  * Used for storing kernels and
@@ -63,7 +64,7 @@ void pure64_fs_free(struct pure64_fs *fs);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_fs_export(struct pure64_fs *fs, FILE *out);
+int pure64_fs_export(struct pure64_fs *fs, struct pure64_stream *out);
 
 /** Imports the file system from a stream.
  * @param fs An initialized file system structure.
@@ -71,7 +72,7 @@ int pure64_fs_export(struct pure64_fs *fs, FILE *out);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_fs_import(struct pure64_fs *fs, FILE *in);
+int pure64_fs_import(struct pure64_fs *fs, struct pure64_stream *in);
 
 /** Creates a file in the file system.
  * @param fs An initialized file system structure.

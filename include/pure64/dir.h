@@ -11,13 +11,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 struct pure64_file;
+struct pure64_stream;
 
 /** A directory in a Pure64 image.
  * */
@@ -55,7 +55,7 @@ void pure64_dir_free(struct pure64_dir *dir);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_dir_export(struct pure64_dir *dir, FILE *out);
+int pure64_dir_export(struct pure64_dir *dir, struct pure64_stream *out);
 
 /** Deserializes a directory from a stream.
  * @param dir An initialized directory structure.
@@ -63,7 +63,7 @@ int pure64_dir_export(struct pure64_dir *dir, FILE *out);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_dir_import(struct pure64_dir *dir, FILE *in);
+int pure64_dir_import(struct pure64_dir *dir, struct pure64_stream *in);
 
 /** Adds a file to the directory.
  * This function will fail if the name of the file exists.
