@@ -6,6 +6,8 @@
 
 #include "misc.h"
 
+#include <pure64/stream.h>
+
 int encode_uint64(uint64_t n, struct pure64_stream *file) {
 
 	int err;
