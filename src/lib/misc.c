@@ -6,9 +6,11 @@
 
 #include "misc.h"
 
-int encode_uint64(uint64_t n, FILE *file) {
+int encode_uint64(uint64_t n, struct pure64_stream *file) {
 
+	int err;
 	unsigned char buf[8];
+
 	buf[0] = (n >> 0x00) & 0xff;
 	buf[1] = (n >> 0x08) & 0xff;
 	buf[2] = (n >> 0x10) & 0xff;
@@ -17,18 +19,22 @@ int encode_uint64(uint64_t n, FILE *file) {
 	buf[5] = (n >> 0x28) & 0xff;
 	buf[6] = (n >> 0x30) & 0xff;
 	buf[7] = (n >> 0x38) & 0xff;
-	if (fwrite(buf, 1, 8, file) != 8)
-		return -1;
+
+	err = pure64_stream_write(file, buf, 8);
+	if (err != 0)
+		return err;
 
 	return 0;
 }
 
-int decode_uint64(uint64_t *n_ptr, FILE *file) {
+int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file) {
 
+	int err;
 	unsigned char buf[8];
 
-	if (fread(buf, 1, 8, file) != 8)
-		return -1;
+	err = pure64_stream_read(file, buf, 8);
+	if (err != 0)
+		return err;
 
 	uint64_t n = 0;
 	n |= ((uint64_t) buf[0] << 0x00);

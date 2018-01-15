@@ -8,15 +8,16 @@
 #define PURE64_MISC_H
 
 #include <stdint.h>
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-int encode_uint64(uint64_t n, FILE *file);
+struct pure64_stream;
 
-int decode_uint64(uint64_t *n_ptr, FILE *file);
+int encode_uint64(uint64_t n, struct pure64_stream *file);
+
+int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file);
 
 #ifdef __cplusplus
 } /* extern "C" { */
