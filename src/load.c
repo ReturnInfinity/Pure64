@@ -7,6 +7,18 @@
 #include <pure64/dir.h>
 #include <pure64/file.h>
 
+typedef void (*kernel_entry)(void);
+
+static void pure64_memcpy(void *dst, const void *src, uint64_t size) {
+
+	unsigned char *dst8 = (unsigned char *) dst;
+
+	const unsigned char *src8 = (const unsigned char *) src;
+
+	for (uint64_t i = 0; i < size; i++)
+		dst8[i] = src8[i];
+}
+
 static bool find_kernel(struct pure64_file *kernel);
 
 static void load_kernel(struct pure64_file *kernel);
@@ -24,7 +36,106 @@ void load(void) {
 }
 
 static void load_kernel(struct pure64_file *kernel) {
-	(void) kernel;
+
+	const unsigned char *data;
+	uint64_t data_size;
+
+	data = (const unsigned char *) kernel->data;
+
+	data_size = kernel->data_size;
+
+	/* check that the entire header is there */
+	if (data_size < 0x3E)
+		return;
+
+	/* verify file signature */
+	if ((data[0x00] != 0x7f)
+	 || (data[0x01] != 'E')
+	 || (data[0x02] != 'L')
+	 || (data[0x03] != 'F')) {
+		return;
+	}
+
+	/* verify it is 64-bit */
+	if (data[0x04] != 2)
+		return;
+
+	/* verify is little-endian */
+	if (data[0x05] != 1)
+		return;
+
+	/* verify is executable */
+	if ((data[0x10] != 0x02)
+	 || (data[0x11] != 0x00))
+		return;
+
+	if ((data[0x12] != 0x3e)
+	 || (data[0x13] != 0x00))
+		return;
+
+	kernel_entry e_entry = (kernel_entry) *(uint64_t *) &data[0x18];
+
+	uint64_t e_phoff = *(uint64_t *) &data[0x20];
+
+	uint16_t e_phentsize = *(uint16_t *) &data[0x36];
+
+	uint16_t e_phnum = *(uint16_t *) &data[0x38];
+
+	/* check to make sure the all the program
+	 * headers are available in memory */
+	if (data_size < (e_phoff + (e_phnum * e_phentsize))) {
+		return;
+	}
+
+	for (uint16_t i = 0; i < e_phnum; i++) {
+
+		unsigned char *ph = (unsigned char *) &data[e_phoff + (i * e_phentsize)];
+
+		/* verify it's a loadable segment */
+		if ((ph[0] != 0x01)
+		 || (ph[1] != 0x00)
+		 || (ph[2] != 0x00)
+		 || (ph[3] != 0x00)) {
+			continue;
+		}
+
+		/* offset of segment within the file */
+		uint64_t p_offset = *(uint64_t *) &ph[0x08];
+
+		/* virtual address of segment */
+		void *vaddr = (void *) *(uint64_t *) &ph[0x10];
+
+		/* size of segment on file */
+		uint64_t p_filesz = *(uint64_t *) &ph[0x20];
+
+		/* size of segment in memory */
+		uint64_t p_memsz = *(uint64_t *) &ph[0x28];
+
+		/* Verify the size of file is the same
+		 * or smaller than the required area in
+		 * memory */
+		if (p_filesz > p_memsz)
+			return;
+
+		/* Pure64 currently only supports
+		 * loading at this address. */
+		if (vaddr != ((void *) 0x400000))
+			return;
+
+		/* TODO : properly allocate memory,
+		 * checking to see if the address is
+		 * available or not */
+
+		/* Copy code over to address */
+		pure64_memcpy(vaddr, &data[p_offset], p_filesz);
+
+		/* Call the kernel */
+		e_entry();
+
+		/* If the kernel returns, exit
+		 * this function */
+		return;
+	}
 }
 
 static unsigned char *skip_file(unsigned char *ptr) {
