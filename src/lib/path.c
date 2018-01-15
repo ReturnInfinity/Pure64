@@ -5,6 +5,7 @@
  */
 
 #include <pure64/path.h>
+#include <pure64/error.h>
 #include <pure64/memory.h>
 
 #include <string.h>
@@ -124,7 +125,7 @@ pure64_path_parse(struct pure64_path *path,
 			err = pure64_path_push_child(path, tmp);
 			if (err != 0) {
 				pure64_free(tmp);
-				return -1;
+				return err;
 			}
 
 			tmp_size = 0;
@@ -136,7 +137,7 @@ pure64_path_parse(struct pure64_path *path,
 				tmp2 = pure64_realloc(tmp, tmp_res);
 				if (tmp2 == NULL) {
 					pure64_free(tmp);
-					return -1;
+					return PURE64_ENOMEM;
 				}
 				tmp = tmp2;
 			}
@@ -150,7 +151,7 @@ pure64_path_parse(struct pure64_path *path,
 		err = pure64_path_push_child(path, tmp);
 		if (err != 0) {
 			pure64_free(tmp);
-			return -1;
+			return err;
 		}
 	}
 
@@ -175,7 +176,7 @@ pure64_path_push_child(struct pure64_path *path,
 
 	name_array = pure64_realloc(name_array, name_array_size);
 	if (name_array == NULL)
-		return -1;
+		return PURE64_ENOMEM;
 
 	path->name_array = name_array;
 
@@ -183,7 +184,7 @@ pure64_path_push_child(struct pure64_path *path,
 
 	tmp_name = pure64_malloc(name_size + 1);
 	if (tmp_name == NULL)
-		return -1;
+		return PURE64_ENOMEM;
 
 	memcpy(tmp_name, name, name_size);
 
