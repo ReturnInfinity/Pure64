@@ -7,6 +7,7 @@
 #include <pure64/fs.h>
 #include <pure64/file.h>
 #include <pure64/path.h>
+#include <pure64/error.h>
 
 #include "misc.h"
 
