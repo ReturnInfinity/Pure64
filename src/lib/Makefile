@@ -47,12 +47,12 @@ clean:
 test:
 
 .PHONY: install
-install: $(DESTDIR)$(PREFIX)/lib/libpure64.a
+install: $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/lib/libpure64.a
 
 $(DESTDIR)$(PREFIX)/lib:
-	mkdir $@
+	mkdir -p $@
 
-$(DESTDIR)$(PREFIX)/lib/libpure64.a: $(DESTDIR)$(PREFIX)/lib libpure64.a
+$(DESTDIR)$(PREFIX)/lib/libpure64.a: libpure64.a
 	cp $< $@
 
 $(V).SILENT:
