@@ -28,13 +28,39 @@ struct pure64_file {
 	void *data;
 };
 
+/** Initializes a file structure.
+ * @param file An uninitialized file structure.
+ * */
+
 void pure64_file_init(struct pure64_file *file);
+
+/** Releases memory allocated by the file structure.
+ * @param file An initialized file structure.
+ * */
 
 void pure64_file_free(struct pure64_file *file);
 
+/** Serializes a file to a stream.
+ * @param file An initialized file structure.
+ * @param out The stream to export the file to.
+ * @returns Zero on success, non-zero on failure.
+ * */
+
 int pure64_file_export(struct pure64_file *file, FILE *out);
 
+/** Deserializes a file from a stream.
+ * @param file An initialized file structure.
+ * @param in The stream to read the file from.
+ * @returns Zero on success, non-zero on failure.
+ * */
+
 int pure64_file_import(struct pure64_file *file, FILE *in);
+
+/** Sets the name of the file.
+ * @param file An initialized file structure.
+ * @param name The new name of the file.
+ * @returns Zero on success, non-zero on failure.
+ * */
 
 int pure64_file_set_name(struct pure64_file *file, const char *name);
 
