@@ -16,11 +16,11 @@
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
-
 USE32
-ORG 0x00008000
 
 PURE64SIZE equ 4096			; Pad Pure64 to this length
+
+extern load
 
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
@@ -506,39 +506,12 @@ nextIOAPIC:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
+	call load
 
-; Check binary that was loaded and execute
-; Raw binary and PE supported
-; To-Do - ELF
-
-; PE loader header check
-	mov eax, [0x10003c]		; Get the e_lfanew value which is the address of the PE header (32bit).
-	mov cx, [eax + 0x100004]	; The machine type.
-	cmp cx, 0x8664			; Check to make sure the machine type is x64.
-	jne normal_start		; If it isn't equal jump to the normal starting address. (Comment out to ignore result.)
-	mov ebx, [eax + 0x100000]	; The PE header signature is here.
-	cmp ebx, 0x00004550		; Compare the PE header signature to make sure it matches. (little endian)
-	jne normal_start		; If it isn't equal jump to the normal starting address.
-
-; PE loader starting address (RVA) parsing
-	add eax, 0x100028		; Add size of PE header (24 bytes) and offset to
-					; AddressOfEntryPoint (16 bytes) to image base 0x100000
-	mov ebx, [eax]			; AddressOfEntryPoint added to ImageBase to get entry point address
-	add eax, 0x08			; Add the offset to get the ImageBase
-	add ebx, [eax]			; Add ImageBase to AddressOfEntryPoint (ebx)
-
-	xor eax, eax			; Clear rax and rcx; rbx has the jump location so don't clear it.
-	xor ecx, ecx
-
-pe_start:
-	jmp rbx				; rbx has the compute RVA for the jmp
-
-normal_start:
-	xor eax, eax			; Clear registers used earlier
-	xor ebx, ebx
-	xor ecx, ecx
-	jmp 0x0000000000100000
-
+; Fall into a halt if the function returns.
+halt:
+	hlt
+	jmp halt
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
