@@ -4,6 +4,7 @@ build
 *.o
 *.a
 *.img
+/src/pure64
 /src/util/pure64
 /src/util/rc
 /src/util/mbr-data.h
