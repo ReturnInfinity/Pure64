@@ -47,14 +47,6 @@ int pure64_dir_add_file(struct pure64_dir *dir, const char *name);
 
 int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name);
 
-int pure64_dir_make_file(struct pure64_dir *dir, const char *path);
-
-int pure64_dir_make_subdir(struct pure64_dir *dir, const char *path);
-
-struct pure64_file *pure64_dir_open_file(struct pure64_dir *dir, const char *path);
-
-struct pure64_dir *pure64_dir_open_subdir(struct pure64_dir *dir, const char *path);
-
 bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name);
 
 int pure64_dir_set_name(struct pure64_dir *dir, const char *name);
