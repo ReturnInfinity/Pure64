@@ -16,10 +16,12 @@ ld pure64.o load.o -o pure64 -T pure64.ld
 objcopy -O binary pure64 pure64.sys
 
 # Build libpure64.a
-gcc -c lib/dir.c  -o lib/dir.o  -I ../include
-gcc -c lib/file.c -o lib/file.o -I ../include
-gcc -c lib/misc.c -o lib/misc.o -I ../include
-gcc -c lib/path.c -o lib/path.o -I ../include
+gcc -c lib/dir.c    -o lib/dir.o    -I ../include
+gcc -c lib/file.c   -o lib/file.o   -I ../include
+gcc -c lib/fs.c     -o lib/fs.o     -I ../include
+gcc -c lib/misc.c   -o lib/misc.o   -I ../include
+gcc -c lib/path.c   -o lib/path.o   -I ../include
+gcc -c lib/stream.c -o lib/stream.o -I ../include
 ar rcs lib/libpure64.a lib/dir.o lib/file.o lib/misc.o lib/path.o
 
 # Build util/rc
