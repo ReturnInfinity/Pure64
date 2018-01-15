@@ -44,26 +44,40 @@ void pure64_fs_free(struct pure64_fs *fs) {
 	pure64_dir_free(&fs->root);
 }
 
-int pure64_fs_export(struct pure64_fs *fs, FILE *out) {
+int pure64_fs_export(struct pure64_fs *fs, struct pure64_stream *out) {
+
+	int err;
 
 	fs->size = pure64_fs_size(fs);
 
-	int err = 0;
-	err |= encode_uint64(fs->signature, out);
-	err |= encode_uint64(fs->size, out);
-	err |= pure64_dir_export(&fs->root, out);
+	err = encode_uint64(fs->signature, out);
+	if (err != 0)
+		return err;
+
+	err = encode_uint64(fs->size, out);
+	if (err != 0)
+		return err;
+
+	err = pure64_dir_export(&fs->root, out);
 	if (err != 0)
 		return err;
 
 	return 0;
 }
 
-int pure64_fs_import(struct pure64_fs *fs, FILE *in) {
+int pure64_fs_import(struct pure64_fs *fs, struct pure64_stream *in) {
 
-	int err = 0;
-	err |= decode_uint64(&fs->signature, in);
-	err |= decode_uint64(&fs->size, in);
-	err |= pure64_dir_import(&fs->root, in);
+	int err;
+
+	err = decode_uint64(&fs->signature, in);
+	if (err != 0)
+		return err;
+
+	err = decode_uint64(&fs->size, in);
+	if (err != 0)
+		return err;
+
+	err = pure64_dir_import(&fs->root, in);
 	if (err != 0)
 		return err;
 
@@ -87,13 +101,13 @@ int pure64_fs_make_dir(struct pure64_fs *fs, const char *path_str) {
 	err = pure64_path_parse(&path, path_str);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	err = pure64_path_normalize(&path);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	parent_dir = &fs->root;
@@ -102,7 +116,7 @@ int pure64_fs_make_dir(struct pure64_fs *fs, const char *path_str) {
 
 	if (name_count == 0) {
 		pure64_path_free(&path);
-		return -1;
+		return PURE64_EINVAL;
 	}
 
 	for (i = 0; i < (name_count - 1); i++) {
@@ -110,7 +124,7 @@ int pure64_fs_make_dir(struct pure64_fs *fs, const char *path_str) {
 		name = pure64_path_get_name(&path, i);
 		if (name == NULL) {
 			pure64_path_free(&path);
-			return -1;
+			return PURE64_EFAULT;
 		}
 
 		subdir_count = parent_dir->subdir_count;
@@ -128,19 +142,19 @@ int pure64_fs_make_dir(struct pure64_fs *fs, const char *path_str) {
 		if (j >= subdir_count) {
 			/* not found */
 			pure64_path_free(&path);
-			return -1;
+			return PURE64_ENOENT;
 		}
 	}
 
 	if (i != (name_count - 1)) {
 		pure64_path_free(&path);
-		return -1;
+		return PURE64_ENOENT;
 	}
 
 	err = pure64_dir_add_subdir(parent_dir, path.name_array[i].data);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	pure64_path_free(&path);
@@ -165,13 +179,13 @@ int pure64_fs_make_file(struct pure64_fs *fs, const char *path_str) {
 	err = pure64_path_parse(&path, path_str);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	err = pure64_path_normalize(&path);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	parent_dir = &fs->root;
@@ -180,7 +194,7 @@ int pure64_fs_make_file(struct pure64_fs *fs, const char *path_str) {
 
 	if (name_count == 0) {
 		pure64_path_free(&path);
-		return -1;
+		return PURE64_EINVAL;
 	}
 
 	for (i = 0; i < (name_count - 1); i++) {
@@ -188,7 +202,7 @@ int pure64_fs_make_file(struct pure64_fs *fs, const char *path_str) {
 		name = pure64_path_get_name(&path, i);
 		if (name == NULL) {
 			pure64_path_free(&path);
-			return -1;
+			return PURE64_EINVAL;
 		}
 
 		subdir_count = parent_dir->subdir_count;
@@ -206,19 +220,19 @@ int pure64_fs_make_file(struct pure64_fs *fs, const char *path_str) {
 		if (j >= subdir_count) {
 			/* not found */
 			pure64_path_free(&path);
-			return -1;
+			return PURE64_ENOENT;
 		}
 	}
 
 	if (i != (name_count - 1)) {
 		pure64_path_free(&path);
-		return -1;
+		return PURE64_ENOENT;
 	}
 
 	err = pure64_dir_add_file(parent_dir, path.name_array[i].data);
 	if (err != 0) {
 		pure64_path_free(&path);
-		return -1;
+		return err;
 	}
 
 	pure64_path_free(&path);
