@@ -1,5 +1,9 @@
 top ?= ../..
 
+DESTDIR ?=
+
+PREFIX ?= /usr/local
+
 VPATH += $(top)/include/pure64
 
 CFLAGS += -I $(top)/include
