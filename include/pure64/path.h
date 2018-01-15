@@ -4,6 +4,8 @@
  * =============================================================================
  */
 
+/** @file */
+
 #ifndef PURE64_PATH_H
 #define PURE64_PATH_H
 
@@ -23,7 +25,7 @@ struct pure64_path_name {
 	/** The number of characters
 	 * in the name. */
 	uint64_t size;
-} *name_array;
+};
 
 /** A file system path.
  * */
