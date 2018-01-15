@@ -6,15 +6,56 @@
 
 #include <pure64/fs.h>
 #include <pure64/file.h>
+#include <pure64/error.h>
+#include <pure64/stream.h>
 
 #include "mbr-data.h"
 #include "pure64-data.h"
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
+static int fstream_set_pos(void *file_ptr, uint64_t pos_ptr) {
+
+	if (pos_ptr > LONG_MAX)
+		return PURE64_EINVAL;
+
+	if (fseek((FILE *) file_ptr, pos_ptr, SEEK_SET) != 0)
+		return PURE64_EIO;
+
+	return 0;
+}
+
+static int fstream_get_pos(void *file_ptr, uint64_t *pos_ptr) {
+
+	long int pos;
+
+	pos = ftell((FILE *) file_ptr);
+	if (pos == -1L)
+		return PURE64_EIO;
+
+	*pos_ptr = pos;
+
+	return 0;
+}
+
+static int fstream_write(void *file_ptr, const void *buf, uint64_t buf_size) {
+	if (fwrite(buf, 1, buf_size, (FILE *) file_ptr) != buf_size)
+		return PURE64_EIO;
+	else
+		return 0;
+}
+
+static int fstream_read(void *file_ptr, void *buf, uint64_t buf_size) {
+	if (fread(buf, 1, buf_size, (FILE *) file_ptr) != buf_size)
+		return PURE64_EIO;
+	else
+		return 0;
+}
 
 void *pure64_malloc(uint64_t size) {
 	return malloc(size);
@@ -92,6 +133,7 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
+	struct pure64_stream stream;
 
 	file = fopen(filename, "wb");
 	if (file == NULL) {
@@ -125,7 +167,14 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = pure64_fs_export(fs, file);
+	pure64_stream_init(&stream);
+	stream.data = file;
+	stream.read = fstream_read;
+	stream.write = fstream_write;
+	stream.set_pos = fstream_set_pos;
+	stream.get_pos = fstream_get_pos;
+
+	err = pure64_fs_export(fs, &stream);
 	if (err != 0) {
 		fprintf(stderr, "Failed to export Pure64 file system.\n");
 		fclose(file);
@@ -146,6 +195,7 @@ static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
+	struct pure64_stream stream;
 
 	file = fopen(filename, "rb");
 	if (file == NULL ) {
@@ -160,7 +210,14 @@ static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	if (pure64_fs_import(fs, file) != 0) {
+	pure64_stream_init(&stream);
+	stream.data = file;
+	stream.read = fstream_read;
+	stream.write = fstream_write;
+	stream.set_pos = fstream_set_pos;
+	stream.get_pos = fstream_get_pos;
+
+	if (pure64_fs_import(fs, &stream) != 0) {
 		fprintf(stderr, "Failed to read file system from '%s'.\n", filename);
 		fclose(file);
 		return EXIT_FAILURE;
