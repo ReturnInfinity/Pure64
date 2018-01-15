@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include <pure64/dir.h>
+#include <pure64/fs.h>
 #include <pure64/file.h>
 
 #include "mbr-data.h"
@@ -88,7 +88,7 @@ static bool is_opt(const char *argv) {
 		return false;
 }
 
-static int ramfs_export(struct pure64_dir *root, const char *filename) {
+static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
@@ -125,7 +125,7 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = pure64_dir_export(root, file);
+	err = pure64_fs_export(fs, file);
 	if (err != 0) {
 		fprintf(stderr, "Failed to export Pure64 file system.\n");
 		fclose(file);
@@ -142,7 +142,7 @@ static int ramfs_export(struct pure64_dir *root, const char *filename) {
 	return EXIT_SUCCESS;
 }
 
-static int ramfs_import(struct pure64_dir *root, const char *filename) {
+static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
@@ -160,7 +160,7 @@ static int ramfs_import(struct pure64_dir *root, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	if (pure64_dir_import(root, file) != 0) {
+	if (pure64_fs_import(fs, file) != 0) {
 		fprintf(stderr, "Failed to read file system from '%s'.\n", filename);
 		fclose(file);
 		return EXIT_FAILURE;
@@ -171,13 +171,13 @@ static int ramfs_import(struct pure64_dir *root, const char *filename) {
 	return EXIT_SUCCESS;
 }
 
-static int pure64_cat(struct pure64_dir *dir, int argc, const char **argv) {
+static int pure64_cat(struct pure64_fs *fs, int argc, const char **argv) {
 
 	struct pure64_file *file;
 
 	for (int i = 0; i < argc; i++) {
 
-		file = pure64_dir_open_file(dir, argv[i]);
+		file = pure64_fs_open_file(fs, argv[i]);
 		if (file == NULL) {
 			fprintf(stderr, "Failed to open '%s'.\n", argv[i]);
 			return EXIT_FAILURE;
@@ -189,7 +189,7 @@ static int pure64_cat(struct pure64_dir *dir, int argc, const char **argv) {
 	return EXIT_SUCCESS;
 }
 
-static int pure64_cp(struct pure64_dir *root, int argc, const char **argv) {
+static int pure64_cp(struct pure64_fs *fs, int argc, const char **argv) {
 
 	int err;
 	struct pure64_file *dst;
@@ -229,14 +229,14 @@ static int pure64_cp(struct pure64_dir *root, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	err = pure64_dir_make_file(root, dst_path);
+	err = pure64_fs_make_file(fs, dst_path);
 	if (err != 0) {
 		fprintf(stderr, "Failed to create destination file '%s'.\n", dst_path);
 		fclose(src);
 		return EXIT_FAILURE;
 	}
 
-	dst = pure64_dir_open_file(root, dst_path);
+	dst = pure64_fs_open_file(fs, dst_path);
 	if (dst == NULL) {
 		fprintf(stderr, "Failed to open destination file '%s'.\n", dst_path);
 		fclose(src);
@@ -263,18 +263,18 @@ static int pure64_cp(struct pure64_dir *root, int argc, const char **argv) {
 	return EXIT_SUCCESS;
 }
 
-static int pure64_ls(struct pure64_dir *dir, int argc, const char **argv) {
+static int pure64_ls(struct pure64_fs *fs, int argc, const char **argv) {
 
 	struct pure64_dir *subdir;
 
 	if (argc == 0) {
 		const char *default_args[] = { "/", NULL };
-		return pure64_ls(dir, 1,  default_args);
+		return pure64_ls(fs, 1,  default_args);
 	}
 
 	for (int i = 0; i < argc; i++) {
 
-		subdir = pure64_dir_open_subdir(dir, argv[i]);
+		subdir = pure64_fs_open_dir(fs, argv[i]);
 		if (subdir == NULL) {
 			fprintf(stderr, "Failed to open '%s'.\n", argv[i]);
 			return EXIT_FAILURE;
@@ -292,12 +292,12 @@ static int pure64_ls(struct pure64_dir *dir, int argc, const char **argv) {
 	return EXIT_SUCCESS;
 }
 
-static int pure64_mkdir(struct pure64_dir *dir, int argc, const char **argv) {
+static int pure64_mkdir(struct pure64_fs *fs, int argc, const char **argv) {
 
 	int err;
 
 	for (int i = 0; i < argc; i++) {
-		err = pure64_dir_make_subdir(dir, argv[i]);
+		err = pure64_fs_make_dir(fs, argv[i]);
 		if (err != 0) {
 			fprintf(stderr, "Failed to create directory '%s'.\n", argv[i]);
 			return EXIT_FAILURE;
@@ -310,20 +310,22 @@ static int pure64_mkdir(struct pure64_dir *dir, int argc, const char **argv) {
 static int pure64_mkfs(const char *filename, int argc, const char **argv) {
 
 	int err;
-	struct pure64_dir root;
+	struct pure64_fs fs;
 
 	/* no arguments are currently
 	 * needed for this command. */
 	(void) argc;
 	(void) argv;
 
-	pure64_dir_init(&root);
+	pure64_fs_init(&fs);
 
-	err = ramfs_export(&root, filename);
-	if (err != EXIT_SUCCESS)
+	err = ramfs_export(&fs, filename);
+	if (err != EXIT_SUCCESS) {
+		pure64_fs_free(&fs);
 		return EXIT_FAILURE;
+	}
 
-	pure64_dir_free(&root);
+	pure64_fs_free(&fs);
 
 	return EXIT_SUCCESS;
 }
@@ -333,7 +335,7 @@ int main(int argc, const char **argv) {
 	int i;
 	int err;
 	const char *filename = "pure64.img";
-	struct pure64_dir root;
+	struct pure64_fs fs;
 
 	for (i = 1; i < argc; i++) {
 		if (check_opt(argv[i], "help", 'h')) {
@@ -366,36 +368,42 @@ int main(int argc, const char **argv) {
 		return pure64_mkfs(filename, i - 1, &argv[i + 1]);
 	}
 
-	pure64_dir_init(&root);
+	pure64_fs_init(&fs);
 
-	err = ramfs_import(&root, filename);
+	err = ramfs_import(&fs, filename);
 	if (err != EXIT_SUCCESS) {
-		pure64_dir_free(&root);
+		pure64_fs_free(&fs);
 		return EXIT_FAILURE;
 	}
 
 	if (strcmp(argv[i], "cat") == 0) {
-		err = pure64_cat(&root, argc - (i + 1), &argv[i + 1]);
+		err = pure64_cat(&fs, argc - (i + 1), &argv[i + 1]);
 	} else if (strcmp(argv[i], "cp") == 0) {
-		err = pure64_cp(&root, argc - (i + 1), &argv[i + 1]);
+		err = pure64_cp(&fs, argc - (i + 1), &argv[i + 1]);
 	} else if (strcmp(argv[i], "ls") == 0) {
-		err = pure64_ls(&root, argc - (i + 1), &argv[i + 1]);
+		err = pure64_ls(&fs, argc - (i + 1), &argv[i + 1]);
 	} else if (strcmp(argv[i], "mkdir") == 0) {
-		err = pure64_mkdir(&root, argc - (i + 1), &argv[i + 1]);
+		err = pure64_mkdir(&fs, argc - (i + 1), &argv[i + 1]);
 	} else if (strcmp(argv[i], "rm") == 0) {
 	} else if (strcmp(argv[i], "rmdir") == 0) {
 	} else {
 		fprintf(stderr, "Unknown command '%s'.\n", argv[i]);
+		pure64_fs_free(&fs);
 		return EXIT_FAILURE;
 	}
 
-	err = ramfs_export(&root, filename);
 	if (err != EXIT_SUCCESS) {
-		pure64_dir_free(&root);
+		pure64_fs_free(&fs);
 		return EXIT_FAILURE;
 	}
 
-	pure64_dir_free(&root);
+	err = ramfs_export(&fs, filename);
+	if (err != EXIT_SUCCESS) {
+		pure64_fs_free(&fs);
+		return EXIT_FAILURE;
+	}
 
-	return err;
+	pure64_fs_free(&fs);
+
+	return EXIT_SUCCESS;
 }
