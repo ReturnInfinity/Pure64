@@ -5,6 +5,8 @@
  */
 
 #include <pure64/file.h>
+#include <pure64/error.h>
+#include <pure64/stream.h>
 
 #include "misc.h"
 
@@ -68,13 +70,13 @@ int pure64_file_import(struct pure64_file *file, struct pure64_stream *in) {
 		return -1;
 	}
 
-	err = pure64_stream_read(stream, file->name, file->name_size);
+	err = pure64_stream_read(in, file->name, file->name_size);
 	if (err != 0)
 		return err;
 
 	file->name[file->name_size] = 0;
 
-	err = pure64_stream_read(stream, file->data, file->data_size);
+	err = pure64_stream_read(in, file->data, file->data_size);
 	if (err != 0)
 		return err;
 
