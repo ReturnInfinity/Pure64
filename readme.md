@@ -1,16 +1,24 @@
 # Pure64 -- an OS/software loader for x86-64 systems
-Copyright (C) 2008-2017 Return Infinity -- see LICENSE.TXT
 
-Pure64 is a software loader that was initially created for BareMetal OS. The loader sets the computer into a full 64-bit state with no legacy compatibility layers and also enables all available CPU Cores in the computer. Pure64 keeps an information table in memory that stores important details about the computer (Amount of RAM and memory layout, number of CPU cores and their APIC IDs, etc). The Pure64 loader has been released separately so others can use it in their own software projects.
+[![Build Status](https://travis-ci.org/ReturnInfinity/Pure64.svg?branch=master)](https://travis-ci.org/ReturnInfinity/Pure64)
+
+Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
+
+Pure64 is a software loader that was initially created for BareMetal OS.
+The loader sets the computer into a full 64-bit state with no legacy compatibility layers and also enables all available CPU Cores in the computer.
+Pure64 keeps an information table in memory that stores important details about the computer (Amount of RAM and memory layout, number of CPU cores and their APIC IDs, etc).
+The Pure64 loader has been released separately so others can use it in their own software projects.
 
 See LICENSE.TXT for redistribution/modification rights, and CREDITS.TXT for a list of people involved.
 
 Ian Seyler (ian.seyler@returninfinity.com)
 
-
 ## Building
 
-The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler). In Linux you can download it from your distributions repository(`apt-get install nasm`). If you are using Windows or macOS you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/) in the `macosx` and `win32` directories, respectively.
+The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler) and GCC.
+In Linux you can download it from your distributions repository(`apt-get install nasm gcc`).
+If you are using Windows or macOS you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/) in the `macosx` and `win32` directories, respectively.
+For GCC, you can use MinGW [here](https://sourceforge.net/projects/mingw/files/).
 
 Build scripts are included for macOS/Linux and Windows systems.
 
