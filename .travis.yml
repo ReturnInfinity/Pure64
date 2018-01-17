@@ -1,0 +1,17 @@
+language: c
+addons:
+  apt:
+    packages:
+    - nasm
+compiler:
+- gcc
+- clang
+script:
+- make pure64-0.7.1.tar.gz
+deploy:
+  provider: releases
+  api_key:
+    secure: Bb1dAXEAF6vumHAgc0BjXTDelgCiAqdSo0KjGvreuQyrH7W/5E5mnUlZdhHr9FpTDsBxm3KNtQytZmOI5Ge9dVn5f5ijggyGKLJgL96F7xvXeOcdjdTIv0HwyXePs3KsqVlqAayzCmRBtqgGhG3c4EouV21XIALb4sSLW6JGhdQ/jLvMxBV8kMxeReNA35NxOA0PIizFavAxoTvXBgpsuKp3MY1QMwkfsYPBQEoZCGlav2JnZmv5wpAXeVbsDz/xltFTC97billsOqag9bUxx7qMykFND1llmi8mlEVnz1FViaTam9MI89Od9ekKzRQ4OK1pnB3uPkOJDAuwvm4QKAsjqvNjb/yG2MdmDSLssaH0fgr/+jLZ6/BPo4rTA6+fX4KMZgrH76lqjijjmYoeHZT4IzmVn6hPgYIDGvla473tgGBBSpirWW5KON6YOF8CcdeF1pBQ09/pRFlv98yXe7pttgx2HtbMrr33dAs12Jep3au8zDFcbq/mtSXAwM22r6bkET8aQGGNJij2P8aWg5wppRnzEL8tXq7rq09nN7eFt/XE9hrM7f+bV7LGwzSsX4FcYWwgj07TAWHsK5oRxWU3gjsYl1qdjMT+NljA7DnbNv2co4v7bDCh/k8r97SYauNJL2ivG5NXbtfY7jSgML8F+4HxbxM/Dho9QB6xioM=
+  file: pure64-0.7.1.tar.gz
+  on:
+    repo: ReturnInfinity/Pure64

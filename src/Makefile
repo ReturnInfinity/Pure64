@@ -54,6 +54,6 @@ clean:
 test:
 
 .PHONY: install
-install:
+install: $(targets)
 
 $(V).SILENT:
