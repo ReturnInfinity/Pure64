@@ -36,9 +36,6 @@ nextchecksum:
 	lodsd				; OEMID (First 4 bytes)
 	lodsw				; OEMID (Last 2 bytes)
 	lodsb				; Grab the Revision value (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
-	add al, 49
-	mov [0x000B8098], al		; Print the ACPI version number
-	sub al, 49
 	cmp al, 0
 	je foundACPIv1			; If AL is 0 then the system is using ACPI v1.0
 	jmp foundACPIv2			; Otherwise it is v2.0 or higher
@@ -94,10 +91,6 @@ foundACPIv2_nextentry:
 	jne foundACPIv2_nextentry
 
 findACPITables:
-	mov al, '3'			; Search through the ACPI tables
-	mov [0x000B809C], al
-	mov al, '4'
-	mov [0x000B809E], al
 	xor ecx, ecx
 nextACPITable:
 	pop rsi
