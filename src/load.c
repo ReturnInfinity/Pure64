@@ -11,11 +11,12 @@ typedef void (*kernel_entry)(void);
 
 static void pure64_memcpy(void *dst, const void *src, uint64_t size) {
 
+	uint64_t i = 0;
 	unsigned char *dst8 = (unsigned char *) dst;
 
 	const unsigned char *src8 = (const unsigned char *) src;
 
-	for (uint64_t i = 0; i < size; i++)
+	for (i = 0; i < size; i++)
 		dst8[i] = src8[i];
 }
 
@@ -39,6 +40,7 @@ static void load_kernel(struct pure64_file *kernel) {
 
 	const unsigned char *data;
 	uint64_t data_size;
+	uint16_t i = 0;
 
 	data = (const unsigned char *) kernel->data;
 
@@ -87,7 +89,7 @@ static void load_kernel(struct pure64_file *kernel) {
 		return;
 	}
 
-	for (uint16_t i = 0; i < e_phnum; i++) {
+	for (i = 0; i < e_phnum; i++) {
 
 		unsigned char *ph = (unsigned char *) &data[e_phoff + (i * e_phentsize)];
 
@@ -161,14 +163,16 @@ static unsigned char *skip_dir(unsigned char *ptr) {
 
 	uint64_t file_count = ptr64[2];
 
+	uint64_t i = 0;
+
 	ptr = (unsigned char *) &ptr64[3];
 
 	ptr = &ptr[name_size];
 
-	for (uint64_t i = 0; i < dir_count; i++)
+	for (i = 0; i < dir_count; i++)
 		ptr = skip_dir(ptr);
 	
-	for (uint64_t i = 0; i < file_count; i++)
+	for (i = 0; i < file_count; i++)
 		ptr = skip_file(ptr);
 
 	return ptr;
