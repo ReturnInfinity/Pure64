@@ -4,6 +4,7 @@ build
 *.o
 *.a
 *.img
+*.tar.gz
 /src/pure64
 /src/util/pure64
 /src/util/rc
