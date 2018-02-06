@@ -114,7 +114,6 @@ static void execute_plan(struct plan *plan) {
 int main(int argc, const char **argv) {
 
 	int i;
-	int err;
 	FILE *source;
 	FILE *header;
 	FILE *input;

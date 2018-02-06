@@ -259,8 +259,8 @@ static bool find_kernel(struct pure64_file *kernel) {
 		/* found the kernel */
 		kernel->name_size = *(uint64_t *) &ptr[0x00];
 		kernel->data_size = *(uint64_t *) &ptr[0x08];
-		kernel->name = &ptr[0x10];
-		kernel->data = &ptr[0x10 + name_size];
+		kernel->name = (char *) &ptr[0x10];
+		kernel->data = (void *) &ptr[0x10 + name_size];
 		return true;
 	}
 

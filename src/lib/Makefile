@@ -6,6 +6,8 @@ PREFIX ?= /usr/local
 
 VPATH += $(top)/include/pure64
 
+CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
+CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
 CFLAGS += -fno-stack-protector
 CFLAGS += -fomit-frame-pointer

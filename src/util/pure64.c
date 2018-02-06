@@ -307,7 +307,7 @@ static int pure64_cp(struct pure64_fs *fs, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	if (fread(dst->data, 1, src_size, src) != src_size) {
+	if (fread(dst->data, 1, src_size, src) != ((size_t) src_size)) {
 		fprintf(stderr, "Failed to read source file'%s'.\n", src_path);
 		fclose(src);
 		return EXIT_FAILURE;
