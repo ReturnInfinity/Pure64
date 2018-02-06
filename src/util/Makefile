@@ -6,6 +6,8 @@ PREFIX ?= /usr/local
 
 VPATH += $(top)/src/lib
 
+CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
+CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
 CFLAGS += -g
 
