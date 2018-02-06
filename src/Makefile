@@ -3,6 +3,8 @@ top ?= ..
 NASM ?= nasm
 NASMFLAGS = -f elf64 -F dwarf
 
+CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
+CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
 CFLAGS += -fno-stack-protector
 CFLAGS += -fomit-frame-pointer
