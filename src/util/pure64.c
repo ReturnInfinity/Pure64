@@ -135,7 +135,7 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	FILE *file;
 	long int pos;
 	uint64_t sector_count;
-	unsigned char sector_count_buf[4];
+	unsigned char sector_count_buf[2];
 
 	struct pure64_stream stream;
 
@@ -202,12 +202,15 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 
 	sector_count = ((((uint64_t) pos) - 0x2000) + 512) / 512;
 
+	if (sector_count > 0xffff) {
+		fprintf(stderr, "Pure64 file system is too large.\n");
+		return EXIT_FAILURE;
+	}
+
 	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
 	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
-	sector_count_buf[2] = (unsigned char)((sector_count >> 0x10) & 0xff);
-	sector_count_buf[3] = (unsigned char)((sector_count >> 0x18) & 0xff);
 
-	if (fwrite(sector_count_buf, 1, 4, file) != 4) {
+	if (fwrite(sector_count_buf, 1, 2, file) != 4) {
 		fprintf(stderr, "Failed to write sector count.\n");
 		return EXIT_FAILURE;
 	}
