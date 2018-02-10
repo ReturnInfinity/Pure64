@@ -186,7 +186,7 @@ static bool find_kernel(struct pure64_file *kernel) {
 	 * */
 
 	/* beginning of the directories in '/' */
-	unsigned char *ptr = (unsigned char *) 0xa000;
+	unsigned char *ptr = (unsigned char *) 0xa000 + 16;
 
 	uint64_t i;
 	uint64_t file_count;
