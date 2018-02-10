@@ -133,6 +133,10 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
+	long int pos;
+	uint64_t sector_count;
+	unsigned char sector_count_buf[4];
+
 	struct pure64_stream stream;
 
 	file = fopen(filename, "wb");
@@ -178,6 +182,33 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	if (err != 0) {
 		fprintf(stderr, "Failed to export Pure64 file system.\n");
 		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	pos = ftell(file);
+	if (pos == -1L) {
+		fprintf(stderr, "Failed to get file position.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* update the number of sectors that the
+	 * boot loader should load. */
+
+	if (fseek(file, 0x01d2, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to sector count offset.\n");
+		return EXIT_FAILURE;
+	}
+
+	sector_count = ((((uint64_t) pos) - 0x2000) + 512) / 512;
+
+	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
+	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
+	sector_count_buf[2] = (unsigned char)((sector_count >> 0x10) & 0xff);
+	sector_count_buf[3] = (unsigned char)((sector_count >> 0x18) & 0xff);
+
+	if (fwrite(sector_count_buf, 1, 4, file) != 4) {
+		fprintf(stderr, "Failed to write sector count.\n");
 		return EXIT_FAILURE;
 	}
 
