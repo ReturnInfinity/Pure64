@@ -205,6 +205,12 @@ static unsigned char *skip_dir(unsigned char *ptr) {
 	return ptr;
 }
 
+static void find_failure(const char *msg) {
+	debug("Failed to find kernel: \"");
+	debug(msg);
+	debug("\"\n");
+}
+
 static bool find_kernel(struct pure64_file *kernel) {
 
 	/* The kernel resides in '/boot/kernel'.
@@ -213,12 +219,26 @@ static bool find_kernel(struct pure64_file *kernel) {
 	 * */
 
 	/* beginning of the directories in '/' */
-	unsigned char *ptr = (unsigned char *) 0xa000 + 16;
+	unsigned char *ptr = (unsigned char *) 0xa000;
 
 	uint64_t i;
 	uint64_t file_count;
 	uint64_t dir_count;
 	uint64_t name_size;
+
+	if ((ptr[0] != 'P')
+	 || (ptr[1] != 'u')
+	 || (ptr[2] != 'r')
+	 || (ptr[3] != 'e')
+	 || (ptr[4] != '6')
+	 || (ptr[5] != '4')
+	 || (ptr[6] != 'F')
+	 || (ptr[7] != 'S')) {
+		find_failure("Pure64 file system not found.");
+		return false;
+	}
+
+	ptr += 16;
 
 	dir_count = *(uint64_t *)(&ptr[0x08]);
 
@@ -245,7 +265,7 @@ static bool find_kernel(struct pure64_file *kernel) {
 	}
 
 	if (i >= dir_count) {
-		/* TODO : error message: '/boot' not found. */
+		find_failure("The '/boot' directory was not found.");
 		return false;
 	}
 
@@ -291,7 +311,7 @@ static bool find_kernel(struct pure64_file *kernel) {
 		return true;
 	}
 
-	/* TODO : error message: 'kernel' not found in '/boot' */
+	find_failure("The '/boot/kernel' kernel file was not found.");
 
 	return false;
 }
