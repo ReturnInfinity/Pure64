@@ -210,7 +210,7 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
 	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
 
-	if (fwrite(sector_count_buf, 1, 2, file) != 4) {
+	if (fwrite(sector_count_buf, 1, 2, file) != 2) {
 		fprintf(stderr, "Failed to write sector count.\n");
 		return EXIT_FAILURE;
 	}
