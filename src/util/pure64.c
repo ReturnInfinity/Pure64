@@ -192,32 +192,51 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	/* update the number of sectors that the
-	 * boot loader should load. */
-
-	if (fseek(file, 0x01d2, SEEK_SET) != 0) {
-		fprintf(stderr, "Failed to seek to sector count offset.\n");
-		return EXIT_FAILURE;
+	if ((pos % 512) != 0) {
+		fseek(file, (pos + (512 - (pos % 512))) - 1, SEEK_SET);
+		fputc(0x00, file);
+		sector_count = ((pos - 0x2000) + 512) / 512;
 	}
 
-	sector_count = ((((uint64_t) pos) - 0x2000) + 512) / 512;
+	/* get ready to update the required
+	 * number of sectors to read from the
+	 * master boot record */
+
+	/* ensure that the sector
+	 * count can be contained
+	 * within a 16-bit, unsigned
+	 * integer.
+	 * */
 
 	if (sector_count > 0xffff) {
 		fprintf(stderr, "Pure64 file system is too large.\n");
 		return EXIT_FAILURE;
 	}
 
+	sector_count -= 1;
+
+	/* encode as little-endian */
+
 	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
 	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
+
+	/* go to the location in the
+	 * master boot record that contains
+	 * the sector count to read.
+	 */
+
+	if (fseek(file, 0x01d2, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to sector count offset.\n");
+		return EXIT_FAILURE;
+	}
+
+	/* write the sector count to
+	 * the master boot record.
+	 */
 
 	if (fwrite(sector_count_buf, 1, 2, file) != 2) {
 		fprintf(stderr, "Failed to write sector count.\n");
 		return EXIT_FAILURE;
-	}
-
-	if (ftell(file) < (512 * 2048)) {
-		fseek(file, (512 * 2048) - 1, SEEK_SET);
-		fputc(0x00, file);
 	}
 
 	fclose(file);
