@@ -11,8 +11,9 @@ nasm bootsectors/pxestart.asm  -o bootsectors/pxestart.sys
 
 # Build pure64.sys
 nasm pure64.asm -f elf64 -F dwarf -o pure64.o
-gcc -c load.c -o load.o -I ../include -fno-stack-protector
-ld pure64.o load.o -o pure64 -T pure64.ld
+gcc -c load.c -o load.o -I ../include -fno-stack-protector -mno-red-zone
+gcc -c debug.c -o debug.o -I ../include -fno-stack-protector -mno-red-zone
+ld pure64.o load.o debug.o -o pure64 -T pure64.ld
 objcopy -O binary pure64 pure64.sys
 
 # Build libpure64.a

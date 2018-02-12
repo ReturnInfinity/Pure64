@@ -7,6 +7,8 @@
 #include <pure64/dir.h>
 #include <pure64/file.h>
 
+#include "debug.h"
+
 typedef void (*kernel_entry)(void);
 
 static void pure64_memcpy(void *dst, const void *src, uint64_t size) {
@@ -28,12 +30,24 @@ void load(void) {
 
 	struct pure64_file kernel;
 
+	debug("Searching for kernel...\n");
+
 	if (!find_kernel(&kernel)) {
 		/* TODO :error message */
 		return;
 	}
 
+	debug("Kernel found.\n");
+
+	debug("Loading kernel...\n");
+
 	load_kernel(&kernel);
+}
+
+static void load_failure(const char *msg) {
+	debug("Failed to load kernel: \"");
+	debug(msg);
+	debug("\"\n");
 }
 
 static void load_kernel(struct pure64_file *kernel) {
@@ -55,22 +69,30 @@ static void load_kernel(struct pure64_file *kernel) {
 	 || (data[0x01] != 'E')
 	 || (data[0x02] != 'L')
 	 || (data[0x03] != 'F')) {
+		load_failure("Kernel is not in ELF format.");
 		return;
 	}
 
 	/* verify it is 64-bit */
-	if (data[0x04] != 2)
+	if (data[0x04] != 2) {
+		load_failure("Kernel is not 64-bit.");
 		return;
+	}
 
 	/* verify is little-endian */
-	if (data[0x05] != 1)
+	if (data[0x05] != 1) {
+		load_failure("Kernel is not little endian.");
 		return;
+	}
 
 	/* verify is executable */
 	if ((data[0x10] != 0x02)
-	 || (data[0x11] != 0x00))
+	 || (data[0x11] != 0x00)) {
+		load_failure("Kernel is not an executable.");
 		return;
+	}
 
+	/* TODO : what is this for? */
 	if ((data[0x12] != 0x3e)
 	 || (data[0x13] != 0x00))
 		return;
@@ -86,6 +108,7 @@ static void load_kernel(struct pure64_file *kernel) {
 	/* check to make sure the all the program
 	 * headers are available in memory */
 	if (data_size < (e_phoff + (e_phnum * e_phentsize))) {
+		load_failure("Kernel file is corrupt.");
 		return;
 	}
 
@@ -116,13 +139,17 @@ static void load_kernel(struct pure64_file *kernel) {
 		/* Verify the size of file is the same
 		 * or smaller than the required area in
 		 * memory */
-		if (p_filesz > p_memsz)
+		if (p_filesz > p_memsz) {
+			load_failure("Kernel file is corrupt.");
 			return;
+		}
 
 		/* Pure64 currently only supports
-		 * loading at this address. */
-		if (vaddr != ((void *) 0x400000))
+		 * loading at or above this address */
+		if (vaddr < ((void *) 0x100000)) {
+			load_failure("Invalid load address.");
 			return;
+		}
 
 		/* TODO : properly allocate memory,
 		 * checking to see if the address is
@@ -178,6 +205,12 @@ static unsigned char *skip_dir(unsigned char *ptr) {
 	return ptr;
 }
 
+static void find_failure(const char *msg) {
+	debug("Failed to find kernel: \"");
+	debug(msg);
+	debug("\"\n");
+}
+
 static bool find_kernel(struct pure64_file *kernel) {
 
 	/* The kernel resides in '/boot/kernel'.
@@ -192,6 +225,20 @@ static bool find_kernel(struct pure64_file *kernel) {
 	uint64_t file_count;
 	uint64_t dir_count;
 	uint64_t name_size;
+
+	if ((ptr[0] != 'P')
+	 || (ptr[1] != 'u')
+	 || (ptr[2] != 'r')
+	 || (ptr[3] != 'e')
+	 || (ptr[4] != '6')
+	 || (ptr[5] != '4')
+	 || (ptr[6] != 'F')
+	 || (ptr[7] != 'S')) {
+		find_failure("Pure64 file system not found.");
+		return false;
+	}
+
+	ptr += 16;
 
 	dir_count = *(uint64_t *)(&ptr[0x08]);
 
@@ -218,7 +265,7 @@ static bool find_kernel(struct pure64_file *kernel) {
 	}
 
 	if (i >= dir_count) {
-		/* TODO : error message: '/boot' not found. */
+		find_failure("The '/boot' directory was not found.");
 		return false;
 	}
 
@@ -264,7 +311,7 @@ static bool find_kernel(struct pure64_file *kernel) {
 		return true;
 	}
 
-	/* TODO : error message: 'kernel' not found in '/boot' */
+	find_failure("The '/boot/kernel' kernel file was not found.");
 
 	return false;
 }

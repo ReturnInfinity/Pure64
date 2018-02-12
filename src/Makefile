@@ -25,14 +25,16 @@ pure64files += sysvar.asm
 .PHONY: all
 all: $(targets)
 
-pure64: pure64.o load.o pure64.ld
-	ld pure64.o load.o -T pure64.ld -o $@
+pure64: pure64.o debug.o load.o pure64.ld
+	ld pure64.o debug.o load.o -T pure64.ld -o $@
 
 # The dependencies of pure64.sys can
 # be (and should be) generated with
 # the command: nasm -M pure64.asm 1>pure64.mk
 # and used to update this target.
 pure64.o: $(pure64files)
+
+debug.o: debug.c debug.h
 
 load.o: load.c
 
