@@ -115,26 +115,23 @@ rtc_poll:
 	out 0xA1, al
 
 ; Configure serial port @ 0x03F8
-	mov dx, 0x03F9
+	mov dx, 0x03F8 + 1		; Interrupt Enable
 	mov al, 0x00			; Disable all interrupts
 	out dx, al
-	mov al, 0x80			; Enable DLAB (set baud rate divisor)
-	add dx, 2
+	mov dx, 0x03F8 + 3		; Line Control
+	mov al, 80
 	out dx, al
-	mov al, 0x01			; Set divisor to 1 for 115200 baud
-	sub dx, 4
+	mov dx, 0x03F8 + 0		; Divisor Latch
+	mov ax, 1			; 1 = 115200 baud
+	out dx, ax
+	mov dx, 0x03F8 + 3		; Line Control
+	mov al, 3			; 8 bits, no parity, one stop bit
 	out dx, al
-	mov al, 0x00
-	add dx, 1
-	out dx, al
-	mov al, 0x03			; 8 bits, no parity, one stop bit
-	add dx, 2
+	mov dx, 0x03F8 + 4		; Modem Control
+	mov al, 3
 	out dx, al
 	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	sub dx, 1
-	out dx, al
-	mov al, 0x0B			; IRQs enabled, RTS/DSR set
-	add dx, 2
+	mov dx, 0x03F8 + 2
 	out dx, al
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
@@ -489,6 +486,25 @@ nextIOAPIC:
 	mov rdi, 0x100000		; Destination address at the 1MiB mark
 	mov rcx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
+
+; Output message via serial port
+	cld				; Clear the direction flag.. we want to increment through the string
+	mov dx, 0x03F8			; Address of first serial port
+	mov rsi, message		; Location of message
+	mov cx, 11			; Length of message
+serial_nextchar:
+	jrcxz serial_done		; If RCX is 0 then the function is complete
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je serial_nextchar
+	dec cx
+	lodsb				; Get char from string and store in AL
+	out dx, al			; Send the char to the serial port
+	jmp serial_nextchar
+serial_done:
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers

@@ -6,6 +6,8 @@
 ; =============================================================================
 
 
+message: db 10, 'Pure64 OK', 10
+
 ;CONFIG
 cfg_smpinit:		db 1	; By default SMP is enabled. Set to 0 to disable.
 cfg_mbr:		db 0	; Did we boot off of a disk with a proper MBR
