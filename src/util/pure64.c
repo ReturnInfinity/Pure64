@@ -24,6 +24,10 @@
  * Constants
  * * * * * */
 
+#ifndef PURE64_MINIMUM_DISK_SIZE
+#define PURE64_MINIMUM_DISK_SIZE (1 * 1024 * 1024)
+#endif
+
 #ifndef PURE64_DEFAULT_DISK_UUID
 #define PURE64_DEFAULT_DISK_UUID "74a7c14a-711d-4293-a731-569ca656799e"
 #endif
@@ -561,7 +565,11 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	if ((pos % 512) != 0) {
+	if (pos < PURE64_MINIMUM_DISK_SIZE) {
+		fseek(file, PURE64_MINIMUM_DISK_SIZE -1, SEEK_SET);
+		fputc(0x00, file);
+		sector_count = PURE64_MINIMUM_DISK_SIZE / 512;
+	} else if ((pos % 512) != 0) {
 		fseek(file, (pos + (512 - (pos % 512))) - 1, SEEK_SET);
 		fputc(0x00, file);
 		sector_count = ((pos - 0x2000) + 512) / 512;
