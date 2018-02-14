@@ -130,6 +130,7 @@ check_A20:
 	mov dl, [DriveNumber]		; http://www.ctyme.com/intr/rb-0708.htm
 	mov si, DAP
 	int 0x13
+	jc read_fail
 
 	mov eax, [0x8000]
 	cmp eax, 0x00017EE9		; Match against the Pure64 binary
@@ -143,6 +144,10 @@ check_A20:
 	mov cr0, eax
 	jmp 8:0x8000			; Jump to 32-bit protected mode
 
+read_fail:
+	mov si, msg_ReadFail
+	call print_string_16
+	jmp halt
 magic_fail:
 	mov si, msg_MagicFail
 	call print_string_16
@@ -183,6 +188,7 @@ gdt32_end:
 
 msg_Load db "BMFS MBR v1.0", 0
 msg_MagicFail db " - Error!", 0
+msg_ReadFail db "Failed to read drive.", 13, 10, 0
 
 times 446-$+$$ db 0
 
