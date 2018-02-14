@@ -568,29 +568,19 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	if (pos < PURE64_MINIMUM_DISK_SIZE) {
 		fseek(file, PURE64_MINIMUM_DISK_SIZE -1, SEEK_SET);
 		fputc(0x00, file);
-		sector_count = PURE64_MINIMUM_DISK_SIZE / 512;
 	} else if ((pos % 512) != 0) {
 		fseek(file, (pos + (512 - (pos % 512))) - 1, SEEK_SET);
 		fputc(0x00, file);
-		sector_count = ((pos - 0x2000) + 512) / 512;
 	}
 
 	/* get ready to update the required
 	 * number of sectors to read from the
 	 * master boot record */
 
-	/* ensure that the sector
-	 * count can be contained
-	 * within a 16-bit, unsigned
-	 * integer.
-	 * */
-
-	if (sector_count > 0xffff) {
-		fprintf(stderr, "Pure64 file system is too large.\n");
-		return EXIT_FAILURE;
-	}
-
-	sector_count -= 1;
+	if ((pure64_data_size % 512) != 0)
+		sector_count = (pure64_data_size + (512 - (pure64_data_size % 512))) / 512;
+	else
+		sector_count = pure64_data_size / 512;
 
 	/* encode as little-endian */
 
