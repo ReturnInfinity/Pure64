@@ -6,10 +6,9 @@
 
 #include "map.h"
 
+#include "ahci.h"
 #include "alloc.h"
 #include "e820.h"
-
-#include "debug.h"
 
 #ifndef NULL
 #define NULL ((void *) 0x00)
@@ -29,10 +28,8 @@ static int append_alloc(struct pure64_map *map,
 	alloc_table_size *= sizeof(struct pure64_alloc);
 
 	alloc_table = pure64_map_realloc(map, alloc_table, alloc_table_size);
-	if (alloc_table == NULL) {
-		debug("failed to realloc alloc table\n");
+	if (alloc_table == NULL)
 		return -1;
-	}
 
 	map->alloc_table = alloc_table;
 	map->alloc_count++;
@@ -278,6 +275,7 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_table[1].reserved = sizeof(struct pure64_alloc) * 2;
 	}
 
+	/* TODO : allocate AHCI driver structure */
 }
 
 void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {
@@ -298,12 +296,8 @@ void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {
 	if (alloc.addr == NULL)
 		return NULL;
 
-	if (append_alloc(map, &alloc) != 0) {
-		debug("failed to append alloc\n");
+	if (append_alloc(map, &alloc) != 0)
 		return NULL;
-	}
-
-	/* TODO resize allocation table */
 
 	return alloc.addr;
 }
@@ -336,10 +330,8 @@ void *pure64_map_realloc(struct pure64_map *map,
 	 * to copy over. */
 
 	alloc = find_alloc_entry(map, addr);
-	if (alloc == NULL) {
-		debug("failed to find the allocation entry\n");
+	if (alloc == NULL)
 		return NULL;
-	}
 
 	/* Check to make sure that there is
 	 * more memory already reserved for
@@ -370,11 +362,6 @@ void *pure64_map_realloc(struct pure64_map *map,
 	if (addr2 == NULL)
 		return NULL;
 
-	/* Copy memory from old location to the
-	 * new location. */
-
-	pure64_memcpy(addr2, addr, alloc->size);
-
 	/* Assign the new address to the allocation
 	 * table entry and resort the entries. */
 
@@ -382,7 +369,42 @@ void *pure64_map_realloc(struct pure64_map *map,
 	alloc->size = size;
 	alloc->reserved = reserved;
 
+	/* Copy memory from old location to the
+	 * new location. */
+
+	pure64_memcpy(addr2, addr, alloc->size);
+
 	sort_alloc_table(map);
 
 	return (void *) addr2;
+}
+
+void pure64_map_free(struct pure64_map *map,
+                     void *addr) {
+
+	struct pure64_alloc *alloc;
+
+	/* Check if the address is a null
+	 * pointer. This means that this
+	 * function should do nothing. */
+	if (addr == NULL)
+		return;
+
+	/* This function finds the allocation
+	 * entry and puts it at the end of the
+	 * table. Once it's at the end of the
+	 * table, it decrements the entry count
+	 * so that the entry is no longer visible. */
+
+	/* Find the allocation entry. */
+	alloc = find_alloc_entry(map, addr);
+	if (alloc == NULL)
+		return;
+
+	/* This will cause the sort function to put
+	 * the entry at the end of the table. */
+	alloc->addr = (void *) 0xffffffffffffffff;
+	sort_alloc_table(map);
+
+	map->alloc_count--;
 }
