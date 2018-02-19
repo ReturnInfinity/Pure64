@@ -50,6 +50,8 @@ static void debug_putc(char c) {
 	serial_putc(c);
 }
 
+const char hextable[16] = "0123456789abcdef";
+
 /** Data type is char */
 #define LENGTH_hh 0x01
 
@@ -342,31 +344,88 @@ static void debug_print_string(const char *str, unsigned int len) {
 
 static void fmt_print_hex(const struct fmt_info *fmt_info, va_list args) {
 
-	const char hex[16] = "0123456789abcdef";
-	char str[8];
-	unsigned int n;
+	char str[16 + 1];
+	unsigned long long int n;
 	unsigned int i;
+	unsigned int bits;
+	unsigned int ch_count;
 
-	n = va_arg(args, unsigned int);
+	if (fmt_info->length_set) {
+		if (fmt_info->length == LENGTH_l) {
+			bits = sizeof(unsigned long int) * 8;
+			n = va_arg(args, unsigned long int);
+		} else if (fmt_info->length == LENGTH_ll) {
+			bits = sizeof(unsigned long long int) * 8;
+			n = va_arg(args, unsigned long long int);
+		} else if (fmt_info->length == LENGTH_h) {
+			bits = sizeof(unsigned char);
+			n = va_arg(args, unsigned int);
+		} else if (fmt_info->length == LENGTH_hh) {
+			bits = sizeof(unsigned short int);
+			n = va_arg(args, unsigned int);
+		} else {
+			/* Unsupported length.
+			 * Bail out before corupting
+			 * the stack */
+			return;
+		}
+	} else if (fmt_info->specifier == SPECIFIER_p) {
+		bits = 64;
+		n = (unsigned long long int) va_arg(args, void *);
+	} else {
+		bits = 32;
+		n = va_arg(args, unsigned int);
+	}
 
-	str[0] = hex[(n >> 28) & 0xf];
-	str[1] = hex[(n >> 24) & 0xf];
-
-	str[2] = hex[(n >> 20) & 0xf];
-	str[3] = hex[(n >> 16) & 0xf];
-
-	str[4] = hex[(n >> 12) & 0xf];
-	str[5] = hex[(n >> 8) & 0xf];
-
-	str[6] = hex[(n >> 4) & 0xf];
-	str[7] = hex[(n >> 0) & 0xf];
+	if (bits == 8) {
+		ch_count = 2;
+		str[0] = hextable[(n >> 4) & 0xf];
+		str[1] = hextable[(n >> 0) & 0xf];
+	} else if (bits == 16) {
+		ch_count = 4;
+		str[0] = hextable[(n >> 12) & 0xf];
+		str[1] = hextable[(n >> 8) & 0xf];
+		str[2] = hextable[(n >> 4) & 0xf];
+		str[3] = hextable[(n >> 0) & 0xf];
+	} else if (bits == 32) {
+		ch_count = 8;
+		str[0] = hextable[(n >> 28) & 0xf];
+		str[1] = hextable[(n >> 24) & 0xf];
+		str[2] = hextable[(n >> 20) & 0xf];
+		str[3] = hextable[(n >> 16) & 0xf];
+		str[4] = hextable[(n >> 12) & 0xf];
+		str[5] = hextable[(n >> 8) & 0xf];
+		str[6] = hextable[(n >> 4) & 0xf];
+		str[7] = hextable[(n >> 0) & 0xf];
+	} else if (bits == 64) {
+		ch_count = 16;
+		str[0] = hextable[(n >> 60) & 0xf];
+		str[1] = hextable[(n >> 56) & 0xf];
+		str[2] = hextable[(n >> 52) & 0xf];
+		str[3] = hextable[(n >> 48) & 0xf];
+		str[4] = hextable[(n >> 44) & 0xf];
+		str[5] = hextable[(n >> 40) & 0xf];
+		str[6] = hextable[(n >> 36) & 0xf];
+		str[7] = hextable[(n >> 32) & 0xf];
+		str[8] = hextable[(n >> 28) & 0xf];
+		str[9] = hextable[(n >> 24) & 0xf];
+		str[10] = hextable[(n >> 20) & 0xf];
+		str[11] = hextable[(n >> 16) & 0xf];
+		str[12] = hextable[(n >> 12) & 0xf];
+		str[13] = hextable[(n >> 8) & 0xf];
+		str[14] = hextable[(n >> 4) & 0xf];
+		str[15] = hextable[(n >> 0) & 0xf];
+	} else {
+		/* Unsupported bit count */
+		return;
+	}
 
 	/* Print leading zeros or
 	 * spaces first. */
 
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < ch_count; i++) {
 		if (str[i] == '0') {
-			if (fmt_info->width_set && ((8 - i) < fmt_info->width)) {
+			if (fmt_info->width_set && ((ch_count - i) < fmt_info->width)) {
 				if (fmt_info->flags & FLAG_PAD_ZERO)
 					debug_putc('0');
 				else
@@ -377,7 +436,16 @@ static void fmt_print_hex(const struct fmt_info *fmt_info, va_list args) {
 		}
 	}
 
-	while (i < 8) {
+	/* Check if all numbers where zero.
+	 * If they were, there should be
+	 * at least one zero printed to
+	 * the screen. */
+
+	if (i >= ch_count) {
+		debug_putc('0');
+	}
+
+	while (i < ch_count) {
 		debug_putc(str[i]);
 		i++;
 	}
@@ -400,7 +468,8 @@ static void fmt_print_string(const struct fmt_info *fmt_info, va_list args) {
 
 static void fmt_print(const struct fmt_info *fmt_info, va_list args) {
 
-	if (fmt_info->specifier == SPECIFIER_x) {
+	if ((fmt_info->specifier == SPECIFIER_x)
+	 || (fmt_info->specifier == SPECIFIER_p)) {
 		fmt_print_hex(fmt_info, args);
 	} else if (fmt_info->specifier == SPECIFIER_s) {
 		fmt_print_string(fmt_info, args);
