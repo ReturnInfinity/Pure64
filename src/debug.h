@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-void debug(const char *fmt, ...);
+void debug(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
 
 #ifdef __cplusplus
 } /* extern "C" { */
