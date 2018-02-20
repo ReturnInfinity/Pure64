@@ -508,6 +508,7 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	FILE *file;
 	long int pos;
 	uint64_t sector_count;
+	uint64_t fs_offset;
 	unsigned char sector_count_buf[2];
 
 	struct pure64_stream stream;
@@ -537,7 +538,11 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 0x4000, SEEK_SET);
+	fs_offset = 0x2000 + pure64_data_size;
+	if ((fs_offset % 0x1000) != 0)
+		fs_offset += 0x1000 - (fs_offset % 0x1000);
+
+	err = fseek(file, fs_offset, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
