@@ -6,7 +6,6 @@
 
 #include "map.h"
 
-#include "ahci.h"
 #include "alloc.h"
 #include "e820.h"
 #include "string.h"
@@ -17,20 +16,7 @@
 
 #define BOUNDARY 0x1000
 
-static void *ahci_malloc(void *map_ptr, unsigned int size) {
-	return pure64_map_malloc((struct pure64_map *) map_ptr, size);
-}
-
-static void *ahci_realloc(void *map_ptr, void *addr, unsigned int size) {
-	return pure64_map_realloc((struct pure64_map *) map_ptr, addr, size);
-}
-
-static void ahci_free(void *map_ptr, void *addr) {
-	return pure64_map_free((struct pure64_map *) map_ptr, addr);
-}
-
-static int append_alloc(struct pure64_map *map,
-                        struct pure64_alloc *alloc) {
+static struct pure64_alloc *append_alloc(struct pure64_map *map, struct pure64_alloc *alloc) {
 
 	struct pure64_alloc *alloc_table;
 	uint64_t alloc_table_size;
@@ -42,14 +28,14 @@ static int append_alloc(struct pure64_map *map,
 
 	alloc_table = pure64_map_realloc(map, alloc_table, alloc_table_size);
 	if (alloc_table == NULL)
-		return -1;
+		return NULL;
 
 	map->alloc_table = alloc_table;
 	map->alloc_count++;
 
 	map->alloc_table[map->alloc_count - 1] = *alloc;
 
-	return 0;
+	return &map->alloc_table[map->alloc_count - 1];
 }
 
 static void sort_alloc_table(struct pure64_map *map) {
@@ -135,13 +121,24 @@ static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 		 * memory allocations. */
 
 		for (i = 0; i < map->alloc_count; i++) {
+
 			alloc = &map->alloc_table[i];
+			addr3 = (uint64_t) alloc->addr;
+			size3 = alloc->reserved;
+
+			/* Check if this entry is in the
+			 * usable memory section from the
+			 * E820 entry. */
+			if ((addr3 < addr2) || (addr3 >= (addr2 + size2))) {
+				/* Not in this E820 section,
+				 * we can skip it. */
+				continue;
+			}
+
 			/* Check if candidate address
 			 * overlaps this entry in the
 			 * allocation table. */
-			addr3 = (uint64_t) alloc->addr;
-			size3 = alloc->reserved;
-			if (((addr + size) > addr3) && (addr <= addr3)) {
+			if ((addr + size) > addr3) {
 				/* Move candidate address to the
 				 * end of the existing allocation. */
 				addr = addr3 + size3;
@@ -274,21 +271,12 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_table[1].size = sizeof(struct pure64_alloc) * 2;
 		map->alloc_table[1].reserved = sizeof(struct pure64_alloc) * 2;
 	}
-
-	map->ahci_driver = pure64_map_malloc(map, sizeof(struct ahci_driver));
-	if (map->ahci_driver != NULL) {
-		ahci_init(map->ahci_driver);
-		map->ahci_driver->mm_data = map;
-		map->ahci_driver->mm_malloc = ahci_malloc;
-		map->ahci_driver->mm_realloc = ahci_realloc;
-		map->ahci_driver->mm_free = ahci_free;
-		ahci_load(map->ahci_driver);
-	}
 }
 
 void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {
 
 	struct pure64_alloc alloc;
+	struct pure64_alloc *alloc_ent;
 
 	if (map->alloc_table == NULL)
 		return NULL;
@@ -299,20 +287,44 @@ void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {
 		size += BOUNDARY - (size % BOUNDARY);
 
 	alloc.reserved = size;
+	alloc.addr = NULL;
 
-	alloc.addr = find_suitable_addr(map, size);
-	if (alloc.addr == NULL)
+	/** The allocation entry must be allocated
+	 * first, so that the new space occupied by
+	 * the allocation table is known before finding
+	 * an address for this allocation. */
+
+	alloc_ent = append_alloc(map, &alloc);
+	if (alloc_ent == NULL)
 		return NULL;
 
-	if (append_alloc(map, &alloc) != 0)
+	/* Do not allow for the allocation we just
+	 * added to be visible to the find_suitable_addr
+	 * function. */
+
+	map->alloc_count--;
+
+	alloc_ent->addr = find_suitable_addr(map, size);
+	if (alloc_ent->addr == NULL)
 		return NULL;
 
-	return alloc.addr;
+	/* Allow for the last allocation to be visible again.
+	 * */
+
+	map->alloc_count++;
+
+	/* Sort allocation table, in
+	 * case the address that was
+	 * found is not the highest
+	 * address in the allocation
+	 * table. */
+
+	sort_alloc_table(map);
+
+	return alloc_ent->addr;
 }
 
-void *pure64_map_realloc(struct pure64_map *map,
-                         void *addr,
-                         uint64_t size) {
+void *pure64_map_realloc(struct pure64_map *map, void *addr, uint64_t size) {
 
 	/* Existing allocation table
 	 * entry. */
@@ -387,8 +399,7 @@ void *pure64_map_realloc(struct pure64_map *map,
 	return (void *) addr2;
 }
 
-void pure64_map_free(struct pure64_map *map,
-                     void *addr) {
+void pure64_map_free(struct pure64_map *map, void *addr) {
 
 	struct pure64_alloc *alloc;
 
