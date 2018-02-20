@@ -6,6 +6,8 @@
 
 #include "debug.h"
 
+#include "string.h"
+
 #include <stdarg.h>
 
 static void outb(unsigned short int port, unsigned char value) {
@@ -34,16 +36,6 @@ static int pure64_isdigit(char c) {
 		return 1;
 	else
 		return 0;
-}
-
-static unsigned int pure64_strlen(const char *str) {
-
-	unsigned int len = 0;
-
-	while (str[len] != 0)
-		len++;
-
-	return len;
 }
 
 static void debug_putc(char c) {
