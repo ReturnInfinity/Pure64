@@ -13,11 +13,46 @@
 extern "C" {
 #endif
 
+/** An AHCI address field.
+ * It's a 64-bit value made
+ * up of two separate 32-bit
+ * integers.
+ * */
+
+struct ahci_addr {
+	/** The lower 32-bits of the address. */
+	uint32_t lower;
+	/** The upper 32-bits of the address. */
+	uint32_t upper;
+};
+
+/** Get the address of an AHCI address field.
+ * @param addr An AHCI address structure.
+ * @param ptr The pointer to set the address
+ * structure value to.
+ * */
+
+void ahci_addr_set(volatile struct ahci_addr *addr, void *ptr);
+
+/** Set the address of an AHCI address field.
+ * @param addr An AHCI address structure.
+ * @returns The pointer constructed from the
+ * address field.
+ * */
+
+void *ahci_addr_get(const volatile struct ahci_addr *addr);
+
+/** An AHCI port. This structure represents
+ * a storage medium in the AHCI specification.
+ * It's also called an HBA port.
+ * */
+
 struct ahci_port {
-	/* command list base address, 1K-byte aligned */
-	void *cmd_base;
-	/* base address of frame information structure */
-	void *fis_base;
+	/** The command list base address */
+	struct ahci_addr command_list;
+	/** The frame information structure
+	 * base address */
+	struct ahci_addr fis;
 	/* interrupt status */
 	uint32_t is;
 	/* interrupt enable */
@@ -50,11 +85,11 @@ struct ahci_port {
 	uint32_t vendor[4];
 };
 
-int ahci_port_is_sata_drive(const struct ahci_port *port);
+int ahci_port_is_sata_drive(const volatile struct ahci_port *port);
 
-int ahci_port_read(struct ahci_port *port,
+int ahci_port_read(volatile struct ahci_port *port,
                    uint64_t sector_index,
-                   uint64_t sector_count,
+                   uint32_t sector_count,
                    void *buffer);
 
 struct ahci_base {
@@ -85,13 +120,42 @@ struct ahci_base {
 	struct ahci_port ports[];
 };
 
+/** Enable AHCI mode. This should be
+ * called upon visiting an AHCI base structure.
+ * */
+
+uint32_t ahci_base_ports_implemented(const volatile struct ahci_base *base);
+
 struct ahci_visitor {
 	void *data;
-	int (*visit_base)(void *data, struct ahci_base *base);
-	int (*visit_port)(void *data, struct ahci_port *port);
+	int (*visit_base)(void *data, volatile struct ahci_base *base);
+	int (*visit_port)(void *data, volatile struct ahci_port *port);
 };
 
 int ahci_visit(struct ahci_visitor *visitor);
+
+/** An AHCI driver. This structure
+ * must first be initialized with @ref ahci_init.
+ * Once that's done, the memory manager callbacks
+ * should be set. Once all of the callbacks are
+ * set, @ref ahci_load will initialize all the
+ * implemented ports.
+ * */
+
+struct ahci_driver {
+	/** Memory manager data */
+	void *mm_data;
+	/** Memory manager allocate callback */
+	void *(*mm_malloc)(void *mm_data, unsigned int size);
+	/** Memory manager re-allocate callback */
+	void *(*mm_realloc)(void *mm_data, void *data, unsigned int size);
+	/** Memory manager free callback */
+	void (*mm_free)(void *mm_data, void *addr);
+};
+
+void ahci_init(struct ahci_driver *driver);
+
+int ahci_load(struct ahci_driver *driver);
 
 #ifdef __cplusplus
 } /* extern "C" { */
