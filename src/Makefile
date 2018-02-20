@@ -23,11 +23,20 @@ pure64files += init/smp.asm
 pure64files += interrupt.asm
 pure64files += sysvar.asm
 
+pure64objs += pure64.o
+pure64objs += ahci.o
+pure64objs += debug.o
+pure64objs += e820.o
+pure64objs += load.o
+pure64objs += map.o
+pure64objs += pci.o
+pure64objs += string.o
+
 .PHONY: all
 all: $(targets)
 
-pure64: pure64.o ahci.o debug.o load.o pci.o pure64.ld
-	ld pure64.o ahci.o debug.o load.o pci.o -T pure64.ld -o $@
+pure64: $(pure64objs) pure64.ld
+	ld $(pure64objs) -T pure64.ld -o $@
 
 # The dependencies of pure64.sys can
 # be (and should be) generated with
@@ -39,9 +48,15 @@ ahci.o: ahci.c ahci.h pci.h
 
 debug.o: debug.c debug.h
 
+e820.o: e820.c e820.h
+
 load.o: load.c ahci.h debug.h
 
+map.o: map.c map.h
+
 pci.o: pci.c pci.h
+
+string.o: string.c string.h
 
 pure64.sys: pure64
 	objcopy -O binary $< $@
@@ -56,7 +71,7 @@ pure64.sys: pure64
 
 .PHONY: clean
 clean:
-	$(RM) load.o pure64.o
+	$(RM) $(pure64objs)
 	$(RM) pure64 pure64.sys
 
 .PHONY: test
