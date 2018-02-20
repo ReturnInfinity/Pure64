@@ -13,6 +13,7 @@
 extern "C" {
 #endif
 
+struct ahci_driver;
 struct pure64_alloc;
 struct pure64_e820;
 struct pure64_info;
@@ -22,6 +23,8 @@ struct pure64_info;
  * */
 
 struct pure64_map {
+	/** The AHCI driver structure. */
+	struct ahci_driver *ahci_driver;
 	/** The memory allocation table. */
 	struct pure64_alloc *alloc_table;
 	/** The number of entries in the
