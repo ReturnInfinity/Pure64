@@ -9,12 +9,25 @@
 #include "ahci.h"
 #include "alloc.h"
 #include "e820.h"
+#include "string.h"
 
 #ifndef NULL
 #define NULL ((void *) 0x00)
 #endif
 
 #define BOUNDARY 0x1000
+
+static void *ahci_malloc(void *map_ptr, unsigned int size) {
+	return pure64_map_malloc((struct pure64_map *) map_ptr, size);
+}
+
+static void *ahci_realloc(void *map_ptr, void *addr, unsigned int size) {
+	return pure64_map_realloc((struct pure64_map *) map_ptr, addr, size);
+}
+
+static void ahci_free(void *map_ptr, void *addr) {
+	return pure64_map_free((struct pure64_map *) map_ptr, addr);
+}
 
 static int append_alloc(struct pure64_map *map,
                         struct pure64_alloc *alloc) {
@@ -68,19 +81,6 @@ bubbleSortLoop:
 
 	if (sorted_flag)
 		goto bubbleSortLoop;
-}
-
-static void pure64_memcpy(void *dst, const void *src, uint64_t size) {
-
-	uint8_t *dst8;
-	const uint8_t *src8;
-	uint64_t i;
-
-	dst8 = (uint8_t *) dst;
-	src8 = (const uint8_t *) src;
-
-	for (i = 0; i < size; i++)
-		dst8[i] = src8[i];
 }
 
 static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
@@ -141,7 +141,7 @@ static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 			 * allocation table. */
 			addr3 = (uint64_t) alloc->addr;
 			size3 = alloc->reserved;
-			if ((addr + size) > addr3) {
+			if (((addr + size) > addr3) && (addr <= addr3)) {
 				/* Move candidate address to the
 				 * end of the existing allocation. */
 				addr = addr3 + size3;
@@ -275,7 +275,15 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_table[1].reserved = sizeof(struct pure64_alloc) * 2;
 	}
 
-	/* TODO : allocate AHCI driver structure */
+	map->ahci_driver = pure64_map_malloc(map, sizeof(struct ahci_driver));
+	if (map->ahci_driver != NULL) {
+		ahci_init(map->ahci_driver);
+		map->ahci_driver->mm_data = map;
+		map->ahci_driver->mm_malloc = ahci_malloc;
+		map->ahci_driver->mm_realloc = ahci_realloc;
+		map->ahci_driver->mm_free = ahci_free;
+		ahci_load(map->ahci_driver);
+	}
 }
 
 void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {
