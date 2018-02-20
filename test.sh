@@ -4,7 +4,8 @@
 
 cmd=( qemu-system-x86_64
 	-cpu core2duo
-	-display curses
+	-display none
+	-serial stdio
 # Window title in graphics mode
 	-name "Pure64 Test"
 # Amount of CPU cores
@@ -16,8 +17,8 @@ cmd=( qemu-system-x86_64
 	-device ahci,id=ahci
 	-device ide-drive,drive=disk,bus=ahci.0
 # Enable GDB debugging
-	-s
-	-S
+#	-s
+#	-S
 )
 
 #execute the cmd string
