@@ -9,12 +9,22 @@
 #include "pci.h"
 #include "string.h"
 
+#include "debug.h"
+
 /* * * * * *
  * Constants
  * * * * * */
 
 #ifndef NULL
 #define NULL ((void *) 0x00)
+#endif
+
+#ifndef AHCI_PORT_CMD_CR
+#define AHCI_PORT_CMD_CR (1 << 15)
+#endif
+
+#ifndef AHCI_PORT_CMD_FR
+#define AHCI_PORT_CMD_FR (1 << 14)
 #endif
 
 #ifndef PRDT_COUNT
@@ -518,119 +528,4 @@ static int find_ahci(void *data, uint8_t bus, uint8_t slot) {
 int ahci_visit(struct ahci_visitor *visitor) {
 
 	return pci_visit(find_ahci, visitor);
-}
-
-/* * * * * * * * * * * *
- * AHCI Driver Functions
- * * * * * * * * * * * */
-
-static int ahci_init_base(void *driver_ptr, volatile struct ahci_base *base) {
-
-	(void) driver_ptr;
-
-	/* enable AHCI mode */
-	base->ghc |= 0x80000000;
-
-	return 0;
-}
-
-static int ahci_init_port(void *driver_ptr, volatile struct ahci_port *port) {
-
-	struct ahci_driver *driver;
-	struct ahci_fis *fis;
-	struct command_list *cmd_list;
-	struct command_table *cmd_tables;
-	unsigned int i;
-
-	driver = (struct ahci_driver *) driver_ptr;
-
-	/* Allocate the command list */
-
-	cmd_list = driver->mm_malloc(driver->mm_data, sizeof(struct command_list));
-	if (cmd_list == NULL)
-		return -1;
-
-	pure64_memset(cmd_list, 0, sizeof(struct command_list));
-
-	/* Allocate the FIS structure. */
-
-	fis = driver->mm_malloc(driver->mm_data, sizeof(struct ahci_fis));
-	if (fis == NULL) {
-		driver->mm_free(driver->mm_data, cmd_list);
-		return -1;
-	}
-
-	pure64_memset(fis, 0, sizeof(struct ahci_fis));
-
-	/* Allocate the command tables */
-
-	cmd_tables = driver->mm_malloc(driver->mm_data, sizeof(struct command_table) * 32);
-	if (cmd_tables == NULL) {
-		driver->mm_free(driver->mm_data, cmd_list);
-		driver->mm_free(driver->mm_data, fis);
-		return -1;
-	}
-
-	pure64_memset(cmd_tables, 0, sizeof(*cmd_tables) * 32);
-
-	/* Stop the port */
-
-	/* Clear the 'FIS Receive Enable' */
-	port->cmd &= ~0x04;
-	/* Clear the 'Start' bit */
-	port->cmd &= ~0x01;
-
-	/* Wait until FR and CR are cleared */
-	while (1) {
-		if (port->cmd & 0x4000)
-			continue;
-		else if (port->cmd & 0x8000)
-			continue;
-		else
-			break;
-	}
-
-	/* Clear the command slots */
-	port->ci = 0;
-	/* Set the command list address */
-	ahci_addr_set(&port->command_list, cmd_list);
-	/* Set the FIS address */
-	ahci_addr_set(&port->fis, fis);
-
-	for (i = 0; i < (sizeof(cmd_list->headers) / sizeof(cmd_list->headers[0])); i++) {
-		cmd_list->headers[i].prdt_length = PRDT_COUNT;
-		ahci_addr_set(&cmd_list->headers[i].command_table, &cmd_tables[i]);
-	}
-
-	/* Start the port */
-
-	/* Wait until CR is cleared */
-	while (1) {
-		if (port->cmd & 0x8000)
-			continue;
-		else
-			break;
-	}
-
-	/* Set FRE */
-	port->cmd |= 0x10;
-	/* Set ST */
-	port->cmd |= 0x01;
-
-	return 0;
-}
-
-void ahci_init(struct ahci_driver *driver) {
-	driver->mm_data = NULL;
-	driver->mm_malloc = NULL;
-	driver->mm_realloc = NULL;
-	driver->mm_free = NULL;
-}
-
-int ahci_load(struct ahci_driver *driver) {
-	struct ahci_visitor visitor;
-	visitor.data = driver;
-	visitor.visit_base = ahci_init_base;
-	visitor.visit_port = ahci_init_port;
-	return ahci_visit(&visitor);
 }

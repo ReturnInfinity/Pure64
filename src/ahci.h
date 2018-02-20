@@ -134,29 +134,6 @@ struct ahci_visitor {
 
 int ahci_visit(struct ahci_visitor *visitor);
 
-/** An AHCI driver. This structure
- * must first be initialized with @ref ahci_init.
- * Once that's done, the memory manager callbacks
- * should be set. Once all of the callbacks are
- * set, @ref ahci_load will initialize all the
- * implemented ports.
- * */
-
-struct ahci_driver {
-	/** Memory manager data */
-	void *mm_data;
-	/** Memory manager allocate callback */
-	void *(*mm_malloc)(void *mm_data, unsigned int size);
-	/** Memory manager re-allocate callback */
-	void *(*mm_realloc)(void *mm_data, void *data, unsigned int size);
-	/** Memory manager free callback */
-	void (*mm_free)(void *mm_data, void *addr);
-};
-
-void ahci_init(struct ahci_driver *driver);
-
-int ahci_load(struct ahci_driver *driver);
-
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
