@@ -14,11 +14,13 @@ CFLAGS += -fomit-frame-pointer
 CFLAGS += -g
 
 libfiles += dir.o
+libfiles += error.o
 libfiles += file.o
 libfiles += fs.o
 libfiles += misc.o
 libfiles += path.o
 libfiles += stream.o
+libfiles += string.o
 
 targets += libpure64.a
 
@@ -30,6 +32,8 @@ libpure64.a: $(libfiles)
 
 dir.o: dir.c dir.h file.h misc.h path.h
 
+error.o: error.c error.h
+
 file.o: file.c file.h misc.h
 
 fs.o: fs.c fs.h file.h dir.h path.h misc.h
@@ -39,6 +43,8 @@ misc.o: misc.c misc.h
 path.o: path.c path.h
 
 stream.o: stream.c stream.h
+
+string.o: string.c string.h
 
 .PHONY: clean
 clean:
