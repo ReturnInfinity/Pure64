@@ -41,3 +41,18 @@ unsigned long int pure64_strlen(const char *str) {
 
 	return i;
 }
+
+int pure64_strcmp(const char *a, const char *b) {
+
+	while (*a && *a == *b) {
+		a++;
+		b++;
+	}
+
+	if (*a > *b)
+		return 1;
+	else if (*a < *b)
+		return -1;
+	else
+		return 0;
+}

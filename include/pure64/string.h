@@ -17,6 +17,8 @@ void pure64_memcpy(void *dst, const void *src, unsigned long int size);
 
 unsigned long int pure64_strlen(const char *src);
 
+int pure64_strcmp(const char *a, const char *b);
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
