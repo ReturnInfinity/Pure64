@@ -6,7 +6,7 @@
 
 #include "debug.h"
 
-#include "string.h"
+#include <pure64/string.h>
 
 #include <stdarg.h>
 
