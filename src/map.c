@@ -8,7 +8,10 @@
 
 #include "alloc.h"
 #include "e820.h"
-#include "string.h"
+#include "error.h"
+
+#include <pure64/error.h>
+#include <pure64/string.h>
 
 #ifndef NULL
 #define NULL ((void *) 0x00)
@@ -87,9 +90,13 @@ static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 
 	e820 = map->e820;
 
-	/* Initial address is zero */
+	/* Initial address is one.
+	 * It should not be zero,
+	 * because too many functions
+	 * use zero to check for allocation
+	 * errors. */
 
-	addr = 0;
+	addr = 1;
 
 	/* Search the E820 map for a free
 	 * entry */
@@ -113,7 +120,13 @@ static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 			continue;
 		}
 
-		addr = addr2;
+		/* Ensure that the memory
+		 * does not end up being
+		 * allocated at address zero. */
+		if (addr2 == 0)
+			addr = 1;
+		else
+			addr = addr2;
 
 		/* Iterate the allocation table
 		 * and make sure that new address
@@ -271,6 +284,61 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_table[1].size = sizeof(struct pure64_alloc) * 2;
 		map->alloc_table[1].reserved = sizeof(struct pure64_alloc) * 2;
 	}
+}
+
+int pure64_map_reserve(struct pure64_map *map, void *ptr, uint64_t size) {
+
+	/* Address 'ptr' as a 64-bit
+	 * unsigned integer. */
+	uint64_t addr;
+	/* Either E820 address or
+	 * allocation address */
+	uint64_t addr2;
+	struct pure64_e820 *e820;
+
+	addr = (uint64_t) ptr;
+
+	e820 = map->e820;
+
+	/* Search the E820 entries and make
+	 * sure that the memory is usable
+	 * in this region. */
+
+	while (pure64_e820_end(e820)) {
+
+		/* Ensure that the region is usable. */
+		if (!pure64_e820_usable(e820)) {
+			e820 = pure64_e820_next(e820);
+			continue;
+		}
+
+		/* Check if the address is contained
+		 * by the E820 region. */
+		addr2 = (uint64_t) e820->addr;
+		if (addr < addr2)
+			return PURE64_ENOMEM;
+		else if ((addr + size) > (addr2 + e820->size))
+			return PURE64_ENOMEM;
+		else
+			break;
+
+		/* It is not, so continue
+		 * and check the next record. */
+		e820 = pure64_e820_next(e820);
+	}
+
+	/* If the loop ended early, that
+	 * means that the memory region was
+	 * found. */
+
+	if (pure64_e820_end(e820)) {
+		return PURE64_ENOMEM;
+	}
+
+	/* Search the allocation entries to
+	 * see if any of them might overlap. */
+
+	return 0;
 }
 
 void *pure64_map_malloc(struct pure64_map *map, uint64_t size) {

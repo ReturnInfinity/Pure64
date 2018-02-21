@@ -77,9 +77,9 @@ void *pure64_map_realloc(struct pure64_map *map,
  * the section.
  * */
 
-void *pure64_map_reserve(struct pure64_map *map,
-                         void *addr,
-                         uint64_t size);
+int pure64_map_reserve(struct pure64_map *map,
+                       void *addr,
+                       uint64_t size);
 
 /** Release a block of memory, so
  * that it may be used by another
