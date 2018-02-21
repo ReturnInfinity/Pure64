@@ -5,52 +5,123 @@
  */
 
 #include <pure64/dir.h>
+#include <pure64/error.h>
 #include <pure64/file.h>
+#include <pure64/fs.h>
+#include <pure64/string.h>
 
+#include "ahci.h"
+#include "alloc.h"
 #include "debug.h"
+#include "e820.h"
+#include "hooks.h"
+#include "map.h"
+#include "string.h"
+
+#ifndef NULL
+#define NULL ((void *) 0x00)
+#endif
 
 typedef void (*kernel_entry)(void);
 
-static void pure64_memcpy(void *dst, const void *src, uint64_t size) {
+static int find_file_system(struct pure64_map *map);
 
-	uint64_t i = 0;
-	unsigned char *dst8 = (unsigned char *) dst;
-
-	const unsigned char *src8 = (const unsigned char *) src;
-
-	for (i = 0; i < size; i++)
-		dst8[i] = src8[i];
-}
-
-static bool find_kernel(struct pure64_file *kernel);
-
-static void load_kernel(struct pure64_file *kernel);
+void load_kernel(struct pure64_map *map,
+                 struct pure64_file *kernel);
 
 void load(void) {
 
-	struct pure64_file kernel;
+	struct pure64_map map;
 
-	debug("Searching for kernel...\n");
+	pure64_map_init(&map);
 
-	if (!find_kernel(&kernel)) {
-		/* TODO :error message */
-		return;
+	pure64_init_memory_hooks(&map);
+
+	debug("Searching for file system.\n");
+
+	find_file_system(&map);
+}
+
+static int ahci_visit_base(void *unused, volatile struct ahci_base *base) {
+
+	(void) unused;
+	(void) base;
+
+	return 0;
+}
+
+static int ahci_visit_port(void *map_ptr, volatile struct ahci_port *port) {
+
+	int err;
+	struct pure64_fs fs;
+	struct pure64_file *kernel;
+	struct ahci_stream stream;
+
+	/* Bail out if port isn't SATA */
+	if (!ahci_port_is_sata_drive(port))
+		return 0;
+
+	/* Initialize the port as a stream. */
+	ahci_stream_init(&stream, port);
+
+	/* Set the stream to the correct position. */
+	pure64_stream_set_pos(&stream.base, PURE64_FS_SECTOR * 512);
+
+	/* Initialize the file system. */
+	pure64_fs_init(&fs);
+
+	/* Import the file system from the
+	 * AHCI stream. */
+	err = pure64_fs_import(&fs, &stream.base);
+	if (err != 0) {
+		if (err == PURE64_EINVAL)
+			debug("Failed to import FS: Invalid file system signature.\n");
+		else
+			debug("Failed to import FS: %s\n", pure64_strerror(err));
+		pure64_fs_free(&fs);
+		return 0;
 	}
 
-	debug("Kernel found.\n");
+	debug("Found file system.\n");
 
-	debug("Loading kernel...\n");
+	kernel = pure64_fs_open_file(&fs, "/boot/kernel");
+	if (kernel == NULL) {
+		debug("Failed to open kernel.\n");
+		debug("Ensure that '/boot/kernel' exists.\n");
+		pure64_fs_free(&fs);
+		return 0;
+	}
 
-	load_kernel(&kernel);
+	debug("Loading kernel.\n");
+
+	load_kernel((struct pure64_map *) map_ptr, kernel);
+
+	pure64_fs_free(&fs);
+
+	/* One means stop the AHCI visitor */
+
+	return 1;
+}
+
+static int find_file_system(struct pure64_map *map) {
+
+	struct ahci_visitor visitor;
+
+	visitor.data = map;
+	visitor.visit_base = ahci_visit_base;
+	visitor.visit_port = ahci_visit_port;
+
+	ahci_visit(&visitor);
+
+	return 0;
 }
 
 static void load_failure(const char *msg) {
-	debug("Failed to load kernel: \"");
-	debug(msg);
-	debug("\"\n");
+	debug("Failed to load kernel: \"%s\"\n", msg);
 }
 
-static void load_kernel(struct pure64_file *kernel) {
+void load_kernel(struct pure64_map *map,
+                 struct pure64_file *kernel) {
 
 	const unsigned char *data;
 	uint64_t data_size;
@@ -151,167 +222,25 @@ static void load_kernel(struct pure64_file *kernel) {
 			return;
 		}
 
-		/* TODO : properly allocate memory,
-		 * checking to see if the address is
-		 * available or not */
+		/* Ensure that the address is available
+		 * and reserve it so that memory can't
+		 * be allocated there. */
+		if (pure64_map_reserve(map, vaddr, p_filesz) != 0) {
+			load_failure("Failed to reserve kernel memory.");
+			return;
+		}
 
 		/* Copy code over to address */
 		pure64_memcpy(vaddr, &data[p_offset], p_filesz);
-
-		/* Call the kernel */
-		e_entry();
-
-		/* If the kernel returns, exit
-		 * this function */
-		return;
-	}
-}
-
-static unsigned char *skip_file(unsigned char *ptr) {
-
-	uint64_t *ptr64 = (uint64_t *) ptr;
-
-	uint64_t name_size = ptr64[0];
-
-	uint64_t data_size = ptr64[1];
-
-	ptr = (unsigned char *) &ptr64[2];
-
-	return &ptr[name_size + data_size];
-}
-
-static unsigned char *skip_dir(unsigned char *ptr) {
-
-	uint64_t *ptr64 = (uint64_t *) ptr;
-
-	uint64_t name_size = ptr64[0];
-
-	uint64_t dir_count = ptr64[1];
-
-	uint64_t file_count = ptr64[2];
-
-	uint64_t i = 0;
-
-	ptr = (unsigned char *) &ptr64[3];
-
-	ptr = &ptr[name_size];
-
-	for (i = 0; i < dir_count; i++)
-		ptr = skip_dir(ptr);
-	
-	for (i = 0; i < file_count; i++)
-		ptr = skip_file(ptr);
-
-	return ptr;
-}
-
-static void find_failure(const char *msg) {
-	debug("Failed to find kernel: \"");
-	debug(msg);
-	debug("\"\n");
-}
-
-static bool find_kernel(struct pure64_file *kernel) {
-
-	/* The kernel resides in '/boot/kernel'.
-	 * Find the 'boot' directory, then look
-	 * for the 'kernel' file.
-	 * */
-
-	/* beginning of the directories in '/' */
-	unsigned char *ptr = (unsigned char *) 0xa000;
-
-	uint64_t i;
-	uint64_t file_count;
-	uint64_t dir_count;
-	uint64_t name_size;
-
-	if ((ptr[0] != 'P')
-	 || (ptr[1] != 'u')
-	 || (ptr[2] != 'r')
-	 || (ptr[3] != 'e')
-	 || (ptr[4] != '6')
-	 || (ptr[5] != '4')
-	 || (ptr[6] != 'F')
-	 || (ptr[7] != 'S')) {
-		find_failure("Pure64 file system not found.");
-		return false;
 	}
 
-	ptr += 16;
+	/* Call the kernel */
+	e_entry();
 
-	dir_count = *(uint64_t *)(&ptr[0x08]);
-
-	ptr = &ptr[0x18];
-
-	for (i = 0; i < dir_count; i++) {
-		/* name size */
-		name_size = *(uint64_t *)(&ptr[0x00]);
-		if (name_size != 4) {
-			ptr = skip_dir(ptr);
-			continue;
-		}
-
-		if ((ptr[0x18] != 'b')
-		 || (ptr[0x19] != 'o')
-		 || (ptr[0x1a] != 'o')
-		 || (ptr[0x1b] != 't')) {
-			ptr = skip_dir(ptr);
-			continue;
-		}
-
-		/* found '/boot' */
-		break;
-	}
-
-	if (i >= dir_count) {
-		find_failure("The '/boot' directory was not found.");
-		return false;
-	}
-
-	/* get the number of subdirectories in
-	 * 'boot' */
-	dir_count = *(uint64_t *) &ptr[0x08];
-
-	/* We have to skip by the
-	 * the subdirectories to get to the
-	 * file array, where we'll find the
-	 * 'kernel' file. */
-	file_count = *(uint64_t *) &ptr[0x10];
-
-	/* point to the subdirectories of '/boot'. */
-	ptr = &ptr[0x18 + name_size];
-
-	for (i = 0; i < dir_count; i++)
-		ptr = skip_dir(ptr);
-
-	for (i = 0; i < file_count; i++) {
-
-		name_size = *(uint64_t *) &ptr[0x00];
-		if (name_size != (sizeof("kernel") - 1)) {
-			ptr = skip_file(ptr);
-			continue;
-		}
-
-		if ((ptr[0x10] != 'k')
-		 || (ptr[0x11] != 'e')
-		 || (ptr[0x12] != 'r')
-		 || (ptr[0x13] != 'n')
-		 || (ptr[0x14] != 'e')
-		 || (ptr[0x15] != 'l')) {
-			ptr = skip_file(ptr);
-			continue;
-		}
-
-		/* found the kernel */
-		kernel->name_size = *(uint64_t *) &ptr[0x00];
-		kernel->data_size = *(uint64_t *) &ptr[0x08];
-		kernel->name = (char *) &ptr[0x10];
-		kernel->data = (void *) &ptr[0x10 + name_size];
-		return true;
-	}
-
-	find_failure("The '/boot/kernel' kernel file was not found.");
-
-	return false;
+	/* Not much to do if this point
+	 * was reached. Might as well just
+	 * notify the user and hang out. */
+	debug("Kernel has exited.\n");
+	/* Loop forever */
+	for (;;);
 }

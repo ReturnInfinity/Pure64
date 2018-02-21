@@ -12,12 +12,377 @@
 #include "mbr-data.h"
 #include "pure64-data.h"
 
+#include <ctype.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+
+/* * * * * *
+ * Constants
+ * * * * * */
+
+#ifndef PURE64_DISK_LOCATION
+#define PURE64_DISK_LOCATION (PURE64_FS_SECTOR * 512)
+#endif
+
+#ifndef PURE64_MINIMUM_DISK_SIZE
+#define PURE64_MINIMUM_DISK_SIZE (1 * 1024 * 1024)
+#endif
+
+#ifndef PURE64_DEFAULT_DISK_UUID
+#define PURE64_DEFAULT_DISK_UUID "74a7c14a-711d-4293-a731-569ca656799e"
+#endif
+
+#ifndef GPT_PARTITION_HEADER_SIZE
+#define GPT_PARTITION_HEADER_SIZE 128
+#endif
+
+#ifndef GPT_PARTITION_HEADER_COUNT
+#define GPT_PARTITION_HEADER_COUNT 128
+#endif
+
+#ifndef GPT_HEADER_SIZE
+#define GPT_HEADER_SIZE 92
+#endif
+
+/* * * * * * * * * * * * * * *
+ * Uncategorized Declarations
+ * * * * * * * * * * * * * * */
+
+static void zero_file_data(FILE *file, unsigned long int size) {
+	while (size-- > 0) {
+		fputc(0, file);
+	}
+}
+
+/* * * * * * * * * * * *
+ * Checksum Declarations
+ * * * * * * * * * * * */
+
+static uint32_t crc32(const void *buf, uint64_t buf_size) {
+
+	uint64_t i;
+	uint64_t j;
+	uint32_t byte;
+	uint32_t crc;
+	uint32_t mask;
+	const uint8_t *buf8;
+
+	crc = 0xFFFFFFFF;
+
+	buf8 = (const uint8_t *) buf;
+
+	for (i = 0; i < buf_size; i++) {
+		byte = buf8[i];
+		crc = crc ^ byte;
+		for (j = 0; j < 8; j++) {
+			mask = -(crc & 1);
+			crc = (crc >> 1) ^ (0xEDB88320 & mask);
+		}
+	}
+
+	return ~crc;
+}
+
+static int calculate_header_checksum(FILE *file, long int header_location) {
+
+	char *buf;
+	size_t buf_size;
+	size_t read_size;
+	uint32_t checksum;
+
+	/* start with header */
+
+	if (fseek(file, header_location, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to GPT header.\n");
+		return EXIT_FAILURE;
+	}
+
+	buf_size = GPT_HEADER_SIZE;
+
+	buf = malloc(buf_size);
+
+	read_size = fread(buf, 1, buf_size, file);
+	if (read_size != buf_size) {
+		fprintf(stderr, "Failed to read GPT header.\n");
+		return EXIT_FAILURE;
+	}
+
+	checksum = crc32(buf, buf_size);
+
+	if (fseek(file, header_location + 16, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fwrite(&checksum, 1, 4, file) != 4) {
+		fprintf(stderr, "Failed to write header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	free(buf);
+
+	return EXIT_SUCCESS;
+}
+
+static int calculate_partition_headers_checksum(FILE *file) {
+
+	char *buf;
+	size_t buf_size;
+	size_t read_size;
+	uint32_t checksum;
+	uint64_t backup_lba;
+
+	/* start with header */
+
+	if (fseek(file, 1024, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to GPT partition headers.\n");
+		return EXIT_FAILURE;
+	}
+
+	buf_size = GPT_PARTITION_HEADER_SIZE * GPT_PARTITION_HEADER_COUNT;
+
+	buf = malloc(buf_size);
+
+	read_size = fread(buf, 1, buf_size, file);
+	if (read_size != buf_size) {
+		fprintf(stderr, "Failed to read primary GPT partition headers.\n");
+		return EXIT_FAILURE;
+	}
+
+	checksum = crc32(buf, buf_size);
+
+	if (fseek(file, 512 + 88, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fwrite(&checksum, 1, 4, file) != 4) {
+		fprintf(stderr, "Failed to write header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fseek(file, 512 + 32, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to header backup location.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fread(&backup_lba, 1, 8, file) != 8) {
+		fprintf(stderr, "Failed to read header backup location.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fseek(file, (backup_lba * 512) - (GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE), SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to backup partition headers.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fread(buf, 1, buf_size, file) != buf_size) {
+		fprintf(stderr, "Failed to read backup partition headers.\n");
+		return EXIT_FAILURE;
+	}
+
+	checksum = crc32(buf, buf_size);
+
+	if (fseek(file, (backup_lba * 512) + 88, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to backup header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (fwrite(&checksum, 1, 4, file) != 4) {
+		fprintf(stderr, "Failed to write backup header checksum.\n");
+		return EXIT_FAILURE;
+	}
+
+	free(buf);
+
+	return EXIT_SUCCESS;
+}
+
+static int calculate_checksums(FILE *file) {
+
+	int err;
+	uint64_t backup_lba;
+
+	err = calculate_partition_headers_checksum(file);
+	if (err != 0) {
+		return err;
+	}
+
+	err = calculate_header_checksum(file, 512);
+	if (err != EXIT_SUCCESS) {
+		fprintf(stderr, "Failed to calculate checksum of primary GPT header.\n");
+		return err;
+	}
+
+	if ((fseek(file, 512 + 32, SEEK_SET) != 0)
+	 || (fread(&backup_lba, 1, 8, file) != 8)) {
+		fprintf(stderr, "Failed to read backup LBA from primary GPT header.\n");
+		return EXIT_FAILURE;
+	}
+
+	err = calculate_header_checksum(file, backup_lba * 512);
+	if (err != EXIT_SUCCESS) {
+		fprintf(stderr, "Failed to calculate checksum of backup GPT header.\n");
+		return err;
+	}
+
+	return EXIT_SUCCESS;
+}
+
+/* * * * * * * * * *
+ * UUID Declarations
+ * * * * * * * * * */
+
+struct pure64_uuid {
+	uint8_t bytes[16];
+};
+
+static int pure64_uuid_parse(struct pure64_uuid *uuid, const char *str) {
+
+	unsigned int i;
+	unsigned int j;
+
+	i = 0;
+	j = 0;
+
+	while ((i < 16) && (str[j] != 0)) {
+
+		uuid->bytes[i] = 0;
+
+		char c = tolower(str[j]);
+		if ((c >= '0') && (c <= '9'))
+			uuid->bytes[i] |= ((c - '0') + 0x00) << 4;
+		else if ((c >= 'a') && (c <= 'f'))
+			uuid->bytes[i] |= ((c - 'a') + 0x0a) << 4;
+		else if (c == '-') {
+			j++;
+			continue;
+		} else
+			return -1;
+
+		c = tolower(str[j + 1]);
+		if ((c >= '0') && (c <= '9'))
+			uuid->bytes[i] |= (c - '0') + 0x00;
+		else if ((c >= 'a') && (c <= 'f'))
+			uuid->bytes[i] |= (c - 'a') + 0x0a;
+		else
+			return -1;
+
+		j += 2;
+		i++;
+	}
+
+	/* adjust for little endian encoding */
+
+	unsigned char buf[16];
+
+	/* little endian */
+
+	buf[0] = uuid->bytes[3];
+	buf[1] = uuid->bytes[2];
+	buf[2] = uuid->bytes[1];
+	buf[3] = uuid->bytes[0];
+
+	/* little endian */
+
+	buf[4] = uuid->bytes[5];
+	buf[5] = uuid->bytes[4];
+
+	/* little endian */
+
+	buf[6] = uuid->bytes[7];
+	buf[7] = uuid->bytes[6];
+
+	/* big endian */
+
+	buf[8] = uuid->bytes[8];
+	buf[9] = uuid->bytes[9];
+
+	/* big endian */
+
+	buf[10] = uuid->bytes[10];
+	buf[11] = uuid->bytes[11];
+	buf[12] = uuid->bytes[12];
+	buf[13] = uuid->bytes[13];
+	buf[14] = uuid->bytes[14];
+	buf[15] = uuid->bytes[15];
+
+	for (i = 0; i < 16; i++)
+		uuid->bytes[i] = buf[i];
+	return 0;
+}
+
+/* * * * * * * * * * * * *
+ * GPT Header Definitions
+ * * * * * * * * * * * * */
+
+/* a short version of the GPT header. */
+
+struct gpt_header {
+	uint64_t current_lba;
+	uint64_t backup_lba;
+	uint64_t first_usable_lba;
+	uint64_t last_usable_lba;
+	struct pure64_uuid disk_uuid;
+	uint64_t partition_headers_lba;
+	uint32_t partition_header_count;
+};
+
+int export_gpt_header(FILE *file, const struct gpt_header *header) {
+
+	unsigned int i;
+	size_t write_count;
+
+	write_count = 0;
+
+	/* signature */
+	write_count += fwrite("EFI PART", 1, 8, file);
+	/* version */
+	write_count += fwrite("\x00\x00\x01\x00", 1, 4, file);
+	/* header size */
+	write_count += fwrite("\x5c\x00\x00\x00", 1, 4, file);
+	/* crc32 of header (zero during calculation) */
+	write_count += fwrite("\x00\x00\x00\x00", 1, 4, file);
+	/* reserved */
+	write_count += fwrite("\x00\x00\x00\x00", 1, 4, file);
+	/* current lba */
+	write_count += fwrite(&header->current_lba, 1, 8, file);
+	/* backup lba */
+	write_count += fwrite(&header->backup_lba, 1, 8, file);
+	/* first usable lba */
+	write_count += fwrite(&header->first_usable_lba, 1, 8, file);
+	/* last usable lba */
+	write_count += fwrite(&header->last_usable_lba, 1, 8, file);
+	/* disk UUID */
+	write_count += fwrite(&header->disk_uuid.bytes, 1, 16, file);
+	/* lba of partition entries */
+	write_count += fwrite(&header->partition_headers_lba, 1, 8, file);
+	/* number of partition entries */
+	write_count += fwrite(&header->partition_header_count, 1, 4, file);
+	/* partition entry size */
+	write_count += fwrite("\x80\x00\x00\x00", 1, 4, file);
+	/* crc32 of partition header array */
+	write_count += fwrite("\x00\x00\x00\x00", 1, 4, file);
+	/* zero the rest of the partition */
+	for (i = 0; i < (512 - 92); i += 4)
+		write_count += fwrite("\x00\x00\x00\x00", 1, 4, file);
+
+	if (write_count != 512) {
+		fprintf(stderr, "Impartial write detected while exporting GPT header.\n");
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
+
+}
+
+/* * * * * * * * * * * * * *
+ * File Stream Declarations
+ * * * * * * * * * * * * * */
 
 static int fstream_set_pos(void *file_ptr, uint64_t pos_ptr) {
 
@@ -57,6 +422,10 @@ static int fstream_read(void *file_ptr, void *buf, uint64_t buf_size) {
 		return 0;
 }
 
+/* * * * * * * * * * * * * * * * *
+ * Memory Allocation Declarations
+ * * * * * * * * * * * * * * * * */
+
 void *pure64_malloc(uint64_t size) {
 	return malloc(size);
 }
@@ -68,6 +437,10 @@ void *pure64_realloc(void *addr, uint64_t size) {
 void pure64_free(void *addr) {
 	free(addr);
 }
+
+/* * * * * * * * * * * * * *
+ * Command Line Declarations
+ * * * * * * * * * * * * * */
 
 /** Compares an option with a command
  * line argument. This function checks
@@ -129,12 +502,17 @@ static bool is_opt(const char *argv) {
 		return false;
 }
 
+/* * * * * * * * * * * *
+ * Pure64FS Declarations
+ * * * * * * * * * * * */
+
 static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 
 	int err;
 	FILE *file;
 	long int pos;
 	uint64_t sector_count;
+	uint64_t fs_offset;
 	unsigned char sector_count_buf[2];
 
 	struct pure64_stream stream;
@@ -164,7 +542,11 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 0x4000, SEEK_SET);
+	fs_offset = 0x2000 + pure64_data_size;
+	if ((fs_offset % PURE64_DISK_LOCATION) != 0)
+		fs_offset += PURE64_DISK_LOCATION - (fs_offset % PURE64_DISK_LOCATION);
+
+	err = fseek(file, fs_offset, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
@@ -192,28 +574,22 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	if ((pos % 512) != 0) {
+	if (pos < PURE64_MINIMUM_DISK_SIZE) {
+		fseek(file, PURE64_MINIMUM_DISK_SIZE -1, SEEK_SET);
+		fputc(0x00, file);
+	} else if ((pos % 512) != 0) {
 		fseek(file, (pos + (512 - (pos % 512))) - 1, SEEK_SET);
 		fputc(0x00, file);
-		sector_count = ((pos - 0x2000) + 512) / 512;
 	}
 
 	/* get ready to update the required
 	 * number of sectors to read from the
 	 * master boot record */
 
-	/* ensure that the sector
-	 * count can be contained
-	 * within a 16-bit, unsigned
-	 * integer.
-	 * */
-
-	if (sector_count > 0xffff) {
-		fprintf(stderr, "Pure64 file system is too large.\n");
-		return EXIT_FAILURE;
-	}
-
-	sector_count -= 1;
+	if ((pure64_data_size % 512) != 0)
+		sector_count = (pure64_data_size + (512 - (pure64_data_size % 512))) / 512;
+	else
+		sector_count = pure64_data_size / 512;
 
 	/* encode as little-endian */
 
@@ -256,7 +632,7 @@ static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 0x4000, SEEK_SET);
+	err = fseek(file, PURE64_DISK_LOCATION, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
@@ -274,6 +650,167 @@ static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 		fprintf(stderr, "Failed to read file system from '%s'.\n", filename);
 		fclose(file);
 		return EXIT_FAILURE;
+	}
+
+	fclose(file);
+
+	return EXIT_SUCCESS;
+}
+
+/* * * * * * * * * * * *
+ * Command Declarations
+ * * * * * * * * * * * */
+
+static int pure64_init(const char *filename, int argc, const char **argv) {
+
+	int err;
+	FILE *file;
+	const char *disk_uuid_str;
+	int i;
+	unsigned long long int disk_size;
+	uint64_t minimum_size;
+	struct gpt_header gpt_header;
+
+	disk_uuid_str = NULL;
+	disk_size = 1 * 1024 * 1024;
+
+	for (i = 0; i < argc; i++) {
+		if (strcmp(argv[i], "--disk-uuid") == 0) {
+			disk_uuid_str = argv[i + 1];
+			i++;
+		} else if (strcmp(argv[i], "--disk-size") == 0) {
+			if ((i + 1) >= argc) {
+				fprintf(stderr, "Disk size not specified.\n");
+				return EXIT_FAILURE;
+			} else if (sscanf(argv[i + 1], "%llu", &disk_size) != 0) {
+				fprintf(stderr, "Malformed disk size was given");
+				return EXIT_FAILURE;
+			}
+		} else {
+			fprintf(stderr, "Unknown option '%s'\n", argv[i]);
+			return EXIT_FAILURE;
+		}
+	}
+
+	/* minimum gpt disk contains: */
+
+	/* one gpt header */
+	minimum_size = GPT_HEADER_SIZE;
+	/* 128 primary partition headers */
+	minimum_size += GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE;
+	/* at least one sector per partition */
+	minimum_size += GPT_PARTITION_HEADER_COUNT * 512;
+	/* GPT_PARTITION_HEADER_COUNT backup partition headers */
+	minimum_size += GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE;
+	/* one backup gpt header */
+	minimum_size += GPT_HEADER_SIZE;
+
+	if (disk_size < minimum_size) {
+		fprintf(stderr, "Disk size must be at least %u bytes.\n", 92U * 2U);
+		return EXIT_FAILURE;
+	}
+
+	/* pad disk to nearest sector */
+
+	if ((disk_size % 512) != 0) {
+		disk_size += (512 - (disk_size % 512));
+	}
+
+	if (disk_uuid_str == NULL) {
+		fprintf(stderr, "Warning: Disk UUID not specified.\n");
+		disk_uuid_str = PURE64_DEFAULT_DISK_UUID;
+	}
+
+	err = pure64_uuid_parse(&gpt_header.disk_uuid, disk_uuid_str);
+	if (err != 0) {
+		fprintf(stderr, "Malformed disk UUID string.\n");
+		return EXIT_FAILURE;
+	}
+
+	file = fopen(filename, "wb+");
+	if (file == NULL) {
+		fprintf(stderr, "Failed to open '%s' for writing.\n", filename);
+		return EXIT_FAILURE;
+	}
+
+	if (fwrite(mbr_data, 1, mbr_data_size, file) != 512) {
+		fprintf(stderr, "Failed to write multiboot record.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* The following code writes a GPT header
+	 * to the file */
+
+	/* TODO : swap little endian values if required */
+
+	gpt_header.current_lba = 1;
+
+	gpt_header.backup_lba = (disk_size - 512) / 512;
+
+	/* mbr + gpt header + partition headers */
+	gpt_header.first_usable_lba = (1 + 1) * 512;
+	gpt_header.first_usable_lba += GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE;
+	gpt_header.first_usable_lba /= 512;
+
+	/* the backup lba minus 64 backup partition headers */
+	gpt_header.last_usable_lba = (gpt_header.backup_lba * 512);
+	gpt_header.last_usable_lba -= (GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE);
+	gpt_header.last_usable_lba -= 512;
+	gpt_header.last_usable_lba /= 512;
+
+	gpt_header.partition_headers_lba = 2;
+
+	gpt_header.partition_header_count = GPT_PARTITION_HEADER_COUNT;
+
+	err = export_gpt_header(file, &gpt_header);
+	if (err != 0) {
+		fprintf(stderr, "Failed to export primary GPT header.\n");
+		return EXIT_FAILURE;
+	}
+
+	/* zero primary partition headers */
+
+	zero_file_data(file, GPT_PARTITION_HEADER_SIZE * GPT_PARTITION_HEADER_COUNT);
+
+	/* zero backup partition headers */
+
+	if (fseek(file, (gpt_header.backup_lba * 512) - (GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE), SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to the backup partition header array.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	zero_file_data(file, GPT_PARTITION_HEADER_SIZE * GPT_PARTITION_HEADER_COUNT);
+
+	/* setup the backup header */
+
+	if (fseek(file, gpt_header.backup_lba * 512, SEEK_SET) != 0) {
+		fprintf(stderr, "Failed to seek to backup GPT header.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* update the information for the backup header */
+
+	gpt_header.partition_headers_lba = gpt_header.backup_lba * 512;
+	gpt_header.partition_headers_lba -= GPT_PARTITION_HEADER_COUNT * GPT_PARTITION_HEADER_SIZE;
+	gpt_header.partition_headers_lba -= 512;
+	gpt_header.partition_headers_lba /= 512;
+	gpt_header.current_lba = gpt_header.backup_lba;
+	gpt_header.backup_lba = 1;
+
+	err = export_gpt_header(file, &gpt_header);
+	if (err != EXIT_SUCCESS) {
+		fprintf(stderr, "Failed to export backup GPT header.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	err = calculate_checksums(file);
+	if (err != EXIT_SUCCESS) {
+		fclose(file);
+		return err;
 	}
 
 	fclose(file);
@@ -341,7 +878,7 @@ static int pure64_cp(struct pure64_fs *fs, int argc, const char **argv) {
 
 	err = pure64_fs_make_file(fs, dst_path);
 	if (err != 0) {
-		fprintf(stderr, "Failed to create destination file '%s'.\n", dst_path);
+		fprintf(stderr, "Failed to create destination file '%s': %s.\n", dst_path, pure64_strerror(err));
 		fclose(src);
 		return EXIT_FAILURE;
 	}
@@ -474,8 +1011,10 @@ int main(int argc, const char **argv) {
 
 	/* argv[i] should now point to a command. */
 
-	if (strcmp(argv[i], "mkfs") == 0) {
-		return pure64_mkfs(filename, i - 1, &argv[i + 1]);
+	if (strcmp(argv[i], "init") == 0) {
+		return pure64_init(filename, argc - (i + 1), &argv[i + 1]);
+	} else if (strcmp(argv[i], "mkfs") == 0) {
+		return pure64_mkfs(filename, argc - (i + 1), &argv[i + 1]);
 	}
 
 	pure64_fs_init(&fs);

@@ -7,8 +7,7 @@
 #include <pure64/path.h>
 #include <pure64/error.h>
 #include <pure64/memory.h>
-
-#include <string.h>
+#include <pure64/string.h>
 
 static int
 is_separator(char c) {
@@ -64,7 +63,7 @@ pure64_path_normalize(struct pure64_path *path) {
 
 	while (i < path->name_count) {
 
-		if (strcmp(path->name_array[i].data, ".") == 0) {
+		if (pure64_strcmp(path->name_array[i].data, ".") == 0) {
 
 			pure64_free(path->name_array[i].data);
 
@@ -74,7 +73,7 @@ pure64_path_normalize(struct pure64_path *path) {
 
 			path->name_count--;
 
-		} else if (strcmp(path->name_array[i].data, "..") == 0) {
+		} else if (pure64_strcmp(path->name_array[i].data, "..") == 0) {
 
 			pure64_free(path->name_array[i].data);
 
@@ -180,13 +179,13 @@ pure64_path_push_child(struct pure64_path *path,
 
 	path->name_array = name_array;
 
-	name_size = strlen(name);
+	name_size = pure64_strlen(name);
 
 	tmp_name = pure64_malloc(name_size + 1);
 	if (tmp_name == NULL)
 		return PURE64_ENOMEM;
 
-	memcpy(tmp_name, name, name_size);
+	pure64_memcpy(tmp_name, name, name_size);
 
 	tmp_name[name_size] = 0;
 

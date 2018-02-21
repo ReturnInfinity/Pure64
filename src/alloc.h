@@ -4,17 +4,29 @@
  * =============================================================================
  */
 
-#ifndef PURE64_DEBUG_H
-#define PURE64_DEBUG_H
+#ifndef PURE64_ALLOC_H
+#define PURE64_ALLOC_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void debug(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+/** A memory allocation.
+ * */
+
+struct pure64_alloc {
+	/** The base address of the memory block*/
+	void *addr;
+	/** The number of bytes being used by the
+	 * memory block. */
+	uint64_t size;
+	/** The number of bytes reserved for the
+	 * memory block to grow. */
+	uint64_t reserved;
+};
 
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* PURE64_DEBUG_H */
+#endif /* PURE64_ALLOC_H */

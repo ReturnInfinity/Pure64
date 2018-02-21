@@ -8,10 +8,13 @@
 #include <pure64/file.h>
 #include <pure64/path.h>
 #include <pure64/error.h>
+#include <pure64/string.h>
 
 #include "misc.h"
 
-#include <string.h>
+#ifndef NULL
+#define NULL ((void *) 0x00)
+#endif
 
 static uint64_t pure64_file_size(const struct pure64_file *file) {
 	return 16 + file->name_size + file->data_size;
@@ -74,6 +77,9 @@ int pure64_fs_import(struct pure64_fs *fs, struct pure64_stream *in) {
 	if (err != 0)
 		return err;
 
+	if (fs->signature != PURE64_SIGNATURE)
+		return PURE64_EINVAL;
+
 	err = decode_uint64(&fs->size, in);
 	if (err != 0)
 		return err;
@@ -134,7 +140,7 @@ int pure64_fs_make_dir(struct pure64_fs *fs, const char *path_str) {
 			subdir = &parent_dir->subdirs[j];
 			if (subdir == NULL) {
 				continue;
-			} else if (strcmp(subdir->name, name) == 0) {
+			} else if (pure64_strcmp(subdir->name, name) == 0) {
 				parent_dir = subdir;
 				break;
 			}
@@ -212,7 +218,7 @@ int pure64_fs_make_file(struct pure64_fs *fs, const char *path_str) {
 			subdir = &parent_dir->subdirs[j];
 			if (subdir == NULL) {
 				continue;
-			} else if (strcmp(subdir->name, name) == 0) {
+			} else if (pure64_strcmp(subdir->name, name) == 0) {
 				parent_dir = subdir;
 				break;
 			}
@@ -279,7 +285,7 @@ struct pure64_dir *pure64_fs_open_dir(struct pure64_fs *fs, const char *path_str
 
 		subdir_count = parent_dir->subdir_count;
 		for (j = 0; j < subdir_count; j++) {
-			if (strcmp(parent_dir->subdirs[j].name, name) == 0) {
+			if (pure64_strcmp(parent_dir->subdirs[j].name, name) == 0) {
 				parent_dir = &parent_dir->subdirs[j];
 				break;
 			}
@@ -340,7 +346,7 @@ struct pure64_file *pure64_fs_open_file(struct pure64_fs *fs, const char *path_s
 
 		subdir_count = parent_dir->subdir_count;
 		for (j = 0; j < subdir_count; j++) {
-			if (strcmp(parent_dir->subdirs[j].name, name) == 0) {
+			if (pure64_strcmp(parent_dir->subdirs[j].name, name) == 0) {
 				parent_dir = &parent_dir->subdirs[j];
 				break;
 			}
@@ -362,7 +368,7 @@ struct pure64_file *pure64_fs_open_file(struct pure64_fs *fs, const char *path_s
 	/* 'name' is now the basename of the file. */
 
 	for (j = 0; j < parent_dir->file_count; j++) {
-		if (strcmp(parent_dir->files[j].name, name) == 0) {
+		if (pure64_strcmp(parent_dir->files[j].name, name) == 0) {
 			pure64_path_free(&path);
 			return &parent_dir->files[j];
 		}

@@ -9,6 +9,7 @@ CFLAGS += -I $(top)/include
 CFLAGS += -fno-stack-protector
 CFLAGS += -fomit-frame-pointer
 CFLAGS += -mno-red-zone
+CFLAGS += -Os
 CFLAGS += -g
 
 targets += pure64.sys
@@ -22,11 +23,20 @@ pure64files += init/smp.asm
 pure64files += interrupt.asm
 pure64files += sysvar.asm
 
+pure64objs += pure64.o
+pure64objs += ahci.o
+pure64objs += debug.o
+pure64objs += e820.o
+pure64objs += hooks.o
+pure64objs += load.o
+pure64objs += map.o
+pure64objs += pci.o
+
 .PHONY: all
 all: $(targets)
 
-pure64: pure64.o debug.o load.o pure64.ld
-	ld pure64.o debug.o load.o -T pure64.ld -o $@
+pure64: $(pure64objs) pure64.ld
+	ld $(pure64objs) -lpure64 -L lib -T pure64.ld -o $@
 
 # The dependencies of pure64.sys can
 # be (and should be) generated with
@@ -34,9 +44,17 @@ pure64: pure64.o debug.o load.o pure64.ld
 # and used to update this target.
 pure64.o: $(pure64files)
 
+ahci.o: ahci.c ahci.h pci.h
+
 debug.o: debug.c debug.h
 
-load.o: load.c
+e820.o: e820.c e820.h
+
+load.o: load.c ahci.h debug.h
+
+map.o: map.c map.h
+
+pci.o: pci.c pci.h
 
 pure64.sys: pure64
 	objcopy -O binary $< $@
@@ -51,7 +69,7 @@ pure64.sys: pure64
 
 .PHONY: clean
 clean:
-	$(RM) load.o pure64.o
+	$(RM) $(pure64objs)
 	$(RM) pure64 pure64.sys
 
 .PHONY: test

@@ -18,6 +18,12 @@
 
 #define PURE64_SIGNATURE 0x5346343665727550
 
+/** The sector that contains the file
+ * system used by Pure64.
+ * */
+
+#define PURE64_FS_SECTOR 0x50
+
 #ifdef __cplusplus
 extern "C" {
 #endif

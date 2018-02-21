@@ -6,7 +6,9 @@
 
 #include <pure64/file.h>
 #include <pure64/error.h>
+#include <pure64/memory.h>
 #include <pure64/stream.h>
+#include <pure64/string.h>
 
 #include "misc.h"
 
@@ -21,8 +23,8 @@ void pure64_file_init(struct pure64_file *file) {
 }
 
 void pure64_file_free(struct pure64_file *file) {
-	free(file->name);
-	free(file->data);
+	pure64_free(file->name);
+	pure64_free(file->data);
 	file->name = NULL;
 	file->data = NULL;
 }
@@ -62,12 +64,12 @@ int pure64_file_import(struct pure64_file *file, struct pure64_stream *in) {
 	if (err != 0)
 		return err;
 
-	file->name = malloc(file->name_size + 1);
-	file->data = malloc(file->data_size);
+	file->name = pure64_malloc(file->name_size + 1);
+	file->data = pure64_malloc(file->data_size);
 	if ((file->name == NULL) || (file->data == NULL)) {
-		free(file->name);
-		free(file->data);
-		return -1;
+		pure64_free(file->name);
+		pure64_free(file->data);
+		return PURE64_ENOMEM;
 	}
 
 	err = pure64_stream_read(in, file->name, file->name_size);
@@ -88,18 +90,18 @@ int pure64_file_set_name(struct pure64_file *file, const char *name) {
 	char *tmp_name;
 	unsigned long int name_size;
 
-	name_size = strlen(name);
+	name_size = pure64_strlen(name);
 
-	tmp_name = malloc(name_size + 1);
+	tmp_name = pure64_malloc(name_size + 1);
 	if (tmp_name == NULL) {
-		return -1;
+		return PURE64_ENOMEM;
 	}
 
-	memcpy(tmp_name, name, name_size);
+	pure64_memcpy(tmp_name, name, name_size);
 
 	tmp_name[name_size] = 0;
 
-	free(file->name);
+	pure64_free(file->name);
 
 	file->name = tmp_name;
 	file->name_size = name_size;

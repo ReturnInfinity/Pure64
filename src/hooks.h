@@ -4,17 +4,19 @@
  * =============================================================================
  */
 
-#ifndef PURE64_DEBUG_H
-#define PURE64_DEBUG_H
+#ifndef PURE64_HOOKS_H
+#define PURE64_HOOKS_H
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void debug(const char *fmt, ...) __attribute__ ((format (printf, 1, 2)));
+struct pure64_map;
+
+void pure64_init_memory_hooks(struct pure64_map *map);
 
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif
 
-#endif /* PURE64_DEBUG_H */
+#endif /* PURE64_HOOKS_H */
