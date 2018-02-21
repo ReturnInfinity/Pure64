@@ -24,6 +24,10 @@
  * Constants
  * * * * * */
 
+#ifndef PURE64_DISK_LOCATION
+#define PURE64_DISK_LOCATION (PURE64_FS_SECTOR * 512)
+#endif
+
 #ifndef PURE64_MINIMUM_DISK_SIZE
 #define PURE64_MINIMUM_DISK_SIZE (1 * 1024 * 1024)
 #endif
@@ -539,8 +543,8 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	}
 
 	fs_offset = 0x2000 + pure64_data_size;
-	if ((fs_offset % 0x1000) != 0)
-		fs_offset += 0x1000 - (fs_offset % 0x1000);
+	if ((fs_offset % PURE64_DISK_LOCATION) != 0)
+		fs_offset += PURE64_DISK_LOCATION - (fs_offset % PURE64_DISK_LOCATION);
 
 	err = fseek(file, fs_offset, SEEK_SET);
 	if (err != 0) {
@@ -628,7 +632,7 @@ static int ramfs_import(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 0x4000, SEEK_SET);
+	err = fseek(file, PURE64_DISK_LOCATION, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to file system location.\n");
 		fclose(file);
@@ -874,7 +878,7 @@ static int pure64_cp(struct pure64_fs *fs, int argc, const char **argv) {
 
 	err = pure64_fs_make_file(fs, dst_path);
 	if (err != 0) {
-		fprintf(stderr, "Failed to create destination file '%s'.\n", dst_path);
+		fprintf(stderr, "Failed to create destination file '%s': %s.\n", dst_path, pure64_strerror(err));
 		fclose(src);
 		return EXIT_FAILURE;
 	}
