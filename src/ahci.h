@@ -7,6 +7,8 @@
 #ifndef PURE64_AHCI_H
 #define PURE64_AHCI_H
 
+#include <pure64/stream.h>
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -120,10 +122,6 @@ struct ahci_base {
 	struct ahci_port ports[];
 };
 
-/** Enable AHCI mode. This should be
- * called upon visiting an AHCI base structure.
- * */
-
 uint32_t ahci_base_ports_implemented(const volatile struct ahci_base *base);
 
 struct ahci_visitor {
@@ -133,6 +131,31 @@ struct ahci_visitor {
 };
 
 int ahci_visit(struct ahci_visitor *visitor);
+
+/** A stream wrapper structure so that
+ * an AHCI port can be read as a stream.
+ * */
+
+struct ahci_stream {
+	/** The stream base structure. */
+	struct pure64_stream base;
+	/** The port associated with
+	 * the stream. */
+	volatile struct ahci_port *port;
+	/** The position of the stream
+	 * within the AHCI disk, in bytes. */
+	uint64_t position;
+	/** A buffer to handle reads that
+	 * aren't in sizes of a sector. */
+	uint8_t buf[512];
+};
+
+/** Initializes an AHCI port stream.
+ * @param stream The AHCI stream to initialize
+ * @param port The port to associate with the stream.
+ * */
+
+void ahci_stream_init(struct ahci_stream *stream, volatile struct ahci_port *port);
 
 #ifdef __cplusplus
 } /* extern "C" { */

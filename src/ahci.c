@@ -7,9 +7,8 @@
 #include "ahci.h"
 
 #include "pci.h"
-#include "string.h"
 
-#include "debug.h"
+#include <pure64/string.h>
 
 /* * * * * *
  * Constants
@@ -528,4 +527,88 @@ static int find_ahci(void *data, uint8_t bus, uint8_t slot) {
 int ahci_visit(struct ahci_visitor *visitor) {
 
 	return pci_visit(find_ahci, visitor);
+}
+
+static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
+
+	int err;
+	uint64_t sector;
+	uint64_t sector_count;
+	uint64_t tailing_bytes;
+	uint64_t i;
+	uint64_t byte;
+	unsigned char *buf8;
+	struct ahci_stream *stream;
+
+	buf8 = (unsigned char *) buf;
+
+	stream = (struct ahci_stream *) stream_ptr;
+
+	/* Get the sector index */
+	sector = stream->position / 512;
+
+	/* Get the byte index */
+	byte = stream->position % 512;
+
+	err = ahci_port_read(stream->port,
+	                     sector,
+	                     1 /* one sector */,
+	                     stream->buf);
+	if (err != 0)
+		return -1;
+
+	if (size < (512 - byte)) {
+		pure64_memcpy(buf8, &stream->buf[byte], size);
+		buf8 += size;
+	} else {
+		pure64_memcpy(buf8, &stream->buf[byte], 512 - byte);
+		buf8 +=  512 - byte;
+	}
+
+	sector_count = size / 512;
+
+	for (i = 1; i < sector_count; i++) {
+
+		err = ahci_port_read(stream->port, sector + i, 1, stream->buf);
+		if (err != 0)
+			return -1;
+
+		pure64_memcpy(buf8, stream->buf, 512);
+
+		buf8 += 512;
+	}
+
+	tailing_bytes = size % 512;
+
+	if (tailing_bytes > 0) {
+		err = ahci_port_read(stream->port, sector + sector_count, 1, stream->buf);
+		if (err != 0)
+			return -1;
+
+		pure64_memcpy(buf8, stream->buf, tailing_bytes);
+	}
+
+	stream->position += size;
+
+	return 0;
+}
+
+static int stream_set_pos(void *stream_ptr, uint64_t pos) {
+
+	struct ahci_stream *ahci_stream;
+
+	ahci_stream = (struct ahci_stream *) stream_ptr;
+
+	ahci_stream->position = pos;
+
+	return 0;
+}
+
+void ahci_stream_init(struct ahci_stream *stream, volatile struct ahci_port *port) {
+	pure64_stream_init(&stream->base);
+	stream->base.data = stream;
+	stream->base.read = stream_read;
+	stream->base.set_pos = stream_set_pos;
+	stream->port = port;
+	stream->position = 0;
 }
