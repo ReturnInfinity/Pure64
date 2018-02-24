@@ -234,13 +234,17 @@ static int load_kernel_bin(struct pure64_map *map,
 	/* Flat binary kernels are loaded
 	 * into the 1 MiB address. */
 
-	int err = pure64_map_reserve(map, (void *) 0x1000000, kernel->data_size);
+	int err = pure64_map_reserve(map, (void *) 0x100000, kernel->data_size);
 	if (err != 0)
 		return err;
 
+	/* Copy over the data. */
+
+	pure64_memcpy((void *) 0x100000, kernel->data, kernel->data_size);
+
 	/* Get the entry point address. */
 
-	kernel_entry kentry = (kernel_entry) kernel->data;
+	kernel_entry kentry = (kernel_entry) 0x100000;
 
 	/* Call the entry point.
 	 * Hope that it works.
