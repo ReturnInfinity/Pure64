@@ -18,7 +18,7 @@
 
 USE32
 
-ORG 8000h
+ORG 0x8000
 
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
