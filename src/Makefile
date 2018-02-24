@@ -17,4 +17,10 @@ pure64.sys: pure64.asm $(pure64_deps)
 clean:
 	$(RM) pure64.sys
 
+.PHONY: test
+test: all
+
+.PHONY: install
+install: all
+
 $(V).SILENT:
