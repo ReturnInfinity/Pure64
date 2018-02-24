@@ -49,6 +49,12 @@
 extern "C" {
 #endif
 
+/** Get a string representation of an
+ * error that occured in the Pure64 library.
+ * @param err The error code that was returned.
+ * @returns A human-readable error description.
+ * */
+
 const char *pure64_strerror(int err);
 
 #ifdef __cplusplus
