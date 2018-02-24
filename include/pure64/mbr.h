@@ -7,6 +7,8 @@
 #ifndef PURE64_MBR_H
 #define PURE64_MBR_H
 
+#include <pure64/dap.h>
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -25,22 +27,13 @@ struct pure64_stream;
 struct pure64_mbr {
 	/** The assembly code used
 	 * to load the next boot loader. */
-	uint8_t code[490];
-	/** The number of sectors occupied
-	 * by the second stage boot loader. */
-	uint16_t load_sector_count;
-	/** The address to load the 2nd
-	 * stage boot loader at. */
-	uint16_t load_address;
-	/** The segment to load the 2nd
-	 * stage boot loader at. */
-	uint16_t load_segment;
-	/** The sector that contains the
-	 * 2nd stage boot loader. */
-	uint64_t load_sector;
-	/** Padding until the boot signature
-	 * at offset 510. */
-	uint8_t padding[6];
+	uint8_t code[476];
+	/** The disk address packet for
+	 * the second stage boot loader. */
+	struct pure64_dap st2dap;
+	/** The disk address packet for
+	 * the third stage boot loader. */
+	struct pure64_dap st3dap;
 	/** The boot signature. */
 	uint16_t boot_signature;
 };

@@ -36,19 +36,11 @@ int pure64_mbr_read(struct pure64_mbr *mbr, struct pure64_stream *stream) {
 	if (err != 0)
 		return err;
 
-	err = decode_uint16(&mbr->load_sector_count, stream);
+	err = pure64_dap_read(&mbr->st2dap, stream);
 	if (err != 0)
 		return err;
 
-	err = decode_uint16(&mbr->load_address, stream);
-	if (err != 0)
-		return err;
-
-	err = decode_uint16(&mbr->load_segment, stream);
-	if (err != 0)
-		return err;
-
-	err = decode_uint64(&mbr->load_sector, stream);
+	err = pure64_dap_read(&mbr->st3dap, stream);
 	if (err != 0)
 		return err;
 
@@ -71,19 +63,11 @@ int pure64_mbr_write(const struct pure64_mbr *mbr, struct pure64_stream *stream)
 	if (err != 0)
 		return err;
 
-	err = encode_uint16(mbr->load_sector_count, stream);
+	err = pure64_dap_write(&mbr->st2dap, stream);
 	if (err != 0)
 		return err;
 
-	err = encode_uint16(mbr->load_address, stream);
-	if (err != 0)
-		return err;
-
-	err = encode_uint16(mbr->load_segment, stream);
-	if (err != 0)
-		return err;
-
-	err = encode_uint64(mbr->load_sector, stream);
+	err = pure64_dap_write(&mbr->st3dap, stream);
 	if (err != 0)
 		return err;
 

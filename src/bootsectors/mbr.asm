@@ -10,11 +10,23 @@
 ; check is made to make sure Pure64 was loaded by comparing a signiture.
 ; =============================================================================
 
+; Default locations of the second
+; stage boot loader. This loads
+; 8 KiB from sector 16 into memory
+; at 0x8000
+%define ST2_SECTORS 16
+%define ST2_STARTSECTOR 16
+%define ST2_ADDRESS 0x8000
+%define ST2_SEGMENT 0x0000
 
-%define SECTORS 64
-%define STARTSECTOR 16
-%define ADDRESS 0x8000
-%define SEGMENT 0x0000
+; Default locations of the third
+; stage boot loader. This loads
+; 32 KiB from sector 32 into memory
+; at 0x60000
+%define ST3_SECTORS 64
+%define ST3_STARTSECTOR 32
+%define ST3_ADDRESS 0x0000
+%define ST3_SEGMENT 0x6000
 
 USE16
 org 0x7C00
@@ -126,17 +138,26 @@ check_A20:
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
 	jne halt
 
+	; Read the 2nd stage boot loader into memory.
 	mov ah, 0x42			; Extended Read
 	mov dl, [DriveNumber]		; http://www.ctyme.com/intr/rb-0708.htm
-	mov si, DAP
+	mov si, ST2_DAP
 	int 0x13
 	jc read_fail
 
+	; Verify that the 2nd stage boot loader was read.
 	mov eax, [0x8000]
 	cmp eax, 0x00017EE9		; Match against the Pure64 binary
 	jne magic_fail
 
-; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
+	; Read the 3rd stage boot loader into memory.
+	mov ah, 0x42
+	mov dl, [DriveNumber]
+	mov si, ST3_DAP
+	int 0x13
+	jc read_fail
+
+	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
 	lgdt [cs:GDTR32]		; Load GDT register
 	mov eax, cr0
@@ -196,15 +217,27 @@ times 446-$+$$ db 0
 db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
 DriveNumber db 0x00
 
-times 490-$+$$ db 0
+times 476-$+$$ db 0
 
 align 4
-DAP:	db 0x10
+
+ST2_DAP:
+	db 0x10
 	db 0x00
-	dw SECTORS
-	dw ADDRESS
-	dw SEGMENT
-	dq STARTSECTOR
+	dw ST2_SECTORS
+	dw ST2_ADDRESS
+	dw ST2_SEGMENT
+	dq ST2_STARTSECTOR
+
+align 4
+
+ST3_DAP:
+	db 0x10
+	db 0x00
+	dw ST3_SECTORS
+	dw ST3_ADDRESS
+	dw ST3_SEGMENT
+	dq ST3_STARTSECTOR
 
 times 510-$+$$ db 0
 
