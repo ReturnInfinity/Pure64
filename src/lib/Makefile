@@ -21,6 +21,7 @@ libfiles += misc.o
 libfiles += path.o
 libfiles += stream.o
 libfiles += string.o
+libfiles += uuid.o
 
 targets += libpure64.a
 
@@ -45,6 +46,8 @@ path.o: path.c path.h
 stream.o: stream.c stream.h
 
 string.o: string.c string.h
+
+uuid.o: uuid.c uuid.h string.h
 
 .PHONY: clean
 clean:
