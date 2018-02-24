@@ -148,6 +148,12 @@ struct ahci_stream {
 	/** A buffer to handle reads that
 	 * aren't in sizes of a sector. */
 	uint8_t buf[512];
+	/** The offset of the last buffer
+	 * read operation. */
+	uint64_t buf_offset;
+	/** The length of the last buffer
+	 * read operation. */
+	uint64_t buf_length;
 };
 
 /** Initializes an AHCI port stream.

@@ -550,8 +550,53 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	/* Get the sector index */
 	sector = stream->position / 512;
 
-	/* Get the byte index */
+	/* Get the byte index within the sector */
 	byte = stream->position % 512;
+
+	/* Check if the read operation
+	 * can be done from the cache */
+	if (((sector * 512) >= stream->buf_offset)
+	 && ((sector * 512) < (stream->buf_offset + 512))
+	 && (((sector * 512) + size) < (stream->buf_offset + 512))) {
+
+		pure64_memcpy(buf, &stream->buf[byte], size);
+
+		stream->position += size;
+
+		return 0;
+	}
+
+	/* If the read operation starts
+	 * at the beginning of the sector
+	 * and reads less than a sector,
+	 * then it should be cached. */
+	if ((byte == 0) && (size < 512)) {
+
+		/* Read the data from the port */
+		err = ahci_port_read(stream->port, sector, 1, stream->buf);
+		if (err != 0)
+			return -1;
+
+		/* Set the cache parameters */
+		stream->buf_offset = sector * 512;
+		stream->buf_length = 512;
+
+
+		/* Copy the data to caller buffer */
+		pure64_memcpy(buf, stream->buf, size);
+
+		/* Update the position */
+		stream->position += size;
+
+		/* Done */
+		return 0;
+	}
+
+	/* The read operation could not
+	 * be done from cache, so reset
+	 * the cache parameters */
+	stream->buf_offset = 0;
+	stream->buf_length = 0;
 
 	err = ahci_port_read(stream->port,
 	                     sector,
@@ -611,4 +656,6 @@ void ahci_stream_init(struct ahci_stream *stream, volatile struct ahci_port *por
 	stream->base.set_pos = stream_set_pos;
 	stream->port = port;
 	stream->position = 0;
+	stream->buf_offset = 0;
+	stream->buf_length = 0;
 }
