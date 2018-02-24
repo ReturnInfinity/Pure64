@@ -2,11 +2,12 @@ VERSION ?= 0.9.0
 
 .PHONY: all clean install
 all clean install:
-	$(MAKE) -C src/lib $@
-	$(MAKE) -C src/bootsectors $@
-	$(MAKE) -C src $@
-	$(MAKE) -C src/util $@
 	$(MAKE) -C include/pure64 $@
+	$(MAKE) -C src $@
+	$(MAKE) -C src/bootsectors $@
+	$(MAKE) -C src/lib $@
+	$(MAKE) -C src/stage-three $@
+	$(MAKE) -C src/util $@
 
 pure64-$(VERSION).tar.gz: pure64-$(VERSION)
 	tar -pcvzf $@ $<
