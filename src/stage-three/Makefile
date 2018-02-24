@@ -29,9 +29,11 @@ stage_three_files += pci.o
 all: stage-three.sys
 
 stage-three.sys: stage-three
+	@echo "OBJCOPY $@"
 	objcopy -O binary $< $@
 
 stage-three: $(stage_three_files) stage-three.ld -lpure64
+	@echo "LD $@"
 	ld $(stage_three_files) $(LDFLAGS) $(LDLIBS) -o $@
 
 _start.o: _start.c ahci.h debug.h
