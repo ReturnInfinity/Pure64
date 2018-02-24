@@ -19,6 +19,8 @@
 
 #define BOUNDARY 0x1000
 
+#define FREE_START 0x70000
+
 static struct pure64_alloc *append_alloc(struct pure64_map *map, struct pure64_alloc *alloc) {
 
 	struct pure64_alloc *alloc_table;
@@ -240,12 +242,16 @@ void pure64_map_init(struct pure64_map *map) {
 		 * used by Pure64. */
 		addr = (uint64_t) e820->addr;
 		size = e820->size;
-		if ((addr + size) < 0x60000) {
+		if ((addr + size) < FREE_START) {
 			e820 = pure64_e820_next(e820);
 			continue;
-		} else if (addr < 0x60000) {
-			size = 0x60000 - addr;
-			addr = 0x60000;
+		} else if (addr < FREE_START) {
+			if ((FREE_START - addr) > size) {
+				e820 = pure64_e820_next(e820);
+				continue;
+			}
+			size -= FREE_START - addr;
+			addr = FREE_START;
 		}
 
 		/* Check that the memory can hold at least
@@ -277,8 +283,8 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_count = 2;
 		/* Pure64 initial memory map */
 		map->alloc_table[0].addr = (void *) 0x00;
-		map->alloc_table[0].size = 0x60000;
-		map->alloc_table[0].reserved = 0x60000;
+		map->alloc_table[0].size = 0x70000;
+		map->alloc_table[0].reserved = 0x70000;
 		/* allocation table (self reference) */
 		map->alloc_table[1].addr = map->alloc_table;
 		map->alloc_table[1].size = sizeof(struct pure64_alloc) * 2;
