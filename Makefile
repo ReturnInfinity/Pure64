@@ -24,6 +24,9 @@ pure64.img: all testing/kernel
 	./src/util/pure64 mkdir /boot
 	./src/util/pure64 cp testing/kernel /boot/kernel
 
+testing/kernel.sys: testing/kernel
+	objcopy -O binary $< $@
+
 testing/kernel: testing/kernel.o
 	ld $< -o $@
 
