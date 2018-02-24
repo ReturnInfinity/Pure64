@@ -7,8 +7,9 @@
 #include <pure64/fs.h>
 #include <pure64/file.h>
 #include <pure64/error.h>
-#include <pure64/uuid.h>
+#include <pure64/mbr.h>
 #include <pure64/stream.h>
+#include <pure64/uuid.h>
 
 #include "mbr-data.h"
 #include "pure64-data.h"
@@ -431,21 +432,29 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	long int pos;
 	uint64_t sector_count;
 	uint64_t fs_offset;
-	unsigned char sector_count_buf[2];
+	struct pure64_mbr mbr;
 
 	struct pure64_stream stream;
 
-	file = fopen(filename, "wb");
+	file = fopen(filename, "wb+");
 	if (file == NULL) {
 		fprintf(stderr, "Failed to open '%s'.\n", filename);
 		return EXIT_FAILURE;
 	}
+
+	/* Write the master boot record to the
+	 * beginning of the file.
+	 * */
 
 	if (fwrite(mbr_data, 1, mbr_data_size, file) != mbr_data_size) {
 		fprintf(stderr, "Failed to write MBR to '%s'.\n", filename);
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/** Write the second stage boot loader
+	 * to the specific location.
+	 * */
 
 	err = fseek(file, 0x2000, SEEK_SET);
 	if (err != 0) {
@@ -459,6 +468,10 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/** Write the file system to the
+	 * specific location.
+	 * */
 
 	fs_offset = 0x2000 + pure64_data_size;
 	if ((fs_offset % PURE64_DISK_LOCATION) != 0)
@@ -500,36 +513,43 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fputc(0x00, file);
 	}
 
-	/* get ready to update the required
-	 * number of sectors to read from the
-	 * master boot record */
+	/* Adjust the size of the 2nd stage
+	 * boot loader so that it is in sector
+	 * units. */
 
 	if ((pure64_data_size % 512) != 0)
 		sector_count = (pure64_data_size + (512 - (pure64_data_size % 512))) / 512;
 	else
 		sector_count = pure64_data_size / 512;
 
-	/* encode as little-endian */
+	/* 0x7f is the maximum number of sectors that
+	 * the BIOS function can read. Make sure that
+	 * this limit is not exceeded. */
 
-	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
-	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
-
-	/* go to the location in the
-	 * master boot record that contains
-	 * the sector count to read.
-	 */
-
-	if (fseek(file, 0x01d2, SEEK_SET) != 0) {
-		fprintf(stderr, "Failed to seek to sector count offset.\n");
+	if (sector_count > 0x7f) {
+		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
+		fclose(file);
 		return EXIT_FAILURE;
 	}
 
-	/* write the sector count to
-	 * the master boot record.
-	 */
+	/* Update the MBR so that it knows where to find
+	 * the 2nd stage boot loader. */
 
-	if (fwrite(sector_count_buf, 1, 2, file) != 2) {
-		fprintf(stderr, "Failed to write sector count.\n");
+	pure64_mbr_zero(&mbr);
+
+	err = pure64_mbr_read(&mbr, &stream);
+	if (err != 0) {
+		fprintf(stderr, "Failed to read MBR: %s\n", pure64_strerror(err));
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	mbr.load_sector_count = sector_count;
+
+	err = pure64_mbr_write(&mbr, &stream);
+	if (err != 0) {
+		fprintf(stderr, "Failed to write MBR: %s\n", pure64_strerror(err));
+		fclose(file);
 		return EXIT_FAILURE;
 	}
 
