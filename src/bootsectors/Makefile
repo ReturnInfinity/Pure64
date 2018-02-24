@@ -1,4 +1,4 @@
-targets += bmfs_mbr.sys
+targets += mbr.sys
 targets += multiboot.sys
 targets += pxestart.sys
 

@@ -27,7 +27,7 @@ pure64.o: pure64.c pure64-data.h mbr-data.h
 
 mbr-data.o: mbr-data.c
 
-mbr-data.c mbr-data.h: $(top)/src/bootsectors/bmfs_mbr.sys rc
+mbr-data.c mbr-data.h: $(top)/src/bootsectors/mbr.sys rc
 	./rc --input $< --source mbr-data.c --header mbr-data.h --name mbr_data
 
 pure64-data.o: pure64-data.c
