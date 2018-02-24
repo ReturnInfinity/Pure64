@@ -7,6 +7,7 @@ build
 *.tar.gz
 pure64-0.7.1/
 /src/pure64
+/src/stage-three/stage-three
 /src/util/pure64
 /src/util/rc
 /src/util/mbr-data.h
