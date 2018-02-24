@@ -1,5 +1,6 @@
 #!/bin/sh
 
+rm -f dap.o
 rm -f dir.o
 rm -f error.o
 rm -f file.o

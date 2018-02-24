@@ -15,6 +15,7 @@ CFLAGS += -g
 
 ARFLAGS = rcs
 
+libfiles += dap.o
 libfiles += dir.o
 libfiles += error.o
 libfiles += file.o
@@ -35,6 +36,8 @@ libpure64.a: $(libfiles)
 	@echo "AR $@"
 	$(AR) $(ARFLAGS) $@ $^
 
+dap.o: dap.c dap.h misc.h stream.h
+
 dir.o: dir.c dir.h file.h misc.h path.h
 
 error.o: error.c error.h
@@ -43,7 +46,7 @@ file.o: file.c file.h misc.h
 
 fs.o: fs.c fs.h file.h dir.h path.h misc.h
 
-mbr.o: mbr.c mbr.h string.h stream.h misc.h
+mbr.o: mbr.c mbr.h string.h stream.h misc.h dap.h
 
 misc.o: misc.c misc.h
 

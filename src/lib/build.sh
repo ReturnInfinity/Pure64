@@ -11,6 +11,7 @@ CFLAGS="$CFLAGS -I ../../include"
 # Compiler is GNU
 CC=gcc
 # Build the object files
+$CC $CFLAGS -c dap.c
 $CC $CFLAGS -c dir.c
 $CC $CFLAGS -c error.c
 $CC $CFLAGS -c file.c
