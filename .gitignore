@@ -14,6 +14,8 @@ pure64-0.7.1/
 /src/util/mbr-data.c
 /src/util/pure64-data.h
 /src/util/pure64-data.c
+/src/util/stage-three-data.h
+/src/util/stage-three-data.c
 /docs/html
 /docs/latex
 /testing/kernel
