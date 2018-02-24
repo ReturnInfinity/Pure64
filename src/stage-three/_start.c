@@ -29,7 +29,9 @@ static int find_file_system(struct pure64_map *map);
 void load_kernel(struct pure64_map *map,
                  struct pure64_file *kernel);
 
-void load(void) {
+void _start(void) __attribute((section(".text._start")));
+
+void _start(void) {
 
 	struct pure64_map map;
 

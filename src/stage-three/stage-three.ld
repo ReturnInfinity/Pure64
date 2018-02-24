@@ -1,4 +1,9 @@
+ENTRY(_start)
+
 SECTIONS {
 	. = 0x60000;
-	.text : { *(.text) }
+	.text : {
+		*(.text._start);
+		*(.text);
+	}
 }
