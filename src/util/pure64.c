@@ -13,6 +13,7 @@
 
 #include "mbr-data.h"
 #include "pure64-data.h"
+#include "stage-three-data.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -430,11 +431,29 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	int err;
 	FILE *file;
 	long int pos;
-	uint64_t sector_count;
+	uint64_t st2_offset;
+	uint64_t st3_offset;
 	uint64_t fs_offset;
 	struct pure64_mbr mbr;
-
 	struct pure64_stream stream;
+
+	/* Check that the 2nd and 3rd stage
+	 * boot loaders aren't too big for
+	 * the BIOS function to read from. */
+
+	/* 0x7f is the maximum number of sectors that
+	 * the BIOS function can read. Make sure that
+	 * this limit is not exceeded. */
+
+	if (((pure64_data_size + 511) / 512) > 0x7f) {
+		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (((stage_three_data_size + 511) / 512) > 0x7f) {
+		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
+		return EXIT_FAILURE;
+	}
 
 	file = fopen(filename, "wb+");
 	if (file == NULL) {
@@ -452,16 +471,30 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	/** Write the second stage boot loader
-	 * to the specific location.
-	 * */
+	/* Set the locations of the boot loader
+	 * stages and file system. */
 
-	err = fseek(file, 0x2000, SEEK_SET);
+	st2_offset = 0x2000;
+	st3_offset = 0x2000 + pure64_data_size;
+	fs_offset = st3_offset + stage_three_data_size;
+
+	/* Round them off to the nearest sector. */
+
+	st2_offset = ((st2_offset + 511) / 512) * 512;
+	st3_offset = ((st3_offset + 511) / 512) * 512;
+	fs_offset = ((fs_offset + 511) / 512) * 512;
+
+	/* Seek to the location of the 2nd
+	 * stage boot loader. */
+
+	err = fseek(file, st2_offset, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to Pure64 location.\n");
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/* Write the second stage boot loader. */
 
 	if (fwrite(pure64_data, 1, pure64_data_size, file) != pure64_data_size) {
 		fprintf(stderr, "Failed to write Pure64 to '%s'.\n", filename);
@@ -469,13 +502,25 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	/** Write the file system to the
-	 * specific location.
-	 * */
+	/* Seek to the location of the 3rd
+	 * stage boot loader. */
 
-	fs_offset = 0x2000 + pure64_data_size;
-	if ((fs_offset % PURE64_DISK_LOCATION) != 0)
-		fs_offset += PURE64_DISK_LOCATION - (fs_offset % PURE64_DISK_LOCATION);
+	err = fseek(file, st3_offset, SEEK_SET);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to 3rd stage boot loader location.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* Write the third stage boot loader. */
+
+	if (fwrite(stage_three_data, 1, stage_three_data_size, file) != stage_three_data_size) {
+		fprintf(stderr, "Failed to write the third stage boot loader.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* Seek to the location of the file system. */
 
 	err = fseek(file, fs_offset, SEEK_SET);
 	if (err != 0) {
@@ -483,6 +528,10 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/** Write the file system to the
+	 * specific location.
+	 * */
 
 	pure64_stream_init(&stream);
 	stream.data = file;
@@ -513,27 +562,8 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fputc(0x00, file);
 	}
 
-	/* Adjust the size of the 2nd stage
-	 * boot loader so that it is in sector
-	 * units. */
-
-	if ((pure64_data_size % 512) != 0)
-		sector_count = (pure64_data_size + (512 - (pure64_data_size % 512))) / 512;
-	else
-		sector_count = pure64_data_size / 512;
-
-	/* 0x7f is the maximum number of sectors that
-	 * the BIOS function can read. Make sure that
-	 * this limit is not exceeded. */
-
-	if (sector_count > 0x7f) {
-		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
-		fclose(file);
-		return EXIT_FAILURE;
-	}
-
 	/* Update the MBR so that it knows where to find
-	 * the 2nd stage boot loader. */
+	 * the 2nd and 3rd stage boot loaders. */
 
 	pure64_mbr_zero(&mbr);
 
@@ -544,7 +574,10 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	mbr.load_sector_count = sector_count;
+	mbr.st2dap.sector = st2_offset / 512;
+	mbr.st2dap.sector_count = (pure64_data_size + 511) / 512;
+	mbr.st3dap.sector = st3_offset / 512;
+	mbr.st3dap.sector_count = (stage_three_data_size + 511) / 512;
 
 	err = pure64_mbr_write(&mbr, &stream);
 	if (err != 0) {
