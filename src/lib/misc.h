@@ -15,7 +15,11 @@ extern "C" {
 
 struct pure64_stream;
 
+int encode_uint16(uint16_t n, struct pure64_stream *file);
+
 int encode_uint64(uint64_t n, struct pure64_stream *file);
+
+int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file);
 
 int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file);
 
