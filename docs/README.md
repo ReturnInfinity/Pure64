@@ -1,8 +1,23 @@
-# Pure64 - v0.9.0 Manual
+# Pure64 Manual
 
-Pure64 must be loaded to the 32-bit memory address `0x00008000`
+This manual has the purpose of helping software developers understand how they should be using Pure64 to load their kernel.
 
-Pure64 expects that the up to 28KiB of data after it is the software that will be loaded to address `0x0000000000100000`.
+
+## Prerequisites
+
+This manual assumes you have some understanding of a typical boot process.
+
+You'll have to have GCC and NASM installed to build the software and Doxygen for the documentation.
+
+
+## Building
+
+In the top directory of Pure64, just run the following:
+
+```
+make
+sudo make install
+```
 
 
 ## System Requirements
@@ -14,16 +29,40 @@ At least 2 MiB of RAM
 The ability to boot via a hard drive, USB stick, or the network
 
 
-## Hard disk / USB boot
+## Creating a Disk Image
 
-`bmfs_mbr.asm` in the bootsectors folder shows how to boot via a BMFS formatted drive.
+Once Pure64 is installed, use the following set of commands to create a disk image.
 
-*Note*: Once Pure64 has executed you will lose access the the USB drive unless you have written a driver for it. The BIOS was used to load from it and you can't use the BIOS in 64-bit mode.
+```
+pure64 mkfs
+pure64 mkdir /boot
+pure64 cp my-kernel.bin /boot/kernel
+```
+
+Here's a breakdown of what each command is doing:
+
+  - The first command, `pure64 mkfs` creates an image called `pure64.img` and inserts the boot loader and file system, so that it runs when it's read by the computer firmware.
+  - The second command creates a directory in the file system contained in `pure64.img` and calls it `/boot`. This is important because the loader opens for the kernel at `/boot/kernel`.
+  - The last command copies the kernel into the file system contained in `pure64.img`, at `/boot/kernel`.
+
+When the kernel is loaded, it is loaded at the address `0x100000`. They entry point must be at the beginning of the binary.
+
+The ELF file format is also supported, just as long as it is found at `/boot/kernel`.
+If the kernel is formatted with ELF, then the entry point is defined by the ELF file and the load address is specified by the program headers.
+The load address in the ELF file should be at least `0x100000`.
 
 
-## Network boot
+## Running the Disk Image with QEMU
 
-`pxestart.asm` in the bootsectors folder shows how to build a PXE image.
+To run the disk image with qemu, enter the Pure64 directory and run `test.sh`.
+Like this:
+
+```
+pure64 mkfs
+pure64 mkdir /boot
+pure64 cp my-kernel.bin /boot/kernel
+./test.sh
+```
 
 
 ## Memory Map
