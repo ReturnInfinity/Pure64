@@ -101,7 +101,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><th>Memory Address</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
 <tr><td>0x5000</td><td>64-bit</td><td>ACPI</td><td>Address of the ACPI tables</td></tr>
 <tr><td>0x5008</td><td>32-bit</td><td>BSP_ID</td><td>APIC ID of the BSP</td></tr>
-<tr><td>0x5010</td><td>16-bit</td><td>CPUSPEED</td><td>Speed of the CPUs in MegaHertz (<a href="http://en.wikipedia.org/wiki/Mhz#Computing">MHz</a>)</td></tr>
+<tr><td>0x5010</td><td>16-bit</td><td>CPUSPEED</td><td>Speed of the CPUs in MegaHertz (<a href="http://en.wikipedia.org/wiki/Hertz">MHz</a>)</td></tr>
 <tr><td>0x5012</td><td>16-bit</td><td>CORES_ACTIVE</td><td>The number of CPU cores that were activated in the system</td></tr>
 <tr><td>0x5014</td><td>16-bit</td><td>CORES_DETECT</td><td>The number of CPU cores that were detected in the system</td></tr>
 <tr><td>0x5016 - 0x501F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
@@ -130,4 +130,4 @@ A copy of the E820 System Memory Map is stored at memory address `0x000000000000
 <tr><td>Extended Attributes</td><td>32-bit</td><td>ACPI 3.0 Extended Attributes bitfield</td></tr>
 <tr><td>Padding</td><td>64-bit</td><td>Padding for 32-byte alignment</td></tr>
 </table>
-For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820">OSDev wiki on E820</a>
+For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29">OSDev wiki on E820</a>
