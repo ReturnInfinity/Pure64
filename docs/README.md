@@ -29,6 +29,50 @@ At least 2 MiB of RAM
 The ability to boot via a hard drive, USB stick, or the network
 
 
+## Writing the Kernel with NASM
+
+Here's a minimal kernel, written for NASM, that you could use with Pure64.
+Once it's loaded, it enters an infinite loop.
+The file can be called `kernel.asm`.
+
+```
+ORG 0x100000
+
+start:
+	jmp start
+```
+
+The `ORG` statement tells NASM that the code should be made to run at the address, `0x100000`.
+
+Assemble it like this:
+
+```
+nasm kernel.asm -o kernel.bin
+```
+
+## Writing a Kernel with GCC
+
+Here's a similar example written in C with GCC.
+The file can be called `kernel.c`.
+
+```
+void _start(void) {
+
+	for (;;) {
+
+	}
+}
+```
+
+Compile is like this:
+
+```
+gcc kernel.c -o kernel -mno-red-zone -fno-stack-protector -fomit-frame-pointer
+```
+
+The flags added to the command are there to help GCC produce could that will run in kernel space.
+
+
 ## Creating a Disk Image
 
 Once Pure64 is installed, use the following set of commands to create a disk image.
