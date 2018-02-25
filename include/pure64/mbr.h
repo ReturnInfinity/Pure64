@@ -4,6 +4,8 @@
  * =============================================================================
  */
 
+/** @file mbr.h API related to the master boot record. */
+
 #ifndef PURE64_MBR_H
 #define PURE64_MBR_H
 

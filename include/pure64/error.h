@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file error.h API related to error codes. */
 
 #ifndef PURE64_ERROR_H
 #define PURE64_ERROR_H

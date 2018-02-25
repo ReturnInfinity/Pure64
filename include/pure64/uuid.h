@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file uuid.h UUID related functions and structures. */
 
 #ifndef PURE64_UUID_H
 #define PURE64_UUID_H

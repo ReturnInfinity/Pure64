@@ -4,6 +4,8 @@
  * =============================================================================
  */
 
+/** @file dap.h API related to the disk address packet structure. */
+
 #ifndef PURE64_DAP_H
 #define PURE64_DAP_H
 

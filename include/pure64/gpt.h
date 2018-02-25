@@ -4,6 +4,8 @@
  * =============================================================================
  */
 
+/** @file gpt.h API related to GPT functions. */
+
 #ifndef PURE64_GPT_H
 #define PURE64_GPT_H
 
