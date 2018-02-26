@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file stream.h API related to stream functions. */
 
 #ifndef PURE64_STREAM_H
 #define PURE64_STREAM_H

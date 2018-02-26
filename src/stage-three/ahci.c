@@ -334,11 +334,12 @@ int ahci_port_is_sata_drive(const volatile struct ahci_port *port) {
 
 int ahci_port_read(volatile struct ahci_port *port,
                    uint64_t sector,
-                   uint32_t count,
+                   uint32_t sector_count,
                    void *buf) {
 
 	uint32_t spin;
 	uint32_t slot;
+	uint64_t byte_count;
 	unsigned char *buf8;
 	uint64_t buf_offset;
 	struct command_list *cmd_list;
@@ -357,18 +358,21 @@ int ahci_port_read(volatile struct ahci_port *port,
 		return -1;
 	}
 
+	byte_count = sector_count * 512;
+
 	/* Make sure that the read count does not
 	 * exceed what's capable of the software. */
-	if (count > (prdt_payload * PRDT_COUNT)) {
-		count = prdt_payload * PRDT_COUNT;
+	if (byte_count > (prdt_payload * PRDT_COUNT)) {
+		byte_count = prdt_payload * PRDT_COUNT;
+		sector_count = byte_count / 512;
 	}
 
 	/* Find out how many PRDT entries are
 	 * required for this operation. */
-	if ((count % prdt_payload) != 0)
-		prdt_count = (count + prdt_payload) / prdt_payload;
+	if ((byte_count % prdt_payload) != 0)
+		prdt_count = (byte_count + prdt_payload) / prdt_payload;
 	else
-		prdt_count = count / prdt_payload;
+		prdt_count = byte_count / prdt_payload;
 
 	/* Setup the command header */
 
@@ -392,8 +396,8 @@ int ahci_port_read(volatile struct ahci_port *port,
 		/* Set the data destination address */
 		ahci_addr_set(&cmd_table->entries[i].data, &buf8[buf_offset]);
 		/* Calculate how much data this PRDT will hold */
-		if (((count * 512) - buf_offset) < prdt_payload)
-			cmd_table->entries[i].byte_count = ((count * 512) - buf_offset) - 1;
+		if ((byte_count - buf_offset) < prdt_payload)
+			cmd_table->entries[i].byte_count = (byte_count - buf_offset) - 1;
 		else
 			cmd_table->entries[i].byte_count = prdt_payload - 1;
 		/* Calculate the new value of the buffer offset */
@@ -418,8 +422,8 @@ int ahci_port_read(volatile struct ahci_port *port,
 	cmd_fis->lba5 = (sector >> 0x28) & 0xff;
 	/* Set LBA mode */
 	cmd_fis->device = 1 << 0x06;
-	cmd_fis->countl = (count >> 0) & 0xff;
-	cmd_fis->counth = (count >> 8) & 0xff;
+	cmd_fis->countl = (sector_count >> 0) & 0xff;
+	cmd_fis->counth = (sector_count >> 8) & 0xff;
 
 	/* Wait until the port is no longer
 	 * busy so that we can issue a command */
@@ -535,7 +539,6 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	uint64_t sector;
 	uint64_t sector_count;
 	uint64_t tailing_bytes;
-	uint64_t i;
 	uint64_t byte;
 	unsigned char *buf8;
 	struct ahci_stream *stream;
@@ -547,8 +550,53 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	/* Get the sector index */
 	sector = stream->position / 512;
 
-	/* Get the byte index */
+	/* Get the byte index within the sector */
 	byte = stream->position % 512;
+
+	/* Check if the read operation
+	 * can be done from the cache */
+	if (((sector * 512) >= stream->buf_offset)
+	 && ((sector * 512) < (stream->buf_offset + 512))
+	 && (((sector * 512) + size) < (stream->buf_offset + 512))) {
+
+		pure64_memcpy(buf, &stream->buf[byte], size);
+
+		stream->position += size;
+
+		return 0;
+	}
+
+	/* If the read operation starts
+	 * at the beginning of the sector
+	 * and reads less than a sector,
+	 * then it should be cached. */
+	if ((byte == 0) && (size < 512)) {
+
+		/* Read the data from the port */
+		err = ahci_port_read(stream->port, sector, 1, stream->buf);
+		if (err != 0)
+			return -1;
+
+		/* Set the cache parameters */
+		stream->buf_offset = sector * 512;
+		stream->buf_length = 512;
+
+
+		/* Copy the data to caller buffer */
+		pure64_memcpy(buf, stream->buf, size);
+
+		/* Update the position */
+		stream->position += size;
+
+		/* Done */
+		return 0;
+	}
+
+	/* The read operation could not
+	 * be done from cache, so reset
+	 * the cache parameters */
+	stream->buf_offset = 0;
+	stream->buf_length = 0;
 
 	err = ahci_port_read(stream->port,
 	                     sector,
@@ -567,15 +615,12 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 
 	sector_count = size / 512;
 
-	for (i = 1; i < sector_count; i++) {
-
-		err = ahci_port_read(stream->port, sector + i, 1, stream->buf);
+	if (sector_count > 0) {
+		err = ahci_port_read(stream->port, sector + 1, sector_count - 1, buf8);
 		if (err != 0)
 			return -1;
 
-		pure64_memcpy(buf8, stream->buf, 512);
-
-		buf8 += 512;
+		buf8 += (sector_count - 1) * 512;
 	}
 
 	tailing_bytes = size % 512;
@@ -611,4 +656,6 @@ void ahci_stream_init(struct ahci_stream *stream, volatile struct ahci_port *por
 	stream->base.set_pos = stream_set_pos;
 	stream->port = port;
 	stream->position = 0;
+	stream->buf_offset = 0;
+	stream->buf_length = 0;
 }

@@ -7,10 +7,13 @@
 #include <pure64/fs.h>
 #include <pure64/file.h>
 #include <pure64/error.h>
+#include <pure64/mbr.h>
 #include <pure64/stream.h>
+#include <pure64/uuid.h>
 
 #include "mbr-data.h"
 #include "pure64-data.h"
+#include "stage-three-data.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -233,89 +236,6 @@ static int calculate_checksums(FILE *file) {
 	return EXIT_SUCCESS;
 }
 
-/* * * * * * * * * *
- * UUID Declarations
- * * * * * * * * * */
-
-struct pure64_uuid {
-	uint8_t bytes[16];
-};
-
-static int pure64_uuid_parse(struct pure64_uuid *uuid, const char *str) {
-
-	unsigned int i;
-	unsigned int j;
-
-	i = 0;
-	j = 0;
-
-	while ((i < 16) && (str[j] != 0)) {
-
-		uuid->bytes[i] = 0;
-
-		char c = tolower(str[j]);
-		if ((c >= '0') && (c <= '9'))
-			uuid->bytes[i] |= ((c - '0') + 0x00) << 4;
-		else if ((c >= 'a') && (c <= 'f'))
-			uuid->bytes[i] |= ((c - 'a') + 0x0a) << 4;
-		else if (c == '-') {
-			j++;
-			continue;
-		} else
-			return -1;
-
-		c = tolower(str[j + 1]);
-		if ((c >= '0') && (c <= '9'))
-			uuid->bytes[i] |= (c - '0') + 0x00;
-		else if ((c >= 'a') && (c <= 'f'))
-			uuid->bytes[i] |= (c - 'a') + 0x0a;
-		else
-			return -1;
-
-		j += 2;
-		i++;
-	}
-
-	/* adjust for little endian encoding */
-
-	unsigned char buf[16];
-
-	/* little endian */
-
-	buf[0] = uuid->bytes[3];
-	buf[1] = uuid->bytes[2];
-	buf[2] = uuid->bytes[1];
-	buf[3] = uuid->bytes[0];
-
-	/* little endian */
-
-	buf[4] = uuid->bytes[5];
-	buf[5] = uuid->bytes[4];
-
-	/* little endian */
-
-	buf[6] = uuid->bytes[7];
-	buf[7] = uuid->bytes[6];
-
-	/* big endian */
-
-	buf[8] = uuid->bytes[8];
-	buf[9] = uuid->bytes[9];
-
-	/* big endian */
-
-	buf[10] = uuid->bytes[10];
-	buf[11] = uuid->bytes[11];
-	buf[12] = uuid->bytes[12];
-	buf[13] = uuid->bytes[13];
-	buf[14] = uuid->bytes[14];
-	buf[15] = uuid->bytes[15];
-
-	for (i = 0; i < 16; i++)
-		uuid->bytes[i] = buf[i];
-	return 0;
-}
-
 /* * * * * * * * * * * * *
  * GPT Header Definitions
  * * * * * * * * * * * * */
@@ -511,17 +431,39 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 	int err;
 	FILE *file;
 	long int pos;
-	uint64_t sector_count;
+	uint64_t st2_offset;
+	uint64_t st3_offset;
 	uint64_t fs_offset;
-	unsigned char sector_count_buf[2];
-
+	struct pure64_mbr mbr;
 	struct pure64_stream stream;
 
-	file = fopen(filename, "wb");
+	/* Check that the 2nd and 3rd stage
+	 * boot loaders aren't too big for
+	 * the BIOS function to read from. */
+
+	/* 0x7f is the maximum number of sectors that
+	 * the BIOS function can read. Make sure that
+	 * this limit is not exceeded. */
+
+	if (((pure64_data_size + 511) / 512) > 0x7f) {
+		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (((stage_three_data_size + 511) / 512) > 0x7f) {
+		fprintf(stderr, "2nd stage boot loader exceeds size limit.\n");
+		return EXIT_FAILURE;
+	}
+
+	file = fopen(filename, "wb+");
 	if (file == NULL) {
 		fprintf(stderr, "Failed to open '%s'.\n", filename);
 		return EXIT_FAILURE;
 	}
+
+	/* Write the master boot record to the
+	 * beginning of the file.
+	 * */
 
 	if (fwrite(mbr_data, 1, mbr_data_size, file) != mbr_data_size) {
 		fprintf(stderr, "Failed to write MBR to '%s'.\n", filename);
@@ -529,12 +471,30 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	err = fseek(file, 0x2000, SEEK_SET);
+	/* Set the locations of the boot loader
+	 * stages and file system. */
+
+	st2_offset = 0x2000;
+	st3_offset = 0x2000 + pure64_data_size;
+	fs_offset = st3_offset + stage_three_data_size;
+
+	/* Round them off to the nearest sector. */
+
+	st2_offset = ((st2_offset + 511) / 512) * 512;
+	st3_offset = ((st3_offset + 511) / 512) * 512;
+	fs_offset = ((fs_offset + 511) / 512) * 512;
+
+	/* Seek to the location of the 2nd
+	 * stage boot loader. */
+
+	err = fseek(file, st2_offset, SEEK_SET);
 	if (err != 0) {
 		fprintf(stderr, "Failed to seek to Pure64 location.\n");
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/* Write the second stage boot loader. */
 
 	if (fwrite(pure64_data, 1, pure64_data_size, file) != pure64_data_size) {
 		fprintf(stderr, "Failed to write Pure64 to '%s'.\n", filename);
@@ -542,9 +502,25 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		return EXIT_FAILURE;
 	}
 
-	fs_offset = 0x2000 + pure64_data_size;
-	if ((fs_offset % PURE64_DISK_LOCATION) != 0)
-		fs_offset += PURE64_DISK_LOCATION - (fs_offset % PURE64_DISK_LOCATION);
+	/* Seek to the location of the 3rd
+	 * stage boot loader. */
+
+	err = fseek(file, st3_offset, SEEK_SET);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to 3rd stage boot loader location.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* Write the third stage boot loader. */
+
+	if (fwrite(stage_three_data, 1, stage_three_data_size, file) != stage_three_data_size) {
+		fprintf(stderr, "Failed to write the third stage boot loader.\n");
+		fclose(file);
+		return EXIT_FAILURE;
+	}
+
+	/* Seek to the location of the file system. */
 
 	err = fseek(file, fs_offset, SEEK_SET);
 	if (err != 0) {
@@ -552,6 +528,10 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fclose(file);
 		return EXIT_FAILURE;
 	}
+
+	/** Write the file system to the
+	 * specific location.
+	 * */
 
 	pure64_stream_init(&stream);
 	stream.data = file;
@@ -582,36 +562,27 @@ static int ramfs_export(struct pure64_fs *fs, const char *filename) {
 		fputc(0x00, file);
 	}
 
-	/* get ready to update the required
-	 * number of sectors to read from the
-	 * master boot record */
+	/* Update the MBR so that it knows where to find
+	 * the 2nd and 3rd stage boot loaders. */
 
-	if ((pure64_data_size % 512) != 0)
-		sector_count = (pure64_data_size + (512 - (pure64_data_size % 512))) / 512;
-	else
-		sector_count = pure64_data_size / 512;
+	pure64_mbr_zero(&mbr);
 
-	/* encode as little-endian */
-
-	sector_count_buf[0] = (unsigned char)((sector_count >> 0x00) & 0xff);
-	sector_count_buf[1] = (unsigned char)((sector_count >> 0x08) & 0xff);
-
-	/* go to the location in the
-	 * master boot record that contains
-	 * the sector count to read.
-	 */
-
-	if (fseek(file, 0x01d2, SEEK_SET) != 0) {
-		fprintf(stderr, "Failed to seek to sector count offset.\n");
+	err = pure64_mbr_read(&mbr, &stream);
+	if (err != 0) {
+		fprintf(stderr, "Failed to read MBR: %s\n", pure64_strerror(err));
+		fclose(file);
 		return EXIT_FAILURE;
 	}
 
-	/* write the sector count to
-	 * the master boot record.
-	 */
+	mbr.st2dap.sector = st2_offset / 512;
+	mbr.st2dap.sector_count = (pure64_data_size + 511) / 512;
+	mbr.st3dap.sector = st3_offset / 512;
+	mbr.st3dap.sector_count = (stage_three_data_size + 511) / 512;
 
-	if (fwrite(sector_count_buf, 1, 2, file) != 2) {
-		fprintf(stderr, "Failed to write sector count.\n");
+	err = pure64_mbr_write(&mbr, &stream);
+	if (err != 0) {
+		fprintf(stderr, "Failed to write MBR: %s\n", pure64_strerror(err));
+		fclose(file);
 		return EXIT_FAILURE;
 	}
 

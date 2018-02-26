@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file fs.h API related to the Pure64 file system. */
 
 #ifndef PURE64_FS_H
 #define PURE64_FS_H
@@ -22,7 +22,7 @@
  * system used by Pure64.
  * */
 
-#define PURE64_FS_SECTOR 0x50
+#define PURE64_FS_SECTOR 59
 
 #ifdef __cplusplus
 extern "C" {

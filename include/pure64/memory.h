@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file memory.h API related to memory allocation functions. */
 
 #ifndef PURE64_MEMORY_H
 #define PURE64_MEMORY_H

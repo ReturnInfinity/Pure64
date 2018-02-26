@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file file.h API related to files in the Pure64 file system. */
 
 #ifndef PURE64_FILE_H
 #define PURE64_FILE_H

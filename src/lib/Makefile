@@ -13,14 +13,19 @@ CFLAGS += -fno-stack-protector
 CFLAGS += -fomit-frame-pointer
 CFLAGS += -g
 
+ARFLAGS = rcs
+
+libfiles += dap.o
 libfiles += dir.o
 libfiles += error.o
 libfiles += file.o
 libfiles += fs.o
+libfiles += mbr.o
 libfiles += misc.o
 libfiles += path.o
 libfiles += stream.o
 libfiles += string.o
+libfiles += uuid.o
 
 targets += libpure64.a
 
@@ -28,7 +33,10 @@ targets += libpure64.a
 all: $(targets)
 
 libpure64.a: $(libfiles)
+	@echo "AR $@"
 	$(AR) $(ARFLAGS) $@ $^
+
+dap.o: dap.c dap.h misc.h stream.h
 
 dir.o: dir.c dir.h file.h misc.h path.h
 
@@ -38,6 +46,8 @@ file.o: file.c file.h misc.h
 
 fs.o: fs.c fs.h file.h dir.h path.h misc.h
 
+mbr.o: mbr.c mbr.h string.h stream.h misc.h dap.h
+
 misc.o: misc.c misc.h
 
 path.o: path.c path.h
@@ -45,6 +55,12 @@ path.o: path.c path.h
 stream.o: stream.c stream.h
 
 string.o: string.c string.h
+
+uuid.o: uuid.c uuid.h string.h
+
+%.o: %.c
+	@echo "CC $@"
+	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:

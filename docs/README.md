@@ -1,8 +1,23 @@
-# Pure64 - v0.8.0 Manual
+# Pure64 Manual
 
-Pure64 must be loaded to the 32-bit memory address `0x00008000`
+This manual has the purpose of helping software developers understand how they should be using Pure64 to load their kernel.
 
-Pure64 expects that the up to 28KiB of data after it is the software that will be loaded to address `0x0000000000100000`.
+
+## Prerequisites
+
+This manual assumes you have some understanding of a typical boot process.
+
+You'll have to have GCC and NASM installed to build the software and Doxygen for the documentation.
+
+
+## Building
+
+In the top directory of Pure64, just run the following:
+
+```
+make
+sudo make install
+```
 
 
 ## System Requirements
@@ -14,16 +29,84 @@ At least 2 MiB of RAM
 The ability to boot via a hard drive, USB stick, or the network
 
 
-## Hard disk / USB boot
+## Writing the Kernel with NASM
 
-`bmfs_mbr.asm` in the bootsectors folder shows how to boot via a BMFS formatted drive.
+Here's a minimal kernel, written for NASM, that you could use with Pure64.
+Once it's loaded, it enters an infinite loop.
+The file can be called `kernel.asm`.
 
-*Note*: Once Pure64 has executed you will lose access the the USB drive unless you have written a driver for it. The BIOS was used to load from it and you can't use the BIOS in 64-bit mode.
+```
+ORG 0x100000
+
+start:
+	jmp start
+```
+
+The `ORG` statement tells NASM that the code should be made to run at the address, `0x100000`.
+
+Assemble it like this:
+
+```
+nasm kernel.asm -o kernel.bin
+```
+
+## Writing a Kernel with GCC
+
+Here's a similar example written in C with GCC.
+The file can be called `kernel.c`.
+
+```
+void _start(void) {
+
+	for (;;) {
+
+	}
+}
+```
+
+Compile is like this:
+
+```
+gcc kernel.c -o kernel -mno-red-zone -fno-stack-protector -fomit-frame-pointer
+```
+
+The flags added to the command are there to help GCC produce could that will run in kernel space.
 
 
-## Network boot
+## Creating a Disk Image
 
-`pxestart.asm` in the bootsectors folder shows how to build a PXE image.
+Once Pure64 is installed, use the following set of commands to create a disk image.
+
+```
+pure64 mkfs
+pure64 mkdir /boot
+pure64 cp my-kernel.bin /boot/kernel
+```
+
+Here's a breakdown of what each command is doing:
+
+  - The first command, `pure64 mkfs` creates an image called `pure64.img` and inserts the boot loader and file system, so that it runs when it's read by the computer firmware.
+  - The second command creates a directory in the file system contained in `pure64.img` and calls it `/boot`. This is important because the loader opens for the kernel at `/boot/kernel`.
+  - The last command copies the kernel into the file system contained in `pure64.img`, at `/boot/kernel`.
+
+When the kernel is loaded, it is loaded at the address `0x100000`. They entry point must be at the beginning of the binary.
+
+The ELF file format is also supported, just as long as it is found at `/boot/kernel`.
+If the kernel is formatted with ELF, then the entry point is defined by the ELF file and the load address is specified by the program headers.
+The load address in the ELF file should be at least `0x100000`.
+
+
+## Running the Disk Image with QEMU
+
+To run the disk image with qemu, enter the Pure64 directory and run `test.sh`.
+Like this:
+
+```
+pure64 mkfs
+pure64 mkdir /boot
+pure64 cp my-kernel.bin /boot/kernel
+./test.sh
+```
 
 
 ## Memory Map
@@ -62,7 +145,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><th>Memory Address</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
 <tr><td>0x5000</td><td>64-bit</td><td>ACPI</td><td>Address of the ACPI tables</td></tr>
 <tr><td>0x5008</td><td>32-bit</td><td>BSP_ID</td><td>APIC ID of the BSP</td></tr>
-<tr><td>0x5010</td><td>16-bit</td><td>CPUSPEED</td><td>Speed of the CPUs in MegaHertz (<a href="http://en.wikipedia.org/wiki/Mhz#Computing">MHz</a>)</td></tr>
+<tr><td>0x5010</td><td>16-bit</td><td>CPUSPEED</td><td>Speed of the CPUs in MegaHertz (<a href="http://en.wikipedia.org/wiki/Hertz">MHz</a>)</td></tr>
 <tr><td>0x5012</td><td>16-bit</td><td>CORES_ACTIVE</td><td>The number of CPU cores that were activated in the system</td></tr>
 <tr><td>0x5014</td><td>16-bit</td><td>CORES_DETECT</td><td>The number of CPU cores that were detected in the system</td></tr>
 <tr><td>0x5016 - 0x501F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
@@ -82,7 +165,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5100...</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 </table>
 
-A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.<p />
+A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
 <tr><td>Starting Address</td><td>64-bit</td><td>The starting address for this record</td></tr>
@@ -91,4 +174,4 @@ A copy of the E820 System Memory Map is stored at memory address `0x000000000000
 <tr><td>Extended Attributes</td><td>32-bit</td><td>ACPI 3.0 Extended Attributes bitfield</td></tr>
 <tr><td>Padding</td><td>64-bit</td><td>Padding for 32-byte alignment</td></tr>
 </table>
-For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29#BIOS_Function:_INT_0x15.2C_EAX_.3D_0xE820">OSDev wiki on E820</a><p />
+For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29">OSDev wiki on E820</a>

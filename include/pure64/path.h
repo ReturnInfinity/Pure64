@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file path.h API related to a file system path. */
 
 #ifndef PURE64_PATH_H
 #define PURE64_PATH_H

@@ -18,9 +18,11 @@
 
 USE32
 
+ORG 0x8000
+
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
-extern load
+STAGE3 equ 0x60000			; Stage three bootloader is at this address.
 
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
@@ -522,7 +524,7 @@ serial_done:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
-	call load
+	call STAGE3
 
 ; Fall into a halt if the function returns.
 halt:

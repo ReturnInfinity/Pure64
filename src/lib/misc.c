@@ -8,6 +8,21 @@
 
 #include <pure64/stream.h>
 
+int encode_uint16(uint16_t n, struct pure64_stream *file) {
+
+	int err;
+	unsigned char buf[2];
+
+	buf[0] = (n >> 0) & 0xff;
+	buf[1] = (n >> 8) & 0xff;
+
+	err = pure64_stream_write(file, buf, 2);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
 int encode_uint64(uint64_t n, struct pure64_stream *file) {
 
 	int err;
@@ -25,6 +40,23 @@ int encode_uint64(uint64_t n, struct pure64_stream *file) {
 	err = pure64_stream_write(file, buf, 8);
 	if (err != 0)
 		return err;
+
+	return 0;
+}
+
+int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file) {
+
+	unsigned char buf[2];
+
+	int err = pure64_stream_read(file, buf, 2);
+	if (err != 0)
+		return err;
+
+	uint16_t n = 0;
+	n |= ((uint16_t) buf[0]) << 0;
+	n |= ((uint16_t) buf[1]) << 8;
+
+	*n_ptr = n;
 
 	return 0;
 }

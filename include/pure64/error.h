@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-/** @file */
+/** @file error.h API related to error codes. */
 
 #ifndef PURE64_ERROR_H
 #define PURE64_ERROR_H
@@ -48,6 +48,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** Get a string representation of an
+ * error that occured in the Pure64 library.
+ * @param err The error code that was returned.
+ * @returns A human-readable error description.
+ * */
 
 const char *pure64_strerror(int err);
 

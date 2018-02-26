@@ -2,11 +2,12 @@ VERSION ?= 0.9.0
 
 .PHONY: all clean install
 all clean install:
-	$(MAKE) -C src/lib $@
-	$(MAKE) -C src/bootsectors $@
-	$(MAKE) -C src $@
-	$(MAKE) -C src/util $@
 	$(MAKE) -C include/pure64 $@
+	$(MAKE) -C src $@
+	$(MAKE) -C src/bootsectors $@
+	$(MAKE) -C src/lib $@
+	$(MAKE) -C src/stage-three $@
+	$(MAKE) -C src/util $@
 
 pure64-$(VERSION).tar.gz: pure64-$(VERSION)
 	tar -pcvzf $@ $<
@@ -22,6 +23,9 @@ pure64.img: all testing/kernel
 	./src/util/pure64 mkfs
 	./src/util/pure64 mkdir /boot
 	./src/util/pure64 cp testing/kernel /boot/kernel
+
+testing/kernel.sys: testing/kernel
+	objcopy -O binary $< $@
 
 testing/kernel: testing/kernel.o
 	ld $< -o $@
