@@ -23,6 +23,21 @@ int encode_uint16(uint16_t n, struct pure64_stream *file) {
 	return 0;
 }
 
+int encode_uint32(uint32_t n, struct pure64_stream *file) {
+
+	unsigned char buf[4];
+	buf[0] = (n >> 0) & 0xff;
+	buf[1] = (n >> 8) & 0xff;
+	buf[2] = (n >> 16) & 0xff;
+	buf[3] = (n >> 24) & 0xff;
+
+	int err = pure64_stream_write(file, buf, 4);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
 int encode_uint64(uint64_t n, struct pure64_stream *file) {
 
 	int err;
