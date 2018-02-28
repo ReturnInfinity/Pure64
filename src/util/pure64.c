@@ -394,6 +394,13 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	err = pure64_stream_set_pos(&disk.base, 0);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to MBR.\n");
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
 	err = pure64_stream_write(&disk.base, mbr_data, mbr_data_size);
 	if (err != 0) {
 		fprintf(stderr, "Failed to write multiboot record.\n");
