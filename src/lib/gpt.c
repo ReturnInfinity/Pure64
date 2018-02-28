@@ -6,6 +6,7 @@
 
 #include <pure64/gpt.h>
 
+#include <pure64/error.h>
 #include <pure64/memory.h>
 #include <pure64/stream.h>
 #include <pure64/string.h>
@@ -342,6 +343,15 @@ int pure64_gpt_entry_export(const struct pure64_gpt_entry *entry,
 	return 0;
 }
 
+int pure64_gpt_entry_is_valid(const struct pure64_gpt_entry *entry) {
+
+	if ((entry->first_lba == GPT_INVALID_LBA)
+	 || (entry->last_lba == GPT_INVALID_LBA))
+		return 0;
+	else
+		return 1;
+}
+
 void pure64_gpt_init(struct pure64_gpt *gpt) {
 	init_header(&gpt->primary_header);
 	init_header(&gpt->backup_header);
@@ -367,18 +377,12 @@ void pure64_gpt_set_disk_uuid(struct pure64_gpt *gpt,
 }
 
 int pure64_gpt_format(struct pure64_gpt *gpt,
-                      struct pure64_stream *stream) {
-
-	uint64_t stream_size = 0;
-
-	int err = pure64_stream_get_size(stream, &stream_size);
-	if (err != 0)
-		return err;
+                      uint64_t disk_size) {
 
 	/* Initialize primary */
 
 	gpt->primary_header.current_lba = 1;
-	gpt->primary_header.backup_lba = (stream_size - 512) / 512;
+	gpt->primary_header.backup_lba = (disk_size - 512) / 512;
 	gpt->primary_header.first_usable_lba = (1 + 1) * 512; /* mbr + gpt header */
 	gpt->primary_header.first_usable_lba += GPT_ENTRY_COUNT * GPT_ENTRY_SIZE;
 	gpt->primary_header.first_usable_lba /= 512;
@@ -406,7 +410,7 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
 
 	entries = pure64_realloc(gpt->primary_entries, 128 * sizeof(struct pure64_gpt_entry));
 	if (entries == NULL) {
-		return -1;
+		return PURE64_ENOMEM;
 	}
 
 	pure64_memset(entries, 0, 128 * sizeof(struct pure64_gpt_entry));
@@ -417,14 +421,14 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
 
 	entries = pure64_realloc(gpt->backup_entries, 128 * sizeof(struct pure64_gpt_entry));
 	if (entries == NULL) {
-		return -1;
+		return PURE64_ENOMEM;
 	}
 
 	pure64_memset(entries, 0, 128 * sizeof(struct pure64_gpt_entry));
 
 	gpt->backup_entries = entries;
 
-	return pure64_gpt_export(gpt, stream);
+	return 0;
 }
 
 int pure64_gpt_import(struct pure64_gpt *gpt,
@@ -468,6 +472,93 @@ int pure64_gpt_export(const struct pure64_gpt *gpt,
 	err = calculate_checksums(stream);
 	if (err != 0)
 		return err;
+
+	return 0;
+}
+
+int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              const char16_t *name) {
+
+	if ((entry_index > gpt->primary_header.partition_entry_count)
+	 || (entry_index > gpt->backup_header.partition_entry_count))
+		return PURE64_EINVAL;
+
+	uint64_t i = 0;
+
+	while ((name[i] != 0) && (i < 35)) {
+		gpt->primary_entries[entry_index].name[i] = name[i];
+		gpt->backup_entries[entry_index].name[i] = name[i];
+		i++;
+	}
+
+	gpt->primary_entries[entry_index].name[i] = 0;
+	gpt->backup_entries[entry_index].name[i] = 0;
+
+	return 0;
+}
+
+int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              const char *type_uuid_str) {
+
+	if ((entry_index > gpt->primary_header.partition_entry_count)
+	 || (entry_index > gpt->backup_header.partition_entry_count))
+		return PURE64_EINVAL;
+
+	struct pure64_uuid type_uuid;
+
+	int err = pure64_uuid_parse(&type_uuid, type_uuid_str);
+	if (err != 0)
+		return err;
+
+	pure64_uuid_copy(&gpt->primary_entries[entry_index].type_uuid, &type_uuid);
+
+	pure64_uuid_copy(&gpt->backup_entries[entry_index].type_uuid, &type_uuid);
+
+	return 0;
+}
+
+int pure64_gpt_set_entry_size(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              uint64_t size) {
+
+	if ((entry_index > gpt->primary_header.partition_entry_count)
+	 || (entry_index > gpt->backup_header.partition_entry_count))
+		return PURE64_EINVAL;
+
+	/* TODO : sort entries here */
+
+	uint64_t first_lba = gpt->primary_header.first_usable_lba;
+
+	uint64_t lba_count = (size + 511) / 512;
+	if (lba_count == 0)
+		lba_count = 1;
+
+	uint64_t last_lba = first_lba + lba_count - 1;
+
+	for (uint64_t i = 0; i < gpt->primary_header.partition_entry_count; i++) {
+
+		struct pure64_gpt_entry *entry = &gpt->primary_entries[i];
+
+		if (!pure64_gpt_entry_is_valid(entry))
+			continue;
+
+		if ((first_lba >= entry->first_lba)
+		 || (last_lba >= entry->first_lba)) {
+			first_lba = entry->last_lba + 1;
+			last_lba = first_lba + lba_count - 1;
+		}
+	}
+
+	if (last_lba > gpt->primary_header.last_usable_lba)
+		return PURE64_ENOSPC;
+
+	gpt->primary_entries[entry_index].first_lba = first_lba;
+	gpt->primary_entries[entry_index].last_lba = last_lba;
+
+	gpt->backup_entries[entry_index].first_lba = first_lba;
+	gpt->backup_entries[entry_index].last_lba = last_lba;
 
 	return 0;
 }

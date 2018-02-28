@@ -18,6 +18,10 @@
 #define PURE64_GPT_INVALID_LBA 0
 #endif
 
+#ifndef PURE64_GPT_INVALID_ENTRY
+#define PURE64_GPT_INVALID_ENTRY 0xffffffff
+#endif
+
 #ifndef PURE64_GPT_ENTRY_COUNT
 #define PURE64_GPT_ENTRY_COUNT 128
 #endif
@@ -154,18 +158,31 @@ void pure64_gpt_done(struct pure64_gpt *gpt);
 void pure64_gpt_set_disk_uuid(struct pure64_gpt *gpt,
                               const struct pure64_uuid *uuid);
 
-/** This function formats a stream
- * to GPT. If there is an existing
- * partition table, then it is overwritten
- * with a new one.
+/** Allocates a partition of a specified size and UUID.
  * @param gpt An initialized GPT structure.
- * @param stream The stream to format with GPT.
+ * @param uuid The UUID to use for the new GPT entry.
+ * @param lba_count The number of LBAs that
+ * the partition should be able to fit.
+ * @returns Zero on success, an error code
+ * on failure.
+ * */
+
+uint32_t pure64_gpt_alloc(struct pure64_gpt *gpt,
+                          const struct pure64_uuid *uuid,
+                          uint64_t lba_count);
+
+/** This function formats the GPT structure
+ * according to the size of the disk.
+ * @param gpt An initialized GPT structure.
+ * @param disk_size The size, in bytes, of
+ * the disk that the GPT structure will be
+ * exported to.
  * @returns Zero on success, an error code on
  * failure.
  * */
 
 int pure64_gpt_format(struct pure64_gpt *gpt,
-                      struct pure64_stream *stream);
+                      uint64_t disk_size);
 
 /** Import GPT data from a stream.
  * @param gpt The GPT structure to hold the data.
@@ -188,6 +205,28 @@ int pure64_gpt_import(struct pure64_gpt *gpt,
 
 int pure64_gpt_export(const struct pure64_gpt *gpt,
                       struct pure64_stream *stream);
+
+int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              const char *type_uuid);
+
+int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              const char16_t *name);
+
+/** Sets the size of a certain partition entry.
+ * This function will find the appropriate space
+ * that can fit the partition data.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the GPT entry.
+ * @param size The size, in bytes, that the partition
+ * should be able to fit.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_gpt_set_entry_size(struct pure64_gpt *gpt,
+                              uint32_t entry_index,
+                              uint64_t size);
 
 #ifdef __cplusplus
 } /* extern "C" { */
