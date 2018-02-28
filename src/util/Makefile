@@ -26,12 +26,14 @@ rc: rc.o
 
 rc.o: rc.c
 
-pure64: pure64.o stage-three-data.o pure64-data.o mbr-data.o -lpure64
+pure64: pure64.o stage-three-data.o pure64-data.o mbr-data.o fstream.o -lpure64
 
 pure64.exe: pure64.o stage-three-data.o pure64-data.o mbr-data.o -lpure64
 	x86_64-w64-mingw32-ld $^ -o $@
 
-pure64.o: pure64.c stage-three-data.h pure64-data.h mbr-data.h
+pure64.o: pure64.c stage-three-data.h pure64-data.h mbr-data.h fstream.h
+
+fstream.o: fstream.c fstream.h
 
 mbr-data.o: mbr-data.c
 
