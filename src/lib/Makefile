@@ -20,6 +20,7 @@ libfiles += dir.o
 libfiles += error.o
 libfiles += file.o
 libfiles += fs.o
+libfiles += gpt.o
 libfiles += mbr.o
 libfiles += misc.o
 libfiles += path.o
@@ -45,6 +46,8 @@ error.o: error.c error.h
 file.o: file.c file.h misc.h
 
 fs.o: fs.c fs.h file.h dir.h path.h misc.h
+
+gpt.o: gpt.c gpt.h string.h stream.h misc.h
 
 mbr.o: mbr.c mbr.h string.h stream.h misc.h dap.h
 
