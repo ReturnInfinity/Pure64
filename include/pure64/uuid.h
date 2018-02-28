@@ -19,32 +19,32 @@
 
 #endif
 
-#ifndef PURE64_UUID_PARTITION
-
-/** The UUID of the Pure64
- * partition type.
- * */
-
-#define PURE64_UUID_PARTITION "32cfd7f2-0e0a-4908-8d3b-16d7fb3a3c57"
-
-#endif
-
 #ifndef PURE64_UUID_STAGE_TWO
 
 /** The UUID for the stage
  * two boot loader partition.
  * */
 
-#define PURE64_UUID_INIT "daa1ab4e-7a2c-4404-8208-61a12c660382"
+#define PURE64_UUID_STAGE_TWO "daa1ab4e-7a2c-4404-8208-61a12c660382"
 
 #endif
 
-#ifndef PURE64_UUID_FS
+#ifndef PURE64_UUID_STAGE_THREE
+
+/** The UUID of the stage
+ * three partition.
+ * */
+
+#define PURE64_UUID_STAGE_THREE "32cfd7f2-0e0a-4908-8d3b-16d7fb3a3c57"
+
+#endif
+
+#ifndef PURE64_UUID_FILE_SYSTEM
 
 /** The UUID for Pure64's file system.
  * */
 
-#define PURE64_UUID_FS "f7439905-43da-4df0-b863-1f456e008b58"
+#define PURE64_UUID_FILE_SYSTEM "f7439905-43da-4df0-b863-1f456e008b58"
 
 #endif
 
@@ -73,6 +73,15 @@ struct pure64_uuid {
  * */
 
 void pure64_uuid_zero(struct pure64_uuid *uuid);
+
+/** Copies a UUID.
+ * @param dst The destination of the UUID.
+ * @param src The UUID to copy over to the
+ * destination.
+ * */
+
+void pure64_uuid_copy(struct pure64_uuid *dst,
+                      const struct pure64_uuid *src);
 
 /** Parse a UUID string.
  * @param uuid A UUID structure.
