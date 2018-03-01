@@ -15,19 +15,44 @@
 #include <uchar.h>
 
 #ifndef PURE64_GPT_INVALID_LBA
-#define PURE64_GPT_INVALID_LBA 0
-#endif
 
-#ifndef PURE64_GPT_INVALID_ENTRY
-#define PURE64_GPT_INVALID_ENTRY 0xffffffff
+/** This value represents an invalid
+ * or uninitialized LBA value. It is
+ * set to a value that cannot possibly
+ * occur on a 64, 32, or 16-bit system.
+ * */
+
+#define PURE64_GPT_INVALID_LBA 0xffffffffffffffff
+
 #endif
 
 #ifndef PURE64_GPT_ENTRY_COUNT
+
+/** This value represents the number
+ * of available partition entries that
+ * Pure64 allows for when formatting a
+ * disk. This value is not the number
+ * of entries that Pure64 supports on
+ * a GPT formatted disk, just the number
+ * of partition entries that Pure64 gives
+ * by default.
+ * */
+
 #define PURE64_GPT_ENTRY_COUNT 128
+
 #endif
 
 #ifndef PURE64_GPT_MINIMUM_SIZE
+
+/** This value is the size, in bytes,
+ * that GPT data occupies on the disk.
+ * Therefore, a disk must be at least
+ * this size if it should contain a GPT
+ * formatted partition table.
+ * */
+
 #define PURE64_GPT_MINIMUM_SIZE ((512 + (128 * PURE64_GPT_ENTRY_COUNT)) * 2)
+
 #endif
 
 #ifdef __cplusplus
