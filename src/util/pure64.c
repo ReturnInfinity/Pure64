@@ -329,23 +329,25 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 	const char *disk_uuid_str;
 	struct pure64_uuid disk_uuid;
 	int i;
-	unsigned long long int disk_size;
+	unsigned long long int fs_size;
+	uint64_t disk_size;
+	struct pure64_mbr mbr;
 	struct pure64_gpt gpt;
 	struct pure64_fstream disk;
 
 	disk_uuid_str = NULL;
-	disk_size = 1 * 1024 * 1024;
+	fs_size = 32 * 1024 * 1024;
 
 	for (i = 0; i < argc; i++) {
 		if (strcmp(argv[i], "--disk-uuid") == 0) {
 			disk_uuid_str = argv[i + 1];
 			i++;
-		} else if (strcmp(argv[i], "--disk-size") == 0) {
+		} else if (strcmp(argv[i], "--fs-size") == 0) {
 			if ((i + 1) >= argc) {
-				fprintf(stderr, "Disk size not specified.\n");
+				fprintf(stderr, "File system size not specified.\n");
 				return EXIT_FAILURE;
-			} else if (sscanf(argv[i + 1], "%llu", &disk_size) != 0) {
-				fprintf(stderr, "Malformed disk size was given");
+			} else if (sscanf(argv[i + 1], "%llu", &fs_size) != 0) {
+				fprintf(stderr, "Malformed file system: %s\n", argv[i + 1]);
 				return EXIT_FAILURE;
 			}
 		} else {
@@ -354,18 +356,9 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 		}
 	}
 
-	/* minimum gpt disk contains: */
+	/* pad file system size to nearest sector */
 
-	if (disk_size < PURE64_GPT_MINIMUM_SIZE) {
-		fprintf(stderr, "Disk size must be at least %u bytes.\n", 92U * 2U);
-		return EXIT_FAILURE;
-	}
-
-	/* pad disk to nearest sector */
-
-	if ((disk_size % 512) != 0) {
-		disk_size += (512 - (disk_size % 512));
-	}
+	fs_size = ((fs_size + 511) / 512) * 512;
 
 	if (disk_uuid_str == NULL) {
 		fprintf(stderr, "Warning: Disk UUID not specified.\n");
@@ -378,6 +371,8 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	/* Open the disk file */
+
 	pure64_fstream_init(&disk);
 
 	err = pure64_fstream_open(&disk, filename, "wb+");
@@ -387,12 +382,22 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	/* Resize the file based on the file system
+	 * size and all the static data. */
+
+	disk_size = PURE64_GPT_MINIMUM_SIZE;
+	disk_size += pure64_data_size;
+	disk_size += stage_three_data_size;
+	disk_size += fs_size;
+
 	err = pure64_fstream_resize(&disk, disk_size);
 	if (err != 0) {
 		fprintf(stderr, "Failed to resize '%s'.\n", filename);
 		pure64_fstream_done(&disk);
 		return EXIT_FAILURE;
 	}
+
+	/* Write the master boot record */
 
 	err = pure64_stream_set_pos(&disk.base, 0);
 	if (err != 0) {
@@ -408,17 +413,170 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	/* Initialize the GPT structure */
+
 	pure64_gpt_init(&gpt);
 
 	pure64_gpt_set_disk_uuid(&gpt, &disk_uuid);
 
-	err = pure64_gpt_format(&gpt, &disk.base);
+	/* Format the GPT structure */
+
+	err = pure64_gpt_format(&gpt, disk_size);
 	if (err != 0) {
-		fprintf(stderr, "Failed to format '%s' with GPT: %s\n", filename, pure64_strerror(err));
+		fprintf(stderr, "Failed to format GPT: %s\n", pure64_strerror(err));
 		pure64_gpt_done(&gpt);
 		pure64_fstream_done(&disk);
 		return EXIT_FAILURE;
 	}
+
+	/* Initialize stage two partition */
+
+	err = pure64_gpt_set_entry_type(&gpt, 0, PURE64_UUID_STAGE_TWO);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry type: %s\n", pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_name(&gpt, 0, u"Pure64 Stage Two");
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_size(&gpt, 0, pure64_data_size);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry #%u size: %s\n", 0, pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_stream_set_pos(&disk.base, gpt.primary_entries[0].first_lba * 512);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_stream_write(&disk.base, pure64_data, pure64_data_size);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	/* Initialize stage three partition */
+
+	err = pure64_gpt_set_entry_type(&gpt, 1, PURE64_UUID_STAGE_THREE);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry type: %s\n", pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_name(&gpt, 1, u"Pure64 Stage Three");
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_size(&gpt, 1, stage_three_data_size);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry #%u size: %s\n", 1, pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_stream_set_pos(&disk.base, gpt.primary_entries[1].first_lba * 512);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_stream_write(&disk.base, stage_three_data, stage_three_data_size);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	/* Initialize file system partition */
+
+	err = pure64_gpt_set_entry_type(&gpt, 2, PURE64_UUID_FILE_SYSTEM);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry type: %s\n", pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_name(&gpt, 2, u"Pure64 File System");
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_gpt_set_entry_size(&gpt, 2, 4096);
+	if (err != 0) {
+		fprintf(stderr, "Failed to set GPT entry #%u size: %s\n", 2, pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	/* Export the GPT structure to disk */
+
+	err = pure64_gpt_export(&gpt, &disk.base);
+	if (err != 0) {
+		fprintf(stderr, "Failed to export GPT to '%s': %s\n", filename, pure64_strerror(err));
+		pure64_gpt_done(&gpt);
+		pure64_fstream_done(&disk);
+		return EXIT_FAILURE;
+	}
+
+	/* Update the MBR to load to the second
+	 * and third stage boot loaders properly. */
+
+	err = pure64_stream_set_pos(&disk.base, 0x00);
+	if (err != 0) {
+		fprintf(stderr, "Failed to seek to MBR: %s\n", pure64_strerror(err));
+		pure64_fstream_done(&disk);
+		pure64_gpt_done(&gpt);
+		return EXIT_FAILURE;
+	}
+
+	pure64_mbr_zero(&mbr);
+
+	err = pure64_mbr_read(&mbr, &disk.base);
+	if (err != 0) {
+		fprintf(stderr, "Failed to read MBR: %s\n", pure64_strerror(err));
+		pure64_fstream_done(&disk);
+		pure64_gpt_done(&gpt);
+		return EXIT_FAILURE;
+	}
+
+	mbr.st2dap.sector = gpt.primary_entries[0].first_lba;
+	mbr.st2dap.sector_count = (pure64_data_size + 511) / 512;
+	mbr.st3dap.sector = gpt.primary_entries[1].first_lba;
+	mbr.st3dap.sector_count = (stage_three_data_size + 511) / 512;
+
+	err = pure64_mbr_write(&mbr, &disk.base);
+	if (err != 0) {
+		fprintf(stderr, "Failed to write MBR: %s\n", pure64_strerror(err));
+		pure64_fstream_done(&disk);
+		pure64_gpt_done(&gpt);
+		return EXIT_FAILURE;
+	}
+
+	/* Release memory and exit. */
 
 	pure64_gpt_done(&gpt);
 
