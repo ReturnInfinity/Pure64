@@ -16,6 +16,7 @@ $CC $CFLAGS -c dir.c
 $CC $CFLAGS -c error.c
 $CC $CFLAGS -c file.c
 $CC $CFLAGS -c fs.c
+$CC $CFLAGS -c gpt.c
 $CC $CFLAGS -c mbr.c
 $CC $CFLAGS -c misc.c
 $CC $CFLAGS -c path.c
