@@ -313,6 +313,14 @@ int pure64_gpt_header_export(const struct pure64_gpt_header *header,
 	return 0;
 }
 
+void pure64_gpt_entry_init(struct pure64_gpt_entry *entry) {
+	pure64_uuid_zero(&entry->type_uuid);
+	pure64_uuid_zero(&entry->entry_uuid);
+	entry->first_lba = PURE64_GPT_INVALID_LBA;
+	entry->last_lba = PURE64_GPT_INVALID_LBA;
+	entry->attributes = 0;
+}
+
 int pure64_gpt_entry_export(const struct pure64_gpt_entry *entry,
                             struct pure64_stream *stream) {
 
@@ -413,7 +421,8 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
 		return PURE64_ENOMEM;
 	}
 
-	pure64_memset(entries, 0, 128 * sizeof(struct pure64_gpt_entry));
+	for (uint32_t i = 0; i < PURE64_GPT_ENTRY_COUNT; i++)
+		pure64_gpt_entry_init(&entries[i]);
 
 	gpt->primary_entries = entries;
 
@@ -424,7 +433,8 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
 		return PURE64_ENOMEM;
 	}
 
-	pure64_memset(entries, 0, 128 * sizeof(struct pure64_gpt_entry));
+	for (uint32_t i = 0; i < PURE64_GPT_ENTRY_COUNT; i++)
+		pure64_gpt_entry_init(&entries[i]);
 
 	gpt->backup_entries = entries;
 
