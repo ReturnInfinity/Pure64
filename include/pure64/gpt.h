@@ -22,7 +22,7 @@
  * occur on a 64, 32, or 16-bit system.
  * */
 
-#define PURE64_GPT_INVALID_LBA 0xffffffffffffffff
+#define PURE64_GPT_INVALID_LBA 0
 
 #endif
 
@@ -130,6 +130,17 @@ struct pure64_gpt_entry {
 	 * encoded as UTF-16LE. */
 	char16_t name[36];
 };
+
+/** Initializes a GPT partition entry.
+ * The function initializes the entry
+ * in a way that it can be distinguished
+ * as an empty one.
+ * This function should only be used
+ * internally.
+ * @param entry The entry to initialize.
+ * */
+
+void pure64_gpt_entry_init(struct pure64_gpt_entry *entry);
 
 /** Export a GPT entry to a stream.
  * This function should only be used
