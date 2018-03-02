@@ -24,6 +24,7 @@ libfiles += gpt.o
 libfiles += mbr.o
 libfiles += misc.o
 libfiles += path.o
+libfiles += partition.o
 libfiles += stream.o
 libfiles += string.o
 libfiles += uuid.o
@@ -54,6 +55,8 @@ mbr.o: mbr.c mbr.h string.h stream.h misc.h dap.h
 misc.o: misc.c misc.h
 
 path.o: path.c path.h
+
+partition.o: partition.c partition.h stream.h
 
 stream.o: stream.c stream.h
 
