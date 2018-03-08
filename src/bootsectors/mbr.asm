@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2017 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
@@ -42,11 +42,6 @@ entry:
 	sti				; Enable interrupts
 
 	mov [DriveNumber], dl		; BIOS passes drive number in DL
-
-;	mov edi, 0x00004000		; Clear out memory for the E820 map
-;	xor eax, eax
-;	mov ecx, 2048
-;	rep stosd
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -207,7 +202,7 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-msg_Load db "BMFS MBR v1.0", 0
+msg_Load db "Pure64 MBR v1.0", 0
 msg_MagicFail db " - Error!", 0
 msg_ReadFail db "Failed to read drive.", 13, 10, 0
 
@@ -281,3 +276,5 @@ VBEModeInfoBlock.DirectColorModeInfo	equ VBEModeInfoBlock + 39	; DB - direct col
 VBEModeInfoBlock.PhysBasePtr		equ VBEModeInfoBlock + 40	; DD - physical address for flat memory frame buffer
 VBEModeInfoBlock.Reserved1		equ VBEModeInfoBlock + 44	; DD - Reserved - always set to 0
 VBEModeInfoBlock.Reserved2		equ VBEModeInfoBlock + 48	; DD - Reserved - always set to 0
+
+; EOF
