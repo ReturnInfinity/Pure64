@@ -8,7 +8,9 @@
 
 #include "pci.h"
 
+#include <pure64/error.h>
 #include <pure64/string.h>
+#include <pure64/memory.h>
 
 /* * * * * *
  * Constants
@@ -40,6 +42,10 @@
 
 #ifndef ATA_DEV_DRQ
 #define ATA_DEV_DRQ 0x08
+#endif
+
+#ifndef AHCI_CACHE_MAX
+#define AHCI_CACHE_MAX 0x4000
 #endif
 
 /* * * * * * * * * * * * * * *
@@ -553,14 +559,22 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	/* Get the byte index within the sector */
 	byte = stream->position % 512;
 
+	sector_count = (size + 511) / 512;
+
 	/* Check if the read operation
 	 * can be done from the cache */
-	if (((sector * 512) >= stream->buf_offset)
-	 && ((sector * 512) < (stream->buf_offset + 512))
-	 && (((sector * 512) + size) < (stream->buf_offset + 512))) {
+	if ((sector >= stream->buf_sector)
+	 && (sector < (stream->buf_sector + stream->buf_sector_count))
+	 && ((sector + sector_count) <= (stream->buf_sector + stream->buf_sector_count))) {
 
-		pure64_memcpy(buf, &stream->buf[byte], size);
+		/* Calculate the cache position */
+		uint64_t cache_pos = (sector - stream->buf_sector) * 512;
+		cache_pos += byte;
 
+		/* Copy over the cache data. */
+		pure64_memcpy(buf, &stream->buf[cache_pos], size);
+
+		/* Update the stream position. */
 		stream->position += size;
 
 		return 0;
@@ -570,17 +584,20 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	 * at the beginning of the sector
 	 * and reads less than a sector,
 	 * then it should be cached. */
-	if ((byte == 0) && (size < 512)) {
+	if ((byte == 0) && (size <= AHCI_CACHE_MAX)) {
+
+		unsigned char *tmp = pure64_realloc(stream->buf, sector_count * 512);
+		if (tmp == NULL)
+			return PURE64_ENOMEM;
 
 		/* Read the data from the port */
-		err = ahci_port_read(stream->port, sector, 1, stream->buf);
+		err = ahci_port_read(stream->port, sector, sector_count, stream->buf);
 		if (err != 0)
 			return -1;
 
 		/* Set the cache parameters */
-		stream->buf_offset = sector * 512;
-		stream->buf_length = 512;
-
+		stream->buf_sector = sector;
+		stream->buf_sector_count = sector_count;
 
 		/* Copy the data to caller buffer */
 		pure64_memcpy(buf, stream->buf, size);
@@ -595,8 +612,8 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	/* The read operation could not
 	 * be done from cache, so reset
 	 * the cache parameters */
-	stream->buf_offset = 0;
-	stream->buf_length = 0;
+	stream->buf_sector = 0;
+	stream->buf_sector_count = 0;
 
 	err = ahci_port_read(stream->port,
 	                     sector,
@@ -638,6 +655,17 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	return 0;
 }
 
+static int stream_get_pos(void *stream_ptr, uint64_t *pos) {
+
+	struct ahci_stream *ahci_stream;
+
+	ahci_stream = (struct ahci_stream *) stream_ptr;
+
+	*pos = ahci_stream->position;
+
+	return 0;
+}
+
 static int stream_set_pos(void *stream_ptr, uint64_t pos) {
 
 	struct ahci_stream *ahci_stream;
@@ -653,9 +681,11 @@ void ahci_stream_init(struct ahci_stream *stream, volatile struct ahci_port *por
 	pure64_stream_init(&stream->base);
 	stream->base.data = stream;
 	stream->base.read = stream_read;
+	stream->base.get_pos = stream_get_pos;
 	stream->base.set_pos = stream_set_pos;
 	stream->port = port;
 	stream->position = 0;
-	stream->buf_offset = 0;
-	stream->buf_length = 0;
+	stream->buf = NULL;
+	stream->buf_sector = 0;
+	stream->buf_sector_count = 0;
 }
