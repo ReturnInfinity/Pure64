@@ -8,6 +8,8 @@
 #include <pure64/error.h>
 #include <pure64/file.h>
 #include <pure64/fs.h>
+#include <pure64/gpt.h>
+#include <pure64/partition.h>
 #include <pure64/string.h>
 
 #include "ahci.h"
@@ -16,7 +18,6 @@
 #include "e820.h"
 #include "hooks.h"
 #include "map.h"
-#include "string.h"
 
 #ifndef NULL
 #define NULL ((void *) 0x00)
@@ -46,10 +47,11 @@ void _start(void) {
 
 static int ahci_visit_port(void *map_ptr, volatile struct ahci_port *port) {
 
-	int err;
 	struct pure64_fs fs;
 	struct pure64_file *kernel;
 	struct ahci_stream stream;
+	struct pure64_gpt gpt;
+	struct pure64_partition fs_partition;
 
 	/* Bail out if port isn't SATA */
 	if (!ahci_port_is_sata_drive(port))
@@ -58,15 +60,74 @@ static int ahci_visit_port(void *map_ptr, volatile struct ahci_port *port) {
 	/* Initialize the port as a stream. */
 	ahci_stream_init(&stream, port);
 
-	/* Set the stream to the correct position. */
-	pure64_stream_set_pos(&stream.base, PURE64_FS_SECTOR * 512);
+	/* Initialize the GPT structure */
+	pure64_gpt_init(&gpt);
+
+	/* Attempt to read the GPT from the AHCI port. */
+	int err = pure64_gpt_import(&gpt, &stream.base);
+	if (err != 0) {
+		debug("not a GPT drive\n");
+		/* Not a GPT formatted drive. */
+		pure64_gpt_done(&gpt);
+		return 0;
+	}
+
+	/* The file system entry will be set to
+	 * this variable if it is found. */
+	const struct pure64_gpt_entry *fs_entry = NULL;
+
+	/* Look for the file system partition. */
+	for (uint32_t i = 0; i < PURE64_GPT_ENTRY_COUNT; i++) {
+
+		const struct pure64_gpt_entry *entry = pure64_gpt_get_entry(&gpt, i);
+
+		/* Make sure that the entry is a valid one. */
+		if (entry == NULL)
+			continue;
+
+		if (!pure64_gpt_entry_is_used(entry))
+			continue;
+
+		if (pure64_gpt_entry_is_type(entry, PURE64_UUID_FILE_SYSTEM)) {
+			/* Found the file system, exit
+			 * the loop. */
+			fs_entry = entry;
+			break;
+		}
+	}
+
+	/* Check if the loop found the file system. */
+	if (fs_entry == NULL) {
+		debug("does not contain file system partition.\n");
+		/* The file system was not found. */
+		pure64_gpt_done(&gpt);
+		return 0;
+	}
+
+	debug("Found file system partition.\n");
+
+	/* Initialize the file system partition. */
+	pure64_partition_init(&fs_partition);
+
+	/* Set the starting position of the partition. */
+	pure64_partition_set_offset(&fs_partition, pure64_gpt_entry_get_offset(fs_entry));
+
+	/* Set the size of the partition. */
+	pure64_partition_set_size(&fs_partition, pure64_gpt_entry_get_size(fs_entry));
+
+	/* Done with the GPT structure.
+	 * Release its memory. */
+	pure64_gpt_done(&gpt);
+
+	/* Set the disk to the AHCI port stream. */
+	pure64_partition_set_disk(&fs_partition, &stream.base);
 
 	/* Initialize the file system. */
 	pure64_fs_init(&fs);
 
 	/* Import the file system from the
 	 * AHCI stream. */
-	err = pure64_fs_import(&fs, &stream.base);
+	err = pure64_fs_import(&fs, &fs_partition.stream);
 	if (err != 0) {
 		if (err == PURE64_EINVAL)
 			debug("Failed to import FS: Invalid file system signature.\n");
