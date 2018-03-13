@@ -11,9 +11,6 @@
 
 #include <pure64/uuid.h>
 
-#include <stdint.h>
-#include <uchar.h>
-
 #ifndef PURE64_GPT_INVALID_LBA
 
 /** This value represents an invalid
@@ -70,6 +67,8 @@ struct pure64_gpt_header {
 	char signature[8];
 	/** The version of the GPT layout. */
 	uint32_t version;
+	/** The size of this header on disk. */
+	uint32_t header_size;
 	/** The 32-bit CRC checksum of this header. */
 	uint32_t checksum;
 	/** Reserved */
@@ -128,7 +127,7 @@ struct pure64_gpt_entry {
 	uint64_t attributes;
 	/** The name of the partition,
 	 * encoded as UTF-16LE. */
-	char16_t name[36];
+	uint16_t name[36];
 };
 
 /** Initializes a GPT partition entry.
@@ -141,6 +140,35 @@ struct pure64_gpt_entry {
  * */
 
 void pure64_gpt_entry_init(struct pure64_gpt_entry *entry);
+
+/** Indicates whether or not a partition
+ * is used. This is useful for iterating
+ * the partition entries, since some of them might
+ * not actually point to a partition.
+ * @param entry An initialized GPT entry.
+ * @returns One if the entry is used, zero
+ * of it is not.
+ * */
+
+int pure64_gpt_entry_is_used(const struct pure64_gpt_entry *entry);
+
+int pure64_gpt_entry_is_type(const struct pure64_gpt_entry *entry,
+                             const char *type_uuid);
+
+/** Get the offset, in terms of bytes, of the
+ * start of the partition.
+ * @param entry The entry to get the offset of.
+ * @returns The offset of the partition data on disk.
+ * */
+
+uint64_t pure64_gpt_entry_get_offset(const struct pure64_gpt_entry *entry);
+
+/** Get the size of the partition, in terms of bytes.
+ * @param entry The entry to get the size of.
+ * @returns The size of the partition, in terms of bytes.
+ * */
+
+uint64_t pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
 
 /** Export a GPT entry to a stream.
  * This function should only be used
@@ -220,6 +248,46 @@ uint32_t pure64_gpt_alloc(struct pure64_gpt *gpt,
 int pure64_gpt_format(struct pure64_gpt *gpt,
                       uint64_t disk_size);
 
+/** Locates the first unused entry in the partition
+ * header entry array.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index A pointer to a variable that
+ * will receive the index of the unused entry, if
+ * it is found.
+ * @returns Zero if an unused entry is found. An
+ * error code is returned if the function was unable
+ * to find an unused entry.
+ * */
+
+int pure64_gpt_find_unused_entry(const struct pure64_gpt *gpt,
+                                 uint32_t *entry_index);
+
+/** Gets the offset, in bytes, of a partition described
+ * in the partition table.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the partition header entry.
+ * @param offset A pointer to the variable that will receive
+ * the partition offset.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_gpt_get_partition_offset(const struct pure64_gpt *gpt,
+                                    uint32_t entry_index,
+                                    uint64_t *offset);
+
+/** Gets the size, in bytes, of a partition described
+ * in the partition table.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the partition header entry.
+ * @param size A pointer to the variable that will receive
+ * the partition size.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_gpt_get_partition_size(const struct pure64_gpt *gpt,
+                                  uint32_t entry_index,
+                                  uint64_t *size);
+
 /** Import GPT data from a stream.
  * @param gpt The GPT structure to hold the data.
  * @param stream The stream to read the GPT data from.
@@ -242,13 +310,25 @@ int pure64_gpt_import(struct pure64_gpt *gpt,
 int pure64_gpt_export(const struct pure64_gpt *gpt,
                       struct pure64_stream *stream);
 
+/** Gets an entry structure by reference
+ * of its index within the partition table.
+ * @param gpt An initialized GPT structure.
+ * @param index The index of the partition entry.
+ * @returns A pointer to the entry is returned
+ * on success. A null pointer is returned on
+ * failure.
+ * */
+
+const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt,
+                                                    uint32_t index);
+
 int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
                               uint32_t entry_index,
                               const char *type_uuid);
 
 int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
                               uint32_t entry_index,
-                              const char16_t *name);
+                              const uint16_t *name);
 
 /** Sets the size of a certain partition entry.
  * This function will find the appropriate space
