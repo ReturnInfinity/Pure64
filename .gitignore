@@ -12,6 +12,12 @@ pure64-0.7.1/
 /src/util/rc
 /src/util/mbr-data.h
 /src/util/mbr-data.c
+/src/util/multiboot-data.h
+/src/util/multiboot-data.c
+/src/util/multiboot2-data.h
+/src/util/multiboot2-data.c
+/src/util/pxe-data.h
+/src/util/pxe-data.c
 /src/util/pure64-data.h
 /src/util/pure64-data.c
 /src/util/stage-three-data.h
