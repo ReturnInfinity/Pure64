@@ -67,6 +67,15 @@ int pure64_fstream_open(struct pure64_fstream *fstream,
 int pure64_fstream_resize(struct pure64_fstream *fstream,
                           long int size);
 
+/** Zeroes out data on the file stream.
+ * @param fstream An initialized file stream.
+ * @param count The number of bytes to zero.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_fstream_zero(struct pure64_fstream *fstream,
+                        unsigned long int count);
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif

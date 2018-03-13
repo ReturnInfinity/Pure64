@@ -9,6 +9,7 @@
 #include <pure64/error.h>
 
 #include <limits.h>
+#include <stdlib.h>
 
 static int fstream_set_pos(void *file_ptr, uint64_t pos_ptr) {
 
@@ -133,6 +134,37 @@ int pure64_fstream_open(struct pure64_fstream *fstream,
 
 	fstream->file = file;
 	fstream->base.data = file;
+
+	return 0;
+}
+
+int pure64_fstream_zero(struct pure64_fstream *fstream,
+                        unsigned long int count) {
+
+	unsigned long int buf_size = 4096;
+
+	unsigned char *buf = calloc(1, buf_size);
+
+	unsigned long int read_count = 0;
+
+	while ((read_count + buf_size) < count) {
+
+		int err = pure64_stream_write(&fstream->base, buf, buf_size);
+		if (err != 0) {
+			free(buf);
+			return err;
+		}
+
+		read_count += buf_size;
+	}
+
+	int err = pure64_stream_write(&fstream->base, buf, count - read_count);
+	if (err != 0) {
+		free(buf);
+		return err;
+	}
+
+	free(buf);
 
 	return 0;
 }
