@@ -76,6 +76,25 @@ int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file) {
 	return 0;
 }
 
+int decode_uint32(uint32_t *n_ptr, struct pure64_stream *file) {
+
+	unsigned char buf[4];
+
+	int err = pure64_stream_read(file, buf, sizeof(buf));
+	if (err != 0)
+		return err;
+
+	uint32_t n = 0;
+	n |= ((uint32_t) buf[0]) << 0;
+	n |= ((uint32_t) buf[1]) << 8;
+	n |= ((uint32_t) buf[2]) << 16;
+	n |= ((uint32_t) buf[3]) << 24;
+
+	*n_ptr = n;
+
+	return 0;
+}
+
 int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file) {
 
 	int err;
