@@ -36,6 +36,10 @@ struct pure64_partition {
 	/** The number of bytes that
 	 * are occupied by the partition. */
 	uint64_t size;
+	/** The position of the next read
+	 * or write operation within the
+	 * partition. */
+	uint64_t position;
 };
 
 /** Initializes a Pure64 partition.
@@ -53,21 +57,20 @@ void pure64_partition_init(struct pure64_partition *partition);
 
 void pure64_partition_done(struct pure64_partition *partition);
 
-/** Assign the stream to use for the
+/** Assign the disk stream to use for the
  * partition. The start and offset of
  * the partition should also be set,
  * so that the read and write functions
- * function within the bounds of the
- * partition.
+ * function within the bounds of the partition.
  * @param partition The partition structure
- * to assign the stream to.
- * @param stream The stream to assign to
- * the partition. This would typically
+ * to assign the disk stream to.
+ * @param disk The disk stream to assign
+ * to the partition. This would typically
  * be a disk but it does not have to be.
  * */
 
-void pure64_partition_set_stream(struct pure64_partition *partition,
-                                 struct pure64_stream *stream);
+void pure64_partition_set_disk(struct pure64_partition *partition,
+                               struct pure64_stream *disk);
 
 /** Set the number of bytes contained by the partition.
  * @param partition The partition to set the size of.
@@ -77,7 +80,7 @@ void pure64_partition_set_stream(struct pure64_partition *partition,
  * */
 
 void pure64_partition_set_size(struct pure64_partition *partition,
-                                uint64_t size);
+                               uint64_t size);
 
 /** Set the starting point of the partition, in terms
  * of bytes. After using this function, read and write
@@ -89,7 +92,7 @@ void pure64_partition_set_size(struct pure64_partition *partition,
  * */
 
 void pure64_partition_set_offset(struct pure64_partition *partition,
-                                uint64_t offset);
+                                 uint64_t offset);
 
 #ifdef __cplusplus
 } /* extern "C" { */
