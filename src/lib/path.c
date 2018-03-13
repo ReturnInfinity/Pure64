@@ -9,22 +9,19 @@
 #include <pure64/memory.h>
 #include <pure64/string.h>
 
-static int
-is_separator(char c) {
+static int is_separator(char c) {
 	if ((c == '/') || (c == '\\'))
 		return 1;
 	else
 		return 0;
 }
 
-void
-pure64_path_init(struct pure64_path *path) {
+void pure64_path_init(struct pure64_path *path) {
 	path->name_array = NULL;
 	path->name_count = 0;
 }
 
-void
-pure64_path_free(struct pure64_path *path) {
+void pure64_path_free(struct pure64_path *path) {
 
 	uint64_t i;
 
@@ -37,8 +34,7 @@ pure64_path_free(struct pure64_path *path) {
 	path->name_count = 0;
 }
 
-const char *
-pure64_path_get_name(const struct pure64_path *path,
+const char * pure64_path_get_name(const struct pure64_path *path,
                      uint64_t index) {
 
 	if (index >= path->name_count)
@@ -47,14 +43,12 @@ pure64_path_get_name(const struct pure64_path *path,
 	return path->name_array[index].data;
 }
 
-uint64_t
-pure64_path_get_name_count(const struct pure64_path *path) {
+uint64_t pure64_path_get_name_count(const struct pure64_path *path) {
 
 	return path->name_count;
 }
 
-int
-pure64_path_normalize(struct pure64_path *path) {
+int pure64_path_normalize(struct pure64_path *path) {
 
 	uint64_t i;
 	uint64_t j;
@@ -63,7 +57,11 @@ pure64_path_normalize(struct pure64_path *path) {
 
 	while (i < path->name_count) {
 
-		if (pure64_strcmp(path->name_array[i].data, ".") == 0) {
+		if (path->name_array[i].data == NULL) {
+
+			return PURE64_EFAULT;
+
+		} else if (pure64_strcmp(path->name_array[i].data, ".") == 0) {
 
 			pure64_free(path->name_array[i].data);
 
@@ -100,9 +98,8 @@ pure64_path_normalize(struct pure64_path *path) {
 	return 0;
 }
 
-int
-pure64_path_parse(struct pure64_path *path,
-                  const char *path_str) {
+int pure64_path_parse(struct pure64_path *path,
+                      const char *path_str) {
 
 	int err;
 	uint64_t i;
@@ -159,9 +156,8 @@ pure64_path_parse(struct pure64_path *path,
 	return 0;
 }
 
-int
-pure64_path_push_child(struct pure64_path *path,
-                       const char *name) {
+int pure64_path_push_child(struct pure64_path *path,
+                           const char *name) {
 
 	char *tmp_name;
 	uint64_t name_size;
