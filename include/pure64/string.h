@@ -34,6 +34,19 @@ void pure64_memset(void *dst, int value, unsigned long int size);
 
 void pure64_memcpy(void *dst, const void *src, unsigned long int size);
 
+/** Compare two blocks of memory.
+ * @param a The first block
+ * @param b The second block
+ * @param size The number of bytes
+ * in each block of memory.
+ * @returns Zero if the blocks are
+ * equal, one if block @p a is greater
+ * than block @p b, and negative one
+ * if block @p a is less than block @p b.
+ * */
+
+int pure64_memcmp(const void *a, const void *b, unsigned long int size);
+
 /** Calculate the length of a null-terminated string.
  * @param str The string to calculate the
  * length of. This must be null-terminated.

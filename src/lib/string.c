@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include "string.h"
+#include <pure64/string.h>
 
 void pure64_memset(void *dst, int value, unsigned long int size) {
 
@@ -30,6 +30,21 @@ void pure64_memcpy(void *dst, const void *src, unsigned long int size) {
 	for (i = 0; i < size; i++) {
 		dst8[i] = src8[i];
 	}
+}
+
+int pure64_memcmp(const void *a, const void *b, unsigned long int size) {
+
+	const unsigned char *a8 = (const unsigned char *) a;
+	const unsigned char *b8 = (const unsigned char *) b;
+
+	for (unsigned long int i = 0; i < size; i++) {
+		if (a8[i] < b8[i])
+			return -1;
+		else if (a8[i] > b8[i])
+			return 1;
+	}
+
+	return 0;
 }
 
 unsigned long int pure64_strlen(const char *str) {
