@@ -83,6 +83,17 @@ void pure64_uuid_zero(struct pure64_uuid *uuid);
 void pure64_uuid_copy(struct pure64_uuid *dst,
                       const struct pure64_uuid *src);
 
+/** Compares two UUIDs.
+ * @param a The first UUID
+ * @param b The second UUID
+ * @returns Zero, if the UUIDs are equal.
+ * One, if @p a is greater than @p b.
+ * Negative one, if @p is less than @p b.
+ * */
+
+int pure64_uuid_cmp(const struct pure64_uuid *a,
+                    const struct pure64_uuid *b);
+
 /** Parse a UUID string.
  * @param uuid A UUID structure.
  * @param uuid_str A UUID string.

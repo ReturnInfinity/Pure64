@@ -19,6 +19,12 @@ void pure64_uuid_copy(struct pure64_uuid *dst,
 	pure64_memcpy(dst->bytes, src->bytes, sizeof(dst->bytes));
 }
 
+int pure64_uuid_cmp(const struct pure64_uuid *a,
+                    const struct pure64_uuid *b) {
+
+	return pure64_memcmp(a->bytes, b->bytes, sizeof(a->bytes));
+}
+
 int pure64_uuid_parse(struct pure64_uuid *uuid, const char *str) {
 
 	unsigned int i;
