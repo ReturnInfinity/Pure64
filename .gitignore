@@ -22,6 +22,7 @@ pure64-0.7.1/
 /src/util/pure64-data.c
 /src/util/stage-three-data.h
 /src/util/stage-three-data.c
+/src/util/config-test
 /docs/html
 /docs/latex
 /testing/kernel

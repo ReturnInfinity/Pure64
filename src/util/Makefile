@@ -13,23 +13,26 @@ CFLAGS += -g
 
 targets += rc
 targets += pure64
+targets += config-test
 
 pure64_files += pure64.o
-pure64_files += stage-three-data.o
-pure64_files += pure64-data.o
-pure64_files += pxe-data.o
+
+pure64_files += config.o
+pure64_files += fstream.o
 pure64_files += mbr-data.o
 pure64_files += multiboot-data.o
 pure64_files += multiboot2-data.o
-pure64_files += fstream.o
+pure64_files += pure64-data.o
+pure64_files += pxe-data.o
+pure64_files += stage-three-data.o
 pure64_files += util.o
 
-generated_headers += stage-three-data.h
+generated_headers += mbr-data.h
 generated_headers += pure64-data.h
 generated_headers += pxe-data.h
-generated_headers += mbr-data.h
 generated_headers += multiboot-data.h
 generated_headers += multiboot2-data.h
+generated_headers += stage-three-data.h
 
 .PHONY: all
 all: $(targets)
@@ -42,7 +45,11 @@ pure64: $(pure64_files) -lpure64
 
 pure64.o: pure64.c fstream.h util.h $(generated_headers)
 
-util.o: util.c util.h fstream.h
+config.o: config.c config.h
+
+config-test.o: config-test.c config.h
+
+config-test: config-test.o config.o
 
 fstream.o: fstream.c fstream.h
 
@@ -76,6 +83,8 @@ stage-three-data.o: stage-three-data.c
 stage-three-data.c stage-three-data.h: $(top)/src/stage-three/stage-three.sys rc
 	./rc --input $< --source stage-three-data.c --header stage-three-data.h --name stage_three_data
 
+util.o: util.c util.h fstream.h
+
 %: %.o
 	@echo "LD $@"
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
@@ -93,7 +102,8 @@ clean:
 	$(RM) rc.o rc
 
 .PHONY: test
-test:
+test: config-test
+	./config-test
 
 install: pure64 $(DESTDIR)$(PREFIX)/bin
 	cp pure64 $(DESTDIR)$(PREFIX)/bin/pure64
