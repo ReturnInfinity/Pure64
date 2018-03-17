@@ -286,7 +286,7 @@ static int handle_var(struct pure64_config *config,
 		config->kernel[var->value_size] = 0;
 		if (!file_exists(config->kernel)) {
 			error->desc = "Kernel does not exist";
-			return PURE64_ENOMEM;
+			return PURE64_ENOENT;
 		}
 	} else if (is_key(var, "stage-three")) {
 		if (is_value(var, "kernel")) {
