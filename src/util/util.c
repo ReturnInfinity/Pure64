@@ -6,10 +6,134 @@
 
 #include "util.h"
 
+#include "config.h"
+
+#include "pure64-data.h"
+
 #include <pure64/error.h>
 #include <pure64/gpt.h>
 
 #include <stdlib.h>
+
+static int write_bootsector(struct pure64_util *util,
+                            const struct pure64_config *config) {
+
+	const void *bootsector = pure64_bootsector_data(config->bootsector);
+
+	unsigned long int bootsector_size = pure64_bootsector_size(config->bootsector);
+
+	int err = pure64_stream_set_pos(&util->disk_file.base, 0);
+	if (err != 0)
+		return err;
+
+	err = pure64_stream_write(&util->disk_file.base, bootsector, bootsector_size);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
+static int write_stage_two_bin(struct pure64_util *util,
+                               const struct pure64_config *config) {
+
+	if (config->bootsector == PURE64_BOOTSECTOR_PXE) {
+
+		int err = pure64_stream_set_pos(&util->disk_file.base, 1024);
+		if (err != 0)
+			return err;
+
+		err = pure64_stream_write(&util->disk_file.base, pure64_data, pure64_data_size);
+		if (err != 0)
+			return err;
+
+	} else {
+
+		return PURE64_EINVAL;
+	}
+
+	return 0;
+}
+
+static int write_stage_two_gpt(struct pure64_util *util,
+                               const struct pure64_config *config) {
+	(void) util;
+	(void) config;
+	return 0;
+}
+
+static int write_stage_two(struct pure64_util *util,
+                           const struct pure64_config *config) {
+
+	if (config->partition_scheme == PURE64_PARTITION_SCHEME_NONE) {
+		return write_stage_two_bin(util, config);
+	} else if (config->partition_scheme == PURE64_PARTITION_SCHEME_GPT) {
+		return write_stage_two_gpt(util, config);
+	}
+
+	return PURE64_EINVAL;
+}
+
+static int write_kernel(struct pure64_util *util,
+                        const struct pure64_config *config) {
+
+	const char *path = config->kernel;
+	if (path == NULL)
+		path = "kernel";
+
+	FILE *kernel = fopen(path, "rb");
+	if (kernel == NULL)
+		return PURE64_ENOENT;
+
+	if (fseek(kernel, 0UL, SEEK_END) != 0) {
+		fclose(kernel);
+		return PURE64_EINVAL;
+	}
+
+	long int kernel_size = ftell(kernel);
+	if (kernel_size == -1L) {
+		fclose(kernel);
+		return PURE64_EINVAL;
+	}
+
+	if (fseek(kernel, 0UL, SEEK_SET) != 0) {
+		fclose(kernel);
+		return PURE64_EINVAL;
+	}
+
+	void *buf = malloc(kernel_size);
+	if (buf == NULL) {
+		fclose(kernel);
+		return PURE64_ENOMEM;
+	}
+
+	if (fread(buf, 1, kernel_size, kernel) != ((size_t) kernel_size)) {
+		fclose(kernel);
+		free(buf);
+		return PURE64_EIO;
+	}
+
+	fclose(kernel);
+
+	unsigned long int kernel_offset = 0;
+	kernel_offset += pure64_bootsector_size(config->bootsector);
+	kernel_offset += pure64_data_size;
+
+	int err = pure64_stream_set_pos(&util->disk_file.base, kernel_offset);
+	if (err != 0) {
+		free(buf);
+		return err;
+	}
+
+	err = pure64_stream_write(&util->disk_file.base, buf, kernel_size);
+	if (err != 0) {
+		free(buf);
+		return err;
+	}
+
+	free(buf);
+
+	return 0;
+}
 
 void pure64_util_init(struct pure64_util *util) {
 	pure64_fstream_init(&util->disk_file);
@@ -22,18 +146,60 @@ void pure64_util_done(struct pure64_util *util) {
 }
 
 int pure64_util_create_disk(struct pure64_util *util,
-                            const char *path,
-                            uint64_t disk_size) {
+                            const char *config_path,
+                            const char *path) {
 
-	int err = pure64_fstream_open(&util->disk_file, path, "wb+");
-	if (err != 0)
+	struct pure64_config config;
+	struct pure64_config_error error;
+
+	pure64_config_init(&config);
+
+	int err = pure64_config_load(&config, config_path, &error);
+	if (err != 0) {
+
+		if (error.line > 0)
+			fprintf(stderr, "%s:%lu: %s\n", config_path, error.line, error.desc);
+		else
+			fprintf(stderr, "%s: %s\n", config_path, error.desc);
+
+		pure64_config_done(&config);
+
 		return err;
+	}
 
-	disk_size = ((disk_size + 511) / 512) * 512;
-
-	err = pure64_fstream_zero(&util->disk_file, disk_size);
-	if (err != 0)
+	err = pure64_fstream_open(&util->disk_file, path, "wb+");
+	if (err != 0) {
+		pure64_config_done(&config);
 		return err;
+	}
+
+	err = pure64_fstream_zero(&util->disk_file, config.disk_size);
+	if (err != 0) {
+		pure64_config_done(&config);
+		return err;
+	}
+
+	err = write_bootsector(util, &config);
+	if (err != 0) {
+		pure64_config_done(&config);
+		return err;
+	}
+
+	err = write_stage_two(util, &config);
+	if (err != 0) {
+		pure64_config_done(&config);
+		return err;
+	}
+
+	if (config.stage_three == PURE64_STAGE_THREE_KERNEL) {
+		err = write_kernel(util, &config);
+		if (err != 0) {
+			pure64_config_done(&config);
+			return err;
+		}
+	}
+
+	pure64_config_done(&config);
 
 	return 0;
 }

@@ -135,18 +135,15 @@ static bool is_opt(const char *argv) {
 
 static int pure64_init(const char *filename, int argc, const char **argv) {
 
-	unsigned long int disk_size = 1 * 1024 * 1024;
+	const char *config_path = "pure64-config.txt";
 
 	for (int i = 0; i < argc; i++) {
-		if (strcmp(argv[i], "--disk-size") == 0) {
+		if (strcmp(argv[i], "--config") == 0) {
 			if ((i + 1) >= argc) {
-				fprintf(stderr, "Disk size not specified.\n");
+				fprintf(stderr, "Config path not specified.\n");
 				return EXIT_FAILURE;
 			}
-			if (sscanf(argv[i + 1], "%lu", &disk_size) != 1) {
-				fprintf(stderr, "Invalid disk size: %s\n", argv[i + 1]);
-				return EXIT_FAILURE;
-			}
+			config_path = argv[i + 1];
 			i++;
 		} else if (argv[i][0] == '-') {
 			fprintf(stderr, "Unknown option: %s\n", argv[i]);
@@ -161,7 +158,7 @@ static int pure64_init(const char *filename, int argc, const char **argv) {
 
 	pure64_util_init(&util);
 
-	int err = pure64_util_create_disk(&util, filename, disk_size);
+	int err = pure64_util_create_disk(&util, config_path, filename);
 	if (err != 0) {
 		fprintf(stderr, "Failed to create disk image: %s\n", pure64_strerror(err));
 		pure64_util_done(&util);

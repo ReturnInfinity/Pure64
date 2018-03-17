@@ -1,6 +1,8 @@
 #ifndef PURE64_CONFIG_H
 #define PURE64_CONFIG_H
 
+#include "arch.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -10,6 +12,9 @@ extern "C" {
  * */
 
 enum pure64_bootsector {
+	/** This means that there is no
+	 * bootsector on the disk. */
+	PURE64_BOOTSECTOR_NONE,
 	/** This means that the bootsector
 	 * is MBR formatted. */
 	PURE64_BOOTSECTOR_MBR,
@@ -26,6 +31,20 @@ enum pure64_bootsector {
 	PURE64_BOOTSECTOR_MULTIBOOT2
 };
 
+/** Gets the data associated with a bootsector.
+ * @param bootsector The bootsector to get the data for.
+ * @returns The bootsector data.
+ * */
+
+const void *pure64_bootsector_data(enum pure64_bootsector bootsector);
+
+/** Gets the size of a specified bootsector.
+ * @param bootsector The bootsector to get the size of.
+ * @returns The size, in bytes, of the specified bootsector.
+ * */
+
+unsigned long int pure64_bootsector_size(enum pure64_bootsector bootsector);
+
 /** Describes a partitioning
  * scheme supported by Pure64.
  * */
@@ -39,6 +58,34 @@ enum pure64_partition_scheme {
 	PURE64_PARTITION_SCHEME_GPT
 };
 
+/** Indicates what happens after the
+ * second stage in the boot process.
+ * */
+
+enum pure64_stage_three {
+	/** This means that stage three has
+	 * not been specified. */
+	PURE64_STAGE_THREE_NONE,
+	/** This means that a kernel is loaded
+	 * directory after stage two. */
+	PURE64_STAGE_THREE_KERNEL,
+	/** This means that the file system loader
+	 * is started after stage two. */
+	PURE64_STAGE_THREE_LOADER
+};
+
+/** This is a structure that describes
+ * a syntax error that occured in a config
+ * file.
+ * */
+
+struct pure64_config_error {
+	/** The description of the error. */
+	const char *desc;
+	/** The line that the error occured on. */
+	unsigned long int line;
+};
+
 /** Represents a disk configuration file.
  * The configuration is used for detecting
  * invalid settings and determining offsets
@@ -46,13 +93,34 @@ enum pure64_partition_scheme {
  * */
 
 struct pure64_config {
+	/** The architecture of the image. */
+	enum pure64_arch arch;
 	/** The bootsector used for the disk image. */
 	enum pure64_bootsector bootsector;
 	/** The partitioning scheme used by the disk image. */
 	enum pure64_partition_scheme partition_scheme;
+	/** Indicates what happens after the second stage
+	 * boot loader. */
+	enum pure64_stage_three stage_three;
+	/** The size, in bytes, of the disk. */
+	unsigned long int disk_size;
+	/** The path of the kernel to load. This option
+	 * is only valid if the stage three loader is
+	 * specified to load a kernel. */
+	char *kernel;
 };
 
+/** Initializes a configuration file with default values.
+ * @param config The configuration structure to initialize.
+ * */
+
 void pure64_config_init(struct pure64_config *config);
+
+/** Releases memory allocated by a configuration.
+ * @param config An initialized config structure.
+ * */
+
+void pure64_config_done(struct pure64_config *config);
 
 /** Parses a configuration file.
  * @param config An initialized configuration structure.
@@ -60,7 +128,18 @@ void pure64_config_init(struct pure64_config *config);
  * */
 
 int pure64_config_parse(struct pure64_config *config,
-                        const char *source);
+                        const char *source,
+                        struct pure64_config_error *error);
+
+/** Loads a configuration from a file.
+ * @param config An initialized config structure.
+ * @param filename The path of the configuration file.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_config_load(struct pure64_config *config,
+                       const char *filename,
+                       struct pure64_config_error *error);
 
 #ifdef __cplusplus
 } /* extern "C" { */

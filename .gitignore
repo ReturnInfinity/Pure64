@@ -1,5 +1,6 @@
 .DS_Store
 build
+pure64-config.txt
 *.sys
 *.o
 *.a

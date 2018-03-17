@@ -35,14 +35,14 @@ void pure64_util_done(struct pure64_util *util);
 
 /** Creates a new disk image.
  * @param util An initialized utility structure.
+ * @param config_path The path of the configuration file.
  * @param path The path to create the disk image at.
- * @param disk_size The size of the disk, in bytes.
  * @returns Zero on success, an error code on failure.
  * */
 
 int pure64_util_create_disk(struct pure64_util *util,
-                            const char *path,
-                            uint64_t disk_size);
+                            const char *config_path,
+                            const char *path);
 
 /** Opens an existing disk image.
  * @param util An initialized utility structure.

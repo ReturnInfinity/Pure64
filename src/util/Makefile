@@ -17,15 +17,17 @@ targets += config-test
 
 pure64_files += pure64.o
 
+bootsector_files += mbr-data.o
+bootsector_files += multiboot-data.o
+bootsector_files += multiboot2-data.o
+bootsector_files += pxe-data.o
+
 pure64_files += config.o
 pure64_files += fstream.o
-pure64_files += mbr-data.o
-pure64_files += multiboot-data.o
-pure64_files += multiboot2-data.o
-pure64_files += pure64-data.o
-pure64_files += pxe-data.o
 pure64_files += stage-three-data.o
+pure64_files += pure64-data.o
 pure64_files += util.o
+pure64_files += $(bootsector_files)
 
 generated_headers += mbr-data.h
 generated_headers += pure64-data.h
@@ -49,7 +51,7 @@ config.o: config.c config.h
 
 config-test.o: config-test.c config.h
 
-config-test: config-test.o config.o
+config-test: config-test.o config.o $(bootsector_files)
 
 fstream.o: fstream.c fstream.h
 
