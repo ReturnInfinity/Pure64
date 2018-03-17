@@ -36,20 +36,16 @@ static int write_bootsector(struct pure64_util *util,
 static int write_stage_two_bin(struct pure64_util *util,
                                const struct pure64_config *config) {
 
-	if (config->bootsector == PURE64_BOOTSECTOR_PXE) {
+	unsigned long int stage_two_offset = 0;
+	stage_two_offset += pure64_bootsector_size(config->bootsector);
 
-		int err = pure64_stream_set_pos(&util->disk_file.base, 1024);
-		if (err != 0)
-			return err;
+	int err = pure64_stream_set_pos(&util->disk_file.base, stage_two_offset);
+	if (err != 0)
+		return err;
 
-		err = pure64_stream_write(&util->disk_file.base, pure64_data, pure64_data_size);
-		if (err != 0)
-			return err;
-
-	} else {
-
-		return PURE64_EINVAL;
-	}
+	err = pure64_stream_write(&util->disk_file.base, pure64_data, pure64_data_size);
+	if (err != 0)
+		return err;
 
 	return 0;
 }
@@ -138,6 +134,7 @@ static int write_kernel(struct pure64_util *util,
 void pure64_util_init(struct pure64_util *util) {
 	pure64_fstream_init(&util->disk_file);
 	pure64_fs_init(&util->fs);
+	util->errlog = stderr;
 }
 
 void pure64_util_done(struct pure64_util *util) {
@@ -158,9 +155,9 @@ int pure64_util_create_disk(struct pure64_util *util,
 	if (err != 0) {
 
 		if (error.line > 0)
-			fprintf(stderr, "%s:%lu: %s\n", config_path, error.line, error.desc);
+			fprintf(util->errlog, "%s:%lu: %s\n", config_path, error.line, error.desc);
 		else
-			fprintf(stderr, "%s: %s\n", config_path, error.desc);
+			fprintf(util->errlog, "%s: %s\n", config_path, error.desc);
 
 		pure64_config_done(&config);
 
