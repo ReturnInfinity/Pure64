@@ -113,11 +113,11 @@ static void print_help(const char *argv0) {
 	printf("\t--help, -h : Print this help message.\n");
 	printf("\n");
 	printf("Commands:\n");
+	printf("\tinit  : Initialize the disk image.\n");
 	printf("\tcat   : Print the contents of a file.\n");
 	printf("\tcp    : Copy file from host file system to Pure64 image.\n");
 	printf("\tls    : List directory contents.\n");
 	printf("\tmkdir : Create a directory.\n");
-	printf("\tmkfs  : Create the file system image.\n");
 	printf("\trm    : Remove a file.\n");
 	printf("\trmdir : Remove a directory.\n");
 }
