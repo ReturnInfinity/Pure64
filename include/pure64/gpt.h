@@ -152,6 +152,13 @@ void pure64_gpt_entry_init(struct pure64_gpt_entry *entry);
 
 int pure64_gpt_entry_is_used(const struct pure64_gpt_entry *entry);
 
+/** Indicates whether or not the entry is of the specified type.
+ * @param entry The entry to check the type of.
+ * @param type_uuid The UUID of the type to check for.
+ * @returns Zero if the entry is not the specified type, one
+ * if it is.
+ * */
+
 int pure64_gpt_entry_is_type(const struct pure64_gpt_entry *entry,
                              const char *type_uuid);
 
