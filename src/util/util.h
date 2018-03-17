@@ -18,6 +18,9 @@ struct pure64_util {
 	/** The file system contained on
 	 * the disk image. */
 	struct pure64_fs fs;
+	/** The standard error output of
+	 * the utility. */
+	FILE *errlog;
 };
 
 /** Initializes the utility.
