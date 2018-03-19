@@ -14,6 +14,7 @@ CFLAGS += -g
 targets += rc
 targets += pure64
 targets += config-test
+targets += token-test
 
 pure64_files += pure64.o
 
@@ -26,6 +27,7 @@ pure64_files += config.o
 pure64_files += fstream.o
 pure64_files += stage-three-data.o
 pure64_files += pure64-data.o
+pure64_files += token.o
 pure64_files += util.o
 pure64_files += $(bootsector_files)
 
@@ -85,6 +87,12 @@ stage-three-data.o: stage-three-data.c
 stage-three-data.c stage-three-data.h: $(top)/src/stage-three/stage-three.sys rc
 	./rc --input $< --source stage-three-data.c --header stage-three-data.h --name stage_three_data
 
+token.o: token.c token.h
+
+token-test.o: token-test.c token.h
+
+token-test: token-test.o token.o
+
 util.o: util.c util.h fstream.h
 
 %: %.o
@@ -106,6 +114,7 @@ clean:
 .PHONY: test
 test: config-test
 	./config-test
+	./token-test
 
 install: pure64 $(DESTDIR)$(PREFIX)/bin
 	cp pure64 $(DESTDIR)$(PREFIX)/bin/pure64

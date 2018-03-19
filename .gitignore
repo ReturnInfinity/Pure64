@@ -24,6 +24,7 @@ pure64-0.7.1/
 /src/util/stage-three-data.h
 /src/util/stage-three-data.c
 /src/util/config-test
+/src/util/token-test
 /docs/html
 /docs/latex
 /testing/kernel
