@@ -12,9 +12,6 @@
 
 #include "misc.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 void pure64_file_init(struct pure64_file *file) {
 	file->name_size = 0;
 	file->data_size = 0;

@@ -8,7 +8,6 @@
 
 #include "alloc.h"
 #include "e820.h"
-#include "error.h"
 
 #include <pure64/error.h>
 #include <pure64/string.h>

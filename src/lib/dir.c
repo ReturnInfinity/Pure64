@@ -14,9 +14,6 @@
 
 #include "misc.h"
 
-#include <stdlib.h>
-#include <string.h>
-
 void pure64_dir_init(struct pure64_dir *dir) {
 	dir->name_size = 0;
 	dir->subdir_count = 0;

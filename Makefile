@@ -19,10 +19,8 @@ pure64-$(VERSION):
 test: pure64.img
 	./test.sh
 
-pure64.img: all testing/kernel
-	./src/util/pure64 mkfs
-	./src/util/pure64 mkdir /boot
-	./src/util/pure64 cp testing/kernel /boot/kernel
+pure64.img: all testing/kernel examples/example1-config.txt
+	./src/util/pure64 init --config examples/example1-config.txt
 
 testing/kernel.sys: testing/kernel
 	objcopy -O binary $< $@

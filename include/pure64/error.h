@@ -45,6 +45,11 @@
 
 #define PURE64_EIO 0x09
 
+/** Not enough storage space for
+ * the operation to complete. */
+
+#define PURE64_ENOSPC 0x0a
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -1,5 +1,6 @@
 targets += mbr.sys
 targets += multiboot.sys
+targets += multiboot2.sys
 targets += pxestart.sys
 
 .PHONY: all

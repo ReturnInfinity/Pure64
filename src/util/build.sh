@@ -15,4 +15,4 @@ gcc $CFLAGS rc.c -o rc
 # Generate the 3rd stage boot loader source
 ./rc --input ../stage-three/stage-three.sys --source stage-three-data.c --header stage-three-data.h --name stage_three_data
 # Build the utility program
-gcc $CFLAGS pure64.c mbr-data.c pure64-data.c stage-three-data.c -o pure64 ../lib/libpure64.a
+gcc $CFLAGS pure64.c fstream.c mbr-data.c pure64-data.c stage-three-data.c -o pure64 ../lib/libpure64.a
