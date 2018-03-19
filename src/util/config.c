@@ -476,12 +476,14 @@ int pure64_config_load(struct pure64_config *config,
 	FILE *file = fopen(filename, "rb");
 	if (file == NULL) {
 		error->desc = "Failed to open file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_END) != 0) {
 		fclose(file);
 		error->desc = "Failed to seek to end of file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
@@ -489,12 +491,14 @@ int pure64_config_load(struct pure64_config *config,
 	if (file_size == -1L) {
 		fclose(file);
 		error->desc = "Failed to tell file position";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_SET) != 0) {
 		fclose(file);
 		error->desc = "Failed to seek to start of file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
@@ -502,6 +506,7 @@ int pure64_config_load(struct pure64_config *config,
 	if (source == NULL) {
 		fclose(file);
 		error->desc = "Failed to allocate file memory";
+		error->line = 0;
 		return PURE64_ENOMEM;
 	}
 
@@ -511,6 +516,7 @@ int pure64_config_load(struct pure64_config *config,
 		free(source);
 		fclose(file);
 		error->desc = "Failed to read file";
+		error->line = 0;
 		return PURE64_EIO;
 	}
 
