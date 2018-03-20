@@ -53,7 +53,7 @@ config.o: config.c config.h
 
 config-test.o: config-test.c config.h
 
-config-test: config-test.o config.o $(bootsector_files)
+config-test: config-test.o config.o token.o $(bootsector_files)
 
 fstream.o: fstream.c fstream.h
 
@@ -113,8 +113,8 @@ clean:
 
 .PHONY: test
 test: config-test
-	./config-test
 	./token-test
+	./config-test
 
 install: pure64 $(DESTDIR)$(PREFIX)/bin
 	cp pure64 $(DESTDIR)$(PREFIX)/bin/pure64
