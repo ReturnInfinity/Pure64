@@ -106,6 +106,8 @@ struct pure64_config {
 	enum pure64_stage_three stage_three;
 	/** The size, in bytes, of the disk. */
 	unsigned long int disk_size;
+	/** The size, in bytes, to reserve for the file system. */
+	unsigned long int fs_size;
 	/** The path of the kernel to load. This option
 	 * is only valid if the stage three loader is
 	 * specified to load a kernel. */

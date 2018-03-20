@@ -145,9 +145,8 @@ static unsigned char file_exists(const char *path) {
 	return 1;
 }
 
-static int parse_disk_size(struct pure64_config *config,
-                           const char *str,
-                           unsigned int str_size) {
+static int parse_size(const struct pure64_var *var,
+                      unsigned long int *size_ptr) {
 
 	const unsigned long int TiB = 1024UL * 1024UL * 1024UL * 1024UL;
 	const unsigned long int GiB = 1024UL * 1024UL * 1024UL;
@@ -159,8 +158,12 @@ static int parse_disk_size(struct pure64_config *config,
 	const unsigned long int MB = 1000UL * 1000UL;
 	const unsigned long int KB = 1000UL;
 
+	const char *str = var->value;
+
+	unsigned long int str_size = var->value_size;
+
 	if (str_size == 0)
-		return -1;
+		return PURE64_EINVAL;
 
 	char *tmp = malloc(str_size + 1);
 	if (tmp == NULL) {
@@ -219,12 +222,12 @@ static int parse_disk_size(struct pure64_config *config,
 
 	tmp[str_size] = 0;
 
-	if (sscanf(tmp, "%lu", &config->disk_size) != 1) {
+	if (sscanf(tmp, "%lu", size_ptr) != 1) {
 		free(tmp);
 		return PURE64_EINVAL;
 	}
 
-	config->disk_size *= multiplier;
+	*size_ptr *= multiplier;
 
 	free(tmp);
 
@@ -281,11 +284,11 @@ static int handle_var(struct pure64_config *config,
 		}
 	} else if (pure64_var_cmp_key(var, "disk_size")) {
 		if (var->value_size == 0) {
-			error->desc = "Size not specified";
-			return -1;
+			error->desc = "Disk size not specified";
+			return PURE64_EINVAL;
 		}
-		if (parse_disk_size(config, var->value, var->value_size) != 0) {
-			error->desc = "Invalid size";
+		if (parse_size(var, &config->disk_size) != 0) {
+			error->desc = "Invalid disk size";
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "arch")) {
@@ -293,6 +296,15 @@ static int handle_var(struct pure64_config *config,
 			config->arch = PURE64_ARCH_x86_64;
 		} else {
 			error->desc = "Unsupported architecture";
+			return PURE64_EINVAL;
+		}
+	} else if (pure64_var_cmp_key(var, "fs_size")) {
+		if (var->value_size == 0) {
+			error->desc = "File system size not specified";
+			return PURE64_EINVAL;
+		}
+		if (parse_size(var, &config->fs_size) != 0) {
+			error->desc = "Invalid file system size";
 			return PURE64_EINVAL;
 		}
 	} else {
@@ -372,7 +384,8 @@ void pure64_config_init(struct pure64_config *config) {
 	config->bootsector = PURE64_BOOTSECTOR_NONE;
 	config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
 	config->stage_three = PURE64_STAGE_THREE_NONE;
-	config->disk_size = 0;
+	config->disk_size = 1 * 1024 * 1024;
+	config->fs_size = 512 * 1024;
 	config->kernel = NULL;
 }
 
