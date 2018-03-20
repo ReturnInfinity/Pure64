@@ -248,7 +248,7 @@ static int handle_var(struct pure64_config *config,
 			error->desc = "Unknown bootsector type";
 			return PURE64_EINVAL;
 		}
-	} else if (pure64_var_cmp_key(var, "kernel")) {
+	} else if (pure64_var_cmp_key(var, "kernel_path")) {
 		free(config->kernel);
 		config->kernel = malloc(var->value_size + 1);
 		if (config->kernel == NULL) {
