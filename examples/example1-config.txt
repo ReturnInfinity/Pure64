@@ -17,14 +17,14 @@ bootsector: mbr
 # 64-bit state. It can either be a kernel
 # or a file system loader, called 'loader'.
 
-stage-three: kernel
+stage_three: kernel
 
 # This specifies where to find the kernel,
 # so that it can be copied into the disk.
 # This is only checked if 'stage-three' is
 # set to 'kernel' and not 'loader'.
 
-kernel: testing/kernel
+kernel: "testing/kernel"
 
 # This options specifies how big the disk
 # size should be when it is created. Some
@@ -32,4 +32,4 @@ kernel: testing/kernel
 # in order to boot, so this option is useful
 # for those emulators.
 
-disk-size: 1MiB
+disk_size: 1MiB
