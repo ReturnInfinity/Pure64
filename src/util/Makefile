@@ -18,15 +18,19 @@ targets += token-test
 
 pure64_files += pure64.o
 
+# Generated sources
 bootsector_files += mbr-data.o
 bootsector_files += multiboot-data.o
 bootsector_files += multiboot2-data.o
 bootsector_files += pxe-data.o
 
-pure64_files += config.o
-pure64_files += fstream.o
+# Generated sources
 pure64_files += stage-three-data.o
 pure64_files += pure64-data.o
+
+pure64_files += config.o
+pure64_files += fstream.o
+pure64_files += memory.o
 pure64_files += token.o
 pure64_files += util.o
 pure64_files += $(bootsector_files)
@@ -56,6 +60,8 @@ config-test.o: config-test.c config.h
 config-test: config-test.o config.o token.o $(bootsector_files)
 
 fstream.o: fstream.c fstream.h
+
+memory.o: memory.c
 
 mbr-data.o: mbr-data.c
 
