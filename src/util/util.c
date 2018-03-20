@@ -13,6 +13,8 @@
 
 #include <pure64/error.h>
 #include <pure64/gpt.h>
+#include <pure64/mbr.h>
+#include <pure64/partition.h>
 
 #include <stdlib.h>
 
@@ -175,7 +177,25 @@ static int write_fs_gpt(struct pure64_util *util,
 	err = pure64_gpt_set_entry_size(gpt, 2, util->config.fs_size);
 	if (err != 0)
 		return err;
-	
+
+	struct pure64_partition partition;
+
+	pure64_partition_init(&partition);
+
+	pure64_partition_set_offset(&partition, gpt->primary_entries[2].first_lba * 512);
+
+	pure64_partition_set_size(&partition, util->config.fs_size);
+
+	pure64_partition_set_disk(&partition, &util->disk_file.base);
+
+	err = pure64_fs_make_dir(&util->fs, "/boot");
+	if (err != 0)
+		return err;
+
+	err = pure64_fs_export(&util->fs, &partition.stream);
+	if (err != 0)
+		return err;
+
 	return 0;
 }
 
@@ -283,6 +303,30 @@ static int write_stage_two_gpt(struct pure64_util *util,
 	return 0;
 }
 
+static int update_mbr_gpt(struct pure64_util *util,
+                          struct pure64_gpt *gpt) {
+
+	struct pure64_mbr mbr;
+
+	pure64_mbr_zero(&mbr);
+
+	int err = pure64_mbr_read(&mbr, &util->disk_file.base);
+	if (err != 0)
+		return err;
+
+	mbr.st2dap.sector = gpt->primary_entries[0].first_lba;
+	mbr.st2dap.sector_count = (pure64_data_size + 511) / 512;
+
+	mbr.st3dap.sector = gpt->primary_entries[1].first_lba;
+	mbr.st3dap.sector_count = (stage_three_data_size + 511) / 512;
+
+	err = pure64_mbr_write(&mbr, &util->disk_file.base);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
 static int write_gpt_partitions(struct pure64_util *util) {
 
 	struct pure64_gpt gpt;
@@ -313,6 +357,12 @@ static int write_gpt_partitions(struct pure64_util *util) {
 		return err;
 	}
 
+	err = update_mbr_gpt(util, &gpt);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		return err;
+	}
+
 	err = pure64_gpt_export(&gpt, &util->disk_file.base);
 	if (err != 0) {
 		pure64_gpt_done(&gpt);
@@ -333,6 +383,99 @@ static int write_partitions(struct pure64_util *util) {
 	}
 
 	return PURE64_EINVAL;
+}
+
+static int import_fs_gpt(struct pure64_util *util,
+                         struct pure64_gpt *gpt) {
+
+	if (util->config.stage_three != PURE64_STAGE_THREE_LOADER)
+		return 0;
+
+	struct pure64_partition partition;
+
+	pure64_partition_init(&partition);
+
+	pure64_partition_set_offset(&partition, gpt->primary_entries[2].first_lba * 512);
+
+	pure64_partition_set_size(&partition, util->config.fs_size);
+
+	pure64_partition_set_disk(&partition, &util->disk_file.base);
+
+	int err = pure64_fs_import(&util->fs, &partition.stream);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
+static int import_gpt(struct pure64_util *util) {
+
+	struct pure64_gpt gpt;
+
+	pure64_gpt_init(&gpt);
+
+	int err = pure64_gpt_import(&gpt, &util->disk_file.base);
+	if (err != 0)
+		return err;
+
+	err = import_fs_gpt(util, &gpt);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		return err;
+	}
+
+	pure64_gpt_done(&gpt);
+
+	return 0;
+}
+
+static int save_fs_gpt(struct pure64_util *util,
+                       struct pure64_gpt *gpt) {
+
+	struct pure64_partition partition;
+
+	pure64_partition_init(&partition);
+
+	pure64_partition_set_offset(&partition, gpt->primary_entries[2].first_lba * 512);
+
+	pure64_partition_set_size(&partition, util->config.fs_size);
+
+	pure64_partition_set_disk(&partition, &util->disk_file.base);
+
+	int err = pure64_fs_export(&util->fs, &partition.stream);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
+static int save_gpt(struct pure64_util *util) {
+
+	struct pure64_gpt gpt;
+
+	pure64_gpt_init(&gpt);
+
+	int err = pure64_gpt_import(&gpt, &util->disk_file.base);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		return err;
+	}
+
+	err = save_fs_gpt(util, &gpt);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		return err;
+	}
+
+	err = pure64_gpt_export(&gpt, &util->disk_file.base);
+	if (err != 0) {
+		pure64_gpt_done(&gpt);
+		return err;
+	}
+
+	pure64_gpt_done(&gpt);
+
+	return 0;
 }
 
 void pure64_util_init(struct pure64_util *util) {
@@ -387,38 +530,6 @@ int pure64_util_open_config(struct pure64_util *util,
 	return 0;
 }
 
-int pure64_util_mkgpt(struct pure64_util *util,
-                      const struct pure64_uuid *disk_uuid) {
-
-	uint64_t disk_size = 0;
-
-	int err = pure64_stream_get_size(&util->disk_file.base, &disk_size);
-	if (err != 0)
-		return err;
-
-	struct pure64_gpt gpt;
-
-	pure64_gpt_init(&gpt);
-
-	err = pure64_gpt_format(&gpt, disk_size);
-	if (err != 0) {
-		pure64_gpt_done(&gpt);
-		return err;
-	}
-
-	pure64_gpt_set_disk_uuid(&gpt, disk_uuid);
-
-	err = pure64_gpt_export(&gpt, &util->disk_file.base);
-	if (err != 0) {
-		pure64_gpt_done(&gpt);
-		return err;
-	}
-
-	pure64_gpt_done(&gpt);
-
-	return 0;
-}
-
 int pure64_util_open_disk(struct pure64_util *util,
                             const char *path) {
 
@@ -426,116 +537,22 @@ int pure64_util_open_disk(struct pure64_util *util,
 	if (err != 0)
 		return err;
 
-	return 0;
-}
-
-int pure64_util_set_bootsector(struct pure64_util *util,
-                               const void *bootsector_data,
-                               uint64_t bootsector_size) {
-
-	int err = pure64_stream_set_pos(&util->disk_file.base, 0x00);
-	if (err != 0)
-		return err;
-
-	err = pure64_stream_write(&util->disk_file.base, bootsector_data, bootsector_size);
-	if (err != 0)
-		return err;
-
-	if (bootsector_size < 512) {
-
-		size_t buf_size = 512 - bootsector_size;
-
-		void *buf = calloc(1, buf_size);
-		if (buf == NULL)
-			return PURE64_ENOMEM;
-
-		err = pure64_stream_write(&util->disk_file.base, buf, buf_size);
-		if (err != 0) {
-			free(buf);
+	if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_GPT) {
+		err = import_gpt(util);
+		if (err != 0)
 			return err;
-		}
-
-		free(buf);
 	}
 
 	return 0;
 }
 
-static int set_stage_two_bin(struct pure64_util *util,
-                             const void *stage_two_data,
-                             uint64_t stage_two_size) {
+int pure64_util_save_disk(struct pure64_util *util) {
 
-	int err = pure64_stream_set_pos(&util->disk_file.base, 512);
-	if (err != 0)
-		return err;
+	if (util->config.stage_three != PURE64_STAGE_THREE_LOADER)
+		return 0;
 
-	err = pure64_stream_write(&util->disk_file.base, stage_two_data, stage_two_size);
-	if (err != 0)
-		return err;
+	if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_GPT)
+		return save_gpt(util);
 
 	return 0;
-}
-
-static int set_stage_two_gpt(struct pure64_util *util,
-                             struct pure64_gpt *gpt,
-                             const void *stage_two_data,
-                             uint64_t stage_two_size) {
-
-	uint32_t entry_index = 0;
-
-	int err = pure64_gpt_find_unused_entry(gpt, &entry_index);
-	if (err != 0)
-		return err;
-
-	err = pure64_gpt_set_entry_type(gpt, entry_index, PURE64_UUID_STAGE_TWO);
-	if (err != 0)
-		return err;
-
-	err = pure64_gpt_set_entry_name(gpt, entry_index, u"Pure64 Stage Two");
-	if (err != 0)
-		return err;
-
-	err = pure64_gpt_set_entry_size(gpt, entry_index, stage_two_size);
-	if (err != 0)
-		return err;
-
-	uint64_t offset = 0;
-
-	err = pure64_gpt_get_partition_offset(gpt, entry_index, &offset);
-	if (err != 0)
-		return err;
-
-	err = pure64_stream_set_pos(&util->disk_file.base, offset);
-	if (err != 0)
-		return err;
-
-	err = pure64_stream_write(&util->disk_file.base, stage_two_data, stage_two_size);
-	if (err != 0)
-		return err;
-
-	err = pure64_gpt_export(gpt, &util->disk_file.base);
-	if (err != 0)
-		return err;
-
-	return 0;
-}
-
-int pure64_util_set_stage_two(struct pure64_util *util,
-                              const void *stage_two_data,
-                              uint64_t stage_two_size) {
-
-	struct pure64_gpt gpt;
-
-	pure64_gpt_init(&gpt);
-
-	int err = pure64_gpt_import(&gpt, &util->disk_file.base);
-	if (err != 0) {
-		err = set_stage_two_bin(util, stage_two_data, stage_two_size);
-	} else {
-		err = set_stage_two_gpt(util, &gpt, stage_two_data, stage_two_size);
-	}
-
-	pure64_gpt_done(&gpt);
-
-	return err;
 }
