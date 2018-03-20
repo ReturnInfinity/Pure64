@@ -67,8 +67,6 @@ static void print_help(const char *argv0) {
 	printf("\tcp    : Copy file from host file system to Pure64 image.\n");
 	printf("\tls    : List directory contents.\n");
 	printf("\tmkdir : Create a directory.\n");
-	printf("\trm    : Remove a file.\n");
-	printf("\trmdir : Remove a directory.\n");
 }
 
 static bool is_opt(const char *argv) {
