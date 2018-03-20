@@ -109,8 +109,9 @@ static void print_help(const char *argv0) {
 	printf("Usage: %s [options] <command>\n", argv0);
 	printf("\n");
 	printf("Options:\n");
-	printf("\t--file, -f : Specify the path to the Pure64 file.\n");
-	printf("\t--help, -h : Print this help message.\n");
+	printf("\t--disk,   -d : Specify the path to the disk file.\n");
+	printf("\t--config, -c : Specify the path to the config file.\n");
+	printf("\t--help,   -h : Print this help message.\n");
 	printf("\n");
 	printf("Commands:\n");
 	printf("\tinit  : Initialize the disk image.\n");
@@ -133,32 +134,23 @@ static bool is_opt(const char *argv) {
  * Command Declarations
  * * * * * * * * * * * */
 
-static int pure64_init(const char *filename, int argc, const char **argv) {
+static int pure64_init(const char *config, const char *disk, int argc, const char **argv) {
 
-	const char *config_path = "pure64-config.txt";
-
-	for (int i = 0; i < argc; i++) {
-		if (strcmp(argv[i], "--config") == 0) {
-			if ((i + 1) >= argc) {
-				fprintf(stderr, "Config path not specified.\n");
-				return EXIT_FAILURE;
-			}
-			config_path = argv[i + 1];
-			i++;
-		} else if (argv[i][0] == '-') {
-			fprintf(stderr, "Unknown option: %s\n", argv[i]);
-			return EXIT_FAILURE;
-		} else {
-			fprintf(stderr, "Unknown argument: %s\n", argv[i]);
-			return EXIT_FAILURE;
-		}
-	}
+	(void) argc;
+	(void) argv;
 
 	struct pure64_util util;
 
 	pure64_util_init(&util);
 
-	int err = pure64_util_create_disk(&util, config_path, filename);
+	int err = pure64_util_open_config(&util, config);
+	if (err != 0) {
+		fprintf(stderr, "Failed to open config '%s': %s\n", config, pure64_strerror(err));
+		pure64_util_done(&util);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_util_create_disk(&util, disk);
 	if (err != 0) {
 		fprintf(stderr, "Failed to create disk image: %s\n", pure64_strerror(err));
 		pure64_util_done(&util);
@@ -692,16 +684,21 @@ static int pure64_mkdir(struct pure64_fs *fs, int argc, const char **argv) {
 
 int main(int argc, const char **argv) {
 
-	int i;
-	const char *filename = "pure64.img";
+	const char *disk = "pure64.img";
+	const char *config = "pure64-config.txt";
 
-	for (i = 1; i < argc; i++) {
+	int i = 1;
+
+	while (i < argc) {
 		if (check_opt(argv[i], "help", 'h')) {
 			print_help(argv[0]);
 			return EXIT_FAILURE;
-		} else if (check_opt(argv[i], "file", 'f')) {
-			filename = argv[i + 1];
-			i++;
+		} else if (check_opt(argv[i], "disk", 'd')) {
+			disk = argv[i + 1];
+			i += 2;
+		} else if (check_opt(argv[i], "config", 'c')) {
+			disk = argv[i + 1];
+			i += 2;
 		} else if (is_opt(argv[i])) {
 			fprintf(stderr, "Unknown option '%s'.\n", argv[i]);
 			return EXIT_FAILURE;
@@ -710,8 +707,13 @@ int main(int argc, const char **argv) {
 		}
 	}
 
-	if (filename == NULL) {
-		fprintf(stderr, "No filename specified after '--file' or '-f' option.\n");
+	if (disk == NULL) {
+		fprintf(stderr, "No disk specified after '--file' or '-f' option.\n");
+		return EXIT_FAILURE;
+	}
+
+	if (config == NULL) {
+		fprintf(stderr, "No configuration file specified after '--config' or '-c' option.\n");
 		return EXIT_FAILURE;
 	}
 
@@ -733,16 +735,23 @@ int main(int argc, const char **argv) {
 	/* argv[0] is now the command arguments */
 
 	if (pure64_strcmp(command, "init") == 0) {
-		return pure64_init(filename, argc, argv);
+		return pure64_init(config, disk, argc, argv);
 	}
 
 	struct pure64_util util;
 
 	pure64_util_init(&util);
 
-	int err = pure64_util_open_disk(&util, filename);
+	int err = pure64_util_open_config(&util, config);
 	if (err != 0) {
-		fprintf(stderr, "Failed to open '%s': %s\n", filename, pure64_strerror(err));
+		fprintf(stderr, "Failed to open '%s': %s\n", config, pure64_strerror(err));
+		pure64_util_done(&util);
+		return EXIT_FAILURE;
+	}
+
+	err = pure64_util_open_disk(&util, disk);
+	if (err != 0) {
+		fprintf(stderr, "Failed to open '%s': %s\n", disk, pure64_strerror(err));
 		pure64_util_done(&util);
 		return EXIT_FAILURE;
 	}

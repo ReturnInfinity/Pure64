@@ -3,6 +3,7 @@
 
 #include <pure64/fs.h>
 
+#include "config.h"
 #include "fstream.h"
 
 #ifdef __cplusplus
@@ -12,6 +13,7 @@ extern "C" {
 struct pure64_uuid;
 
 struct pure64_util {
+	struct pure64_config config;
 	/** The file associated with the
 	 * Pure64 disk image. */
 	struct pure64_fstream disk_file;
@@ -38,13 +40,11 @@ void pure64_util_done(struct pure64_util *util);
 
 /** Creates a new disk image.
  * @param util An initialized utility structure.
- * @param config_path The path of the configuration file.
  * @param path The path to create the disk image at.
  * @returns Zero on success, an error code on failure.
  * */
 
 int pure64_util_create_disk(struct pure64_util *util,
-                            const char *config_path,
                             const char *path);
 
 /** Opens an existing disk image.
@@ -55,6 +55,15 @@ int pure64_util_create_disk(struct pure64_util *util,
 
 int pure64_util_open_disk(struct pure64_util *util,
                           const char *path);
+
+/** Opens a configuration file.
+ * @param util An initialized utility structure.
+ * @param path The path of the config file.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_util_open_config(struct pure64_util *util,
+                            const char *path);
 
 /** Creates a partition table in GPT format.
  * @param util An initialized utility structure.
