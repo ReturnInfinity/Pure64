@@ -55,6 +55,10 @@ struct pure64_token {
 	 * the source code, because it can be used to increment the
 	 * character index after a successfull parse. */
 	unsigned long int width;
+	/** The line in the source that the token starts at. */
+	unsigned long int line;
+	/** The column within the line that the token starts at. */
+	unsigned long int column;
 };
 
 /** This initializes the token structure
@@ -72,6 +76,13 @@ void pure64_token_init(struct pure64_token *token);
  * */
 
 int pure64_token_parse(struct pure64_token *token, const char *source);
+
+/** This is the end-of-file token. It is sometimes
+ * returned by a function, instead of a null pointer,
+ * when an index is out of bounds.
+ * */
+
+extern const struct pure64_token pure64_eof_token;
 
 /** This is a token buffer, used for parsing
  * a series of tokens.

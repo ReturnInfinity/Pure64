@@ -6,11 +6,47 @@
 #include <stdlib.h>
 #include <string.h>
 
+/** The position of the scanner
+ * within the source code.
+ * */
+
+struct source_pos {
+	/** Indicates the line number, starting at one. */
+	unsigned long int line;
+	/** Indicates the column, starting at one. */
+	unsigned long int column;
+};
+
+static void source_pos_init(struct source_pos *pos) {
+	pos->line = 1;
+	pos->column = 1;
+}
+
+static void source_pos_update(struct source_pos *pos,
+                              const char *str,
+                              unsigned long int size) {
+
+	unsigned long int i = 0;
+
+	while (i < size) {
+		char c = str[i];
+		if (c == '\n') {
+			pos->line++;
+			pos->column = 1;
+		} else {
+			pos->column++;
+		}
+		i++;
+	}
+}
+
 const struct pure64_token pure64_eof_token = {
 	PURE64_TOKEN_END /* token type */,
 	NULL /* data */,
 	0 /* size */,
-	0 /* width */
+	0 /* width */,
+	0 /* line */,
+	0 /* column */
 };
 
 static int parse_whitespace(struct pure64_token *token, const char *source) {
@@ -31,7 +67,7 @@ static int parse_whitespace(struct pure64_token *token, const char *source) {
 		token->type = PURE64_TOKEN_WHITESPACE;
 		token->data = source;
 		token->size = i;
-		token->width = token->size;
+		token->width = i;
 		return 0;
 	}
 
@@ -118,9 +154,8 @@ static int parse_colon(struct pure64_token *token, const char *source) {
 static int parse_identifier(struct pure64_token *token, const char *source) {
 
 	char c = source[0];
-	if (!((c >= 'a') && (c <= 'z'))
-	 && !((c >= 'A') && (c <= 'Z'))
-	 && (c != '_')) {
+
+	if (!isalpha(c) && (c != '_')) {
 		return PURE64_EINVAL;
 	}
 
@@ -189,6 +224,8 @@ void pure64_token_init(struct pure64_token *token) {
 	token->data = NULL;
 	token->size = 0;
 	token->width = 0;
+	token->line = 1;
+	token->column = 1;
 }
 
 int pure64_token_parse(struct pure64_token *token, const char *source) {
@@ -203,9 +240,19 @@ int pure64_token_parse(struct pure64_token *token, const char *source) {
 		return 0;
 	}
 
-	token->type = PURE64_TOKEN_UNKNOWN;
+	if (source[0] == 0) {
+		token->type = PURE64_TOKEN_END;
+		token->data = source;
+		token->size = 0;
+		token->width = 0;
+	} else {
+		token->type = PURE64_TOKEN_UNKNOWN;
+		token->data = source;
+		token->size = 1;
+		token->width = 1;
+	}
 
-	return PURE64_EINVAL;
+	return 0;
 }
 
 void pure64_tokenbuf_init(struct pure64_tokenbuf *tokenbuf) {
@@ -247,23 +294,32 @@ int pure64_tokenbuf_parse(struct pure64_tokenbuf *tokenbuf, const char *source) 
 
 	struct pure64_token token;
 
-	pure64_token_init(&token);
+	struct source_pos pos;
+
+	source_pos_init(&pos);
 
 	while (i < source_len) {
+
+		pure64_token_init(&token);
 
 		int err = pure64_token_parse(&token, &source[i]);
 		if (err != 0)
 			return err;
 
+		token.line = pos.line;
+		token.column = pos.column;
+
+		source_pos_update(&pos, &source[i], token.width);
+
 		if ((token.type == PURE64_TOKEN_WHITESPACE)
 		 && (!tokenbuf->allowing_whitespace)) {
-			i += token.width + 1;
+			i += token.width;
 			continue;
 		}
 
 		if ((token.type == PURE64_TOKEN_COMMENT)
 		 && (!tokenbuf->allowing_comments)) {
-			i += token.width + 1;
+			i += token.width;
 			continue;
 		}
 
@@ -271,7 +327,7 @@ int pure64_tokenbuf_parse(struct pure64_tokenbuf *tokenbuf, const char *source) 
 		if (err != 0)
 			return err;
 
-		i += token.width + 1;
+		i += token.width;
 	}
 
 	int err = pure64_tokenbuf_push(tokenbuf, &pure64_eof_token);
@@ -282,11 +338,6 @@ int pure64_tokenbuf_parse(struct pure64_tokenbuf *tokenbuf, const char *source) 
 }
 
 int pure64_tokenbuf_push(struct pure64_tokenbuf *tokenbuf, const struct pure64_token *token) {
-
-	if ((token->type == PURE64_TOKEN_NONE)
-	 || (token->type == PURE64_TOKEN_UNKNOWN)) {
-		return PURE64_EINVAL;
-	}
 
 	if ((tokenbuf->token_count + 1) >= tokenbuf->tokens_reserved) {
 		int err = reserve_tokens(tokenbuf);
