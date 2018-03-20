@@ -334,6 +334,7 @@ struct pure64_file *pure64_fs_open_file(struct pure64_fs *fs, const char *path_s
 	if (name_count == 0) {
 		/* there must be at least one
 		 * entry name in the path */
+		pure64_path_free(&path);
 		return NULL;
 	}
 
@@ -362,6 +363,7 @@ struct pure64_file *pure64_fs_open_file(struct pure64_fs *fs, const char *path_s
 	if (name == NULL) {
 		/* This shouldn't happen, so
 		 * this check is a precaution */
+		pure64_path_free(&path);
 		return NULL;
 	}
 
