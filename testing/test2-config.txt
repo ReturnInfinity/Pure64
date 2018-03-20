@@ -1,0 +1,5 @@
+arch: x86_64
+bootsector: mbr
+stage_three: loader
+partition_scheme: gpt
+disk_size: 1MiB

@@ -16,12 +16,22 @@ pure64-$(VERSION):
 	$(MAKE) install DESTDIR=$(PWD)/$@ PREFIX=/
 
 .PHONY: test
-test: pure64.img
-	./test.sh
+test: test1
 
-pure64.img: all testing/kernel examples/example2-config.txt
-	./src/util/pure64 --config examples/example2-config.txt init
-	./src/util/pure64 --config examples/example2-config.txt cp testing/kernel /boot/kernel
+.PHONY: test1
+test1: testing/test1.img
+	./test.sh $<
+
+.PHONY: test2
+test2: testing/test2.img
+	./test.sh $<
+
+testing/test1.img: testing/test1-config.txt testing/kernel all
+	./src/util/pure64 --disk $@ --config $< init
+
+testing/test2.img: testing/test2-config.txt testing/kernel all
+	./src/util/pure64 --disk $@ --config $< init
+	./src/util/pure64 --disk $@ --config $< cp testing/kernel /boot/kernel
 
 testing/kernel.sys: testing/kernel
 	objcopy -O binary $< $@
