@@ -84,6 +84,8 @@ struct pure64_config_error {
 	const char *desc;
 	/** The line that the error occured on. */
 	unsigned long int line;
+	/** The column that the error occured on. */
+	unsigned long int column;
 };
 
 /** Represents a disk configuration file.
