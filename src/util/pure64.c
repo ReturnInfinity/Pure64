@@ -246,6 +246,7 @@ static int pure64_cp(struct pure64_util *util, int argc, const char **argv) {
 int main(int argc, const char **argv) {
 
 	const char *disk = "pure64.img";
+
 	const char *config = "pure64-config.txt";
 
 	int i = 1;
@@ -258,7 +259,7 @@ int main(int argc, const char **argv) {
 			disk = argv[i + 1];
 			i += 2;
 		} else if (check_opt(argv[i], "config", 'c')) {
-			disk = argv[i + 1];
+			config = argv[i + 1];
 			i += 2;
 		} else if (is_opt(argv[i])) {
 			fprintf(stderr, "Unknown option '%s'.\n", argv[i]);
@@ -269,7 +270,7 @@ int main(int argc, const char **argv) {
 	}
 
 	if (disk == NULL) {
-		fprintf(stderr, "No disk specified after '--file' or '-f' option.\n");
+		fprintf(stderr, "No disk specified after '--disk' or '-d' option.\n");
 		return EXIT_FAILURE;
 	}
 
