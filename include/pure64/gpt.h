@@ -329,9 +329,28 @@ int pure64_gpt_export(const struct pure64_gpt *gpt,
 const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt,
                                                     uint32_t index);
 
+/** Sets the UUID type of the partition entry.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the entry to
+ * set the entry of.
+ * @param type_uuid The UUID string that indicates
+ * the type of the entry.
+ * @returns Zero on success, an error code on failure.
+ * @see PURE64_UUID_STAGE_TWO
+ * @see PURE64_UUID_STAGE_THREE
+ * @see PURE64_UUID_FILE_SYSTEM
+ * */
+
 int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
                               uint32_t entry_index,
                               const char *type_uuid);
+
+/** Sets the name of a GPT entry.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the entry to set the name of.
+ * @param name The name, as UTF-16, to assign to the entry.
+ * @returns Zero on success, an error code on failure.
+ * */
 
 int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
                               uint32_t entry_index,
