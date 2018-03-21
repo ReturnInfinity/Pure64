@@ -1,18 +1,11 @@
 top ?= ../..
-
 DESTDIR ?=
-
 PREFIX ?= /usr/local
-
 VPATH += $(top)/include/pure64
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
-CFLAGS += -mno-red-zone
-CFLAGS += -fno-stack-protector
-CFLAGS += -fomit-frame-pointer
-CFLAGS += -Os
 CFLAGS += -g
 
 ARFLAGS = rcs
@@ -37,7 +30,7 @@ targets += libpure64.a
 all: $(targets)
 
 libpure64.a: $(libfiles)
-	@echo "AR $@"
+	@echo "AR      $@"
 	$(AR) $(ARFLAGS) $@ $^
 
 dap.o: dap.c dap.h misc.h stream.h
@@ -67,7 +60,7 @@ string.o: string.c string.h
 uuid.o: uuid.c uuid.h string.h
 
 %.o: %.c
-	@echo "CC $@"
+	@echo "CC      $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean

@@ -7,7 +7,7 @@
 #ifndef PURE64_MISC_H
 #define PURE64_MISC_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,17 +15,17 @@ extern "C" {
 
 struct pure64_stream;
 
-int encode_uint16(uint16_t n, struct pure64_stream *file);
+int encode_uint16(pure64_uint16 n, struct pure64_stream *file);
 
-int encode_uint32(uint32_t n, struct pure64_stream *file);
+int encode_uint32(pure64_uint32 n, struct pure64_stream *file);
 
-int encode_uint64(uint64_t n, struct pure64_stream *file);
+int encode_uint64(pure64_uint64 n, struct pure64_stream *file);
 
-int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file);
+int decode_uint16(pure64_uint16 *n_ptr, struct pure64_stream *file);
 
-int decode_uint32(uint32_t *n_ptr, struct pure64_stream *file);
+int decode_uint32(pure64_uint32 *n_ptr, struct pure64_stream *file);
 
-int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file);
+int decode_uint64(pure64_uint64 *n_ptr, struct pure64_stream *file);
 
 #ifdef __cplusplus
 } /* extern "C" { */

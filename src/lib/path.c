@@ -23,7 +23,7 @@ void pure64_path_init(struct pure64_path *path) {
 
 void pure64_path_free(struct pure64_path *path) {
 
-	uint64_t i;
+	pure64_uint64 i;
 
 	for (i = 0; i < path->name_count; i++)
 		pure64_free(path->name_array[i].data);
@@ -35,7 +35,7 @@ void pure64_path_free(struct pure64_path *path) {
 }
 
 const char * pure64_path_get_name(const struct pure64_path *path,
-                     uint64_t index) {
+                                  pure64_uint64 index) {
 
 	if (index >= path->name_count)
 		return NULL;
@@ -43,15 +43,15 @@ const char * pure64_path_get_name(const struct pure64_path *path,
 	return path->name_array[index].data;
 }
 
-uint64_t pure64_path_get_name_count(const struct pure64_path *path) {
+pure64_uint64 pure64_path_get_name_count(const struct pure64_path *path) {
 
 	return path->name_count;
 }
 
 int pure64_path_normalize(struct pure64_path *path) {
 
-	uint64_t i;
-	uint64_t j;
+	pure64_uint64 i;
+	pure64_uint64 j;
 
 	i = 0;
 
@@ -102,11 +102,11 @@ int pure64_path_parse(struct pure64_path *path,
                       const char *path_str) {
 
 	int err;
-	uint64_t i;
+	pure64_uint64 i;
 	char *tmp;
 	char *tmp2;
-	uint64_t tmp_size;
-	uint64_t tmp_res;
+	pure64_uint64 tmp_size;
+	pure64_uint64 tmp_res;
 
 	tmp = NULL;
 	tmp_size = 0;
@@ -160,9 +160,9 @@ int pure64_path_push_child(struct pure64_path *path,
                            const char *name) {
 
 	char *tmp_name;
-	uint64_t name_size;
+	pure64_uint64 name_size;
 	struct pure64_path_name *name_array;
-	uint64_t name_array_size;
+	pure64_uint64 name_array_size;
 
 	name_array = path->name_array;
 

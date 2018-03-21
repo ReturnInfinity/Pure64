@@ -11,7 +11,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
-static int fstream_set_pos(void *file_ptr, uint64_t pos_ptr) {
+static int fstream_set_pos(void *file_ptr, pure64_uint64 pos_ptr) {
 
 	if (pos_ptr > LONG_MAX)
 		return PURE64_EINVAL;
@@ -22,7 +22,7 @@ static int fstream_set_pos(void *file_ptr, uint64_t pos_ptr) {
 	return 0;
 }
 
-static int fstream_get_pos(void *file_ptr, uint64_t *pos_ptr) {
+static int fstream_get_pos(void *file_ptr, pure64_uint64 *pos_ptr) {
 
 	long int pos;
 
@@ -35,7 +35,7 @@ static int fstream_get_pos(void *file_ptr, uint64_t *pos_ptr) {
 	return 0;
 }
 
-static int fstream_get_size(void *file_ptr, uint64_t *size_ptr) {
+static int fstream_get_size(void *file_ptr, pure64_uint64 *size_ptr) {
 
 	FILE *file = (FILE *) file_ptr;
 	if (file == NULL)
@@ -60,19 +60,19 @@ static int fstream_get_size(void *file_ptr, uint64_t *size_ptr) {
 		return PURE64_EINVAL;
 
 	if (size_ptr != NULL)
-		*size_ptr = (uint64_t) size;
+		*size_ptr = (pure64_uint64) size;
 
 	return 0;
 }
 
-static int fstream_write(void *file_ptr, const void *buf, uint64_t buf_size) {
+static int fstream_write(void *file_ptr, const void *buf, pure64_uint64 buf_size) {
 	if (fwrite(buf, 1, buf_size, (FILE *) file_ptr) != buf_size)
 		return PURE64_EIO;
 	else
 		return 0;
 }
 
-static int fstream_read(void *file_ptr, void *buf, uint64_t buf_size) {
+static int fstream_read(void *file_ptr, void *buf, pure64_uint64 buf_size) {
 
 	if (file_ptr == NULL)
 		return PURE64_EFAULT;

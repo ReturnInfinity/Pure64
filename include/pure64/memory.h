@@ -9,15 +9,11 @@
 #ifndef PURE64_MEMORY_H
 #define PURE64_MEMORY_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 /** Represents an invalid memory
  * reference.
  * */
-
-#ifndef NULL
-#define NULL ((void *) 0x00)
-#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +25,7 @@ extern "C" {
  * zero if there is no more memory available.
  * */
 
-void *pure64_malloc(uint64_t size);
+void *pure64_malloc(pure64_uint64 size);
 
 /** Resizes an existing memory block. If the
  * address passed to this function is zero, then
@@ -42,7 +38,7 @@ void *pure64_malloc(uint64_t size);
  * Otherwise, zero is returned.
  * */
 
-void *pure64_realloc(void *addr, uint64_t size);
+void *pure64_realloc(void *addr, pure64_uint64 size);
 
 /** Releases a memory block previously allocated.
  * @param addr The address of the memory block that

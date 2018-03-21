@@ -16,24 +16,24 @@
 #define NULL ((void *) 0x00)
 #endif
 
-static uint64_t pure64_file_size(const struct pure64_file *file) {
+static pure64_uint64 pure64_file_size(const struct pure64_file *file) {
 	return 16 + file->name_size + file->data_size;
 }
 
-static uint64_t pure64_dir_size(const struct pure64_dir *dir) {
+static pure64_uint64 pure64_dir_size(const struct pure64_dir *dir) {
 
-	uint64_t size = 24;
+	pure64_uint64 size = 24;
 
-	for (uint64_t i = 0; i < dir->subdir_count; i++)
+	for (pure64_uint64 i = 0; i < dir->subdir_count; i++)
 		size += pure64_dir_size(&dir->subdirs[i]);
 
-	for (uint64_t i = 0; i < dir->file_count; i++)
+	for (pure64_uint64 i = 0; i < dir->file_count; i++)
 		size += pure64_file_size(&dir->files[i]);
 
 	return size;
 }
 
-static uint64_t pure64_fs_size(const struct pure64_fs *fs) {
+static pure64_uint64 pure64_fs_size(const struct pure64_fs *fs) {
 
 	return 16 + pure64_dir_size(&fs->root);
 }

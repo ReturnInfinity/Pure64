@@ -10,8 +10,7 @@
 #define PURE64_MBR_H
 
 #include <pure64/dap.h>
-
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,7 +28,7 @@ struct pure64_stream;
 struct pure64_mbr {
 	/** The assembly code used
 	 * to load the next boot loader. */
-	uint8_t code[476];
+	pure64_uint8 code[476];
 	/** The disk address packet for
 	 * the second stage boot loader. */
 	struct pure64_dap st2dap;
@@ -37,7 +36,7 @@ struct pure64_mbr {
 	 * the third stage boot loader. */
 	struct pure64_dap st3dap;
 	/** The boot signature. */
-	uint16_t boot_signature;
+	pure64_uint16 boot_signature;
 };
 
 /** Zero out the MBR structure.

@@ -9,7 +9,7 @@
 #ifndef PURE64_DAP_H
 #define PURE64_DAP_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,15 +26,15 @@ struct pure64_stream;
 
 struct pure64_dap {
 	/** Reserved for use by the boot sector. */
-	uint8_t reserved[2];
+	pure64_uint8 reserved[2];
 	/** The number of sectors occupied by the boot loader. */
-	uint16_t sector_count;
+	pure64_uint16 sector_count;
 	/** The address to load the boot loader at. */
-	uint16_t address;
+	pure64_uint16 address;
 	/** The segment to load the boot loader at. */
-	uint16_t segment;
+	pure64_uint16 segment;
 	/** The sector that contains the boot loader. */
-	uint64_t sector;
+	pure64_uint64 sector;
 };
 
 /** Read the disk address packet from a stream.

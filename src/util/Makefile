@@ -4,7 +4,7 @@ DESTDIR ?=
 
 PREFIX ?= /usr/local
 
-VPATH += $(top)/src/lib
+VPATH += $(top)/src/hostlib
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
@@ -102,20 +102,19 @@ token-test: token-test.o token.o
 util.o: util.c util.h fstream.h
 
 %: %.o
-	@echo "LD $@"
+	@echo "LD      $@"
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 %.o: %.c
-	@echo "CC $@"
+	@echo "CC      $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
-	$(RM) mbr-data.h mbr-data.c mbr-data.o
-	$(RM) pure64-data.h pure64-data.c pure64-data.o
-	$(RM) stage-three-data.h stage-three-data.c stage-three-data.o
-	$(RM) pure64.o pure64
-	$(RM) rc.o rc
+	$(RM) pure64 $(pure64_files)
+	$(RM) config-test config-test.o
+	$(RM) token-test token-test.o
+	$(RM) rc rc.o
 
 .PHONY: test
 test: config-test

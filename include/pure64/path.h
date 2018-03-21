@@ -9,7 +9,7 @@
 #ifndef PURE64_PATH_H
 #define PURE64_PATH_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,7 +24,7 @@ struct pure64_path_name {
 	char *data;
 	/** The number of characters
 	 * in the name. */
-	uint64_t size;
+	pure64_uint64 size;
 };
 
 /** A file system path.
@@ -35,7 +35,7 @@ struct pure64_path {
 	struct pure64_path_name *name_array;
 	/** The number of names in the
 	 * directory name array. */
-	uint64_t name_count;
+	pure64_uint64 name_count;
 };
 
 /** Initializes a path structure.
@@ -43,8 +43,7 @@ struct pure64_path {
  * path structure.
  * */
 
-void
-pure64_path_init(struct pure64_path *path);
+void pure64_path_init(struct pure64_path *path);
 
 /** Releases resources allocated
  * by the path.
@@ -52,8 +51,7 @@ pure64_path_init(struct pure64_path *path);
  * structure.
  * */
 
-void
-pure64_path_free(struct pure64_path *path);
+void pure64_path_free(struct pure64_path *path);
 
 /** Get a directory name from the path.
  * @param path An initialized path structure.
@@ -64,17 +62,15 @@ pure64_path_free(struct pure64_path *path);
  * is out of bounds, null is returned.
  * */
 
-const char *
-pure64_path_get_name(const struct pure64_path *path,
-                     uint64_t index);
+const char *pure64_path_get_name(const struct pure64_path *path,
+                                 pure64_uint64 index);
 
 /** Get the number of directories specified in the path.
  * @param path An initialized path structure.
  * @returns The number of directories in the path.
  * */
 
-uint64_t
-pure64_path_get_name_count(const struct pure64_path *path);
+pure64_uint64 pure64_path_get_name_count(const struct pure64_path *path);
 
 /** Resolve '.' and '..' references.
  * If there are more '..' references than
@@ -84,8 +80,7 @@ pure64_path_get_name_count(const struct pure64_path *path);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int
-pure64_path_normalize(struct pure64_path *path);
+int pure64_path_normalize(struct pure64_path *path);
 
 /** Parses a path string.
  * @param path An initialized path string.
@@ -95,9 +90,8 @@ pure64_path_normalize(struct pure64_path *path);
  * failure.
  * */
 
-int
-pure64_path_parse(struct pure64_path *path,
-                  const char *path_string);
+int pure64_path_parse(struct pure64_path *path,
+                      const char *path_string);
 
 /** Add a file or directory name to the
  * end of the path.
@@ -106,9 +100,8 @@ pure64_path_parse(struct pure64_path *path,
  * @returns Zero on success, non-zero otherwise.
  * */
 
-int
-pure64_path_push_child(struct pure64_path *path,
-                       const char *name);
+int pure64_path_push_child(struct pure64_path *path,
+                           const char *name);
 
 #ifdef __cplusplus
 } /* extern "C" { */

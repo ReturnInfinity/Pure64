@@ -9,8 +9,7 @@
 #ifndef PURE64_DIR_H
 #define PURE64_DIR_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,11 +23,11 @@ struct pure64_stream;
 
 struct pure64_dir {
 	/** The number of characters in the directory name. */
-	uint64_t name_size;
+	pure64_uint64 name_size;
 	/** The number of subdirectories in the directory. */
-	uint64_t subdir_count;
+	pure64_uint64 subdir_count;
 	/** The number o files in the directory. */
-	uint64_t file_count;
+	pure64_uint64 file_count;
 	/** The directory name. */
 	char *name;
 	/** The subdirectories in the directory. */
@@ -90,7 +89,7 @@ int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name);
  * @returns True if the name is found, false if it is not.
  * */
 
-bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name);
+pure64_bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name);
 
 /** Sets the name of the directory.
  * @param dir An initialized directory.

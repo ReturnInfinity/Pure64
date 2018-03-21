@@ -8,6 +8,7 @@
 
 #include <pure64/error.h>
 #include <pure64/file.h>
+#include <pure64/types.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -28,9 +29,9 @@
  * if the argument is not a match.
  * */
 
-static bool check_opt(const char *arg,
-                      const char *opt,
-                      char s_opt) {
+static pure64_bool check_opt(const char *arg,
+                             const char *opt,
+                             char s_opt) {
 
 	/* create a string version
 	 * of the short option */
@@ -39,14 +40,14 @@ static bool check_opt(const char *arg,
 	s_opt3[1] = s_opt;
 	s_opt3[2] = 0;
 	if (strcmp(s_opt3, arg) == 0)
-		return true;
+		return pure64_true;
 
 	if ((arg[0] == '-')
 	 && (arg[1] == '-')
 	 && (strcmp(&arg[2], opt) == 0))
-		return true;
+		return pure64_true;
 
-	return false;
+	return pure64_false;
 }
 
 /** Prints the help message.
@@ -69,11 +70,11 @@ static void print_help(const char *argv0) {
 	printf("\tmkdir : Create a directory.\n");
 }
 
-static bool is_opt(const char *argv) {
+static pure64_bool is_opt(const char *argv) {
 	if (argv[0] == '-')
-		return true;
+		return pure64_true;
 	else
-		return false;
+		return pure64_false;
 }
 
 /* * * * * * * * * * * *
@@ -91,7 +92,9 @@ static int pure64_init(const char *config, const char *disk, int argc, const cha
 
 	int err = pure64_util_open_config(&util, config);
 	if (err != 0) {
-		fprintf(stderr, "Failed to open config '%s': %s\n", config, pure64_strerror(err));
+		/* print message if it's not a syntax error */
+		if (err != PURE64_EINVAL)
+			fprintf(stderr, "Failed to open config '%s': %s\n", config, pure64_strerror(err));
 		pure64_util_done(&util);
 		return EXIT_FAILURE;
 	}
@@ -129,10 +132,10 @@ static int pure64_ls(struct pure64_util *util, int argc, const char **argv) {
 
 		printf("%s:\n", argv[i]);
 
-		for (uint64_t j = 0; j < subdir->subdir_count; j++)
+		for (pure64_uint64 j = 0; j < subdir->subdir_count; j++)
 			printf("dir  : %s\n", subdir->subdirs[j].name);
 
-		for (uint64_t j = 0; j < subdir->file_count; j++)
+		for (pure64_uint64 j = 0; j < subdir->file_count; j++)
 			printf("file : %s\n", subdir->files[j].name);
 	}
 

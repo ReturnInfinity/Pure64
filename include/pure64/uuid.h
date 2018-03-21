@@ -48,7 +48,7 @@
 
 #endif
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +62,7 @@ extern "C" {
 struct pure64_uuid {
 	/** The byte oriented layout
 	 * of the identifier. */
-	uint8_t bytes[16];
+	pure64_uint8 bytes[16];
 };
 
 /** Zero the value of an identifier.

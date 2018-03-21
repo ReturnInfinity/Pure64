@@ -9,6 +9,8 @@
 #ifndef PURE64_STRING_H
 #define PURE64_STRING_H
 
+#include <pure64/types.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -22,7 +24,7 @@ extern "C" {
  * memory section.
  * */
 
-void pure64_memset(void *dst, int value, unsigned long int size);
+void pure64_memset(void *dst, int value, pure64_uint64 size);
 
 /** Copy a range of memory from one location
  * to the other. This function does not check
@@ -32,7 +34,7 @@ void pure64_memset(void *dst, int value, unsigned long int size);
  * @param size The number of bytes to copy.
  * */
 
-void pure64_memcpy(void *dst, const void *src, unsigned long int size);
+void pure64_memcpy(void *dst, const void *src, pure64_uint64 size);
 
 /** Compare two blocks of memory.
  * @param a The first block
@@ -45,7 +47,7 @@ void pure64_memcpy(void *dst, const void *src, unsigned long int size);
  * if block @p a is less than block @p b.
  * */
 
-int pure64_memcmp(const void *a, const void *b, unsigned long int size);
+int pure64_memcmp(const void *a, const void *b, pure64_uint64 size);
 
 /** Calculate the length of a null-terminated string.
  * @param str The string to calculate the
@@ -54,7 +56,7 @@ int pure64_memcmp(const void *a, const void *b, unsigned long int size);
  * the null-terminator, in bytes.
  * */
 
-unsigned long int pure64_strlen(const char *str);
+pure64_uint64 pure64_strlen(const char *str);
 
 /** Compares two strings.
  * @param a The first string to compare.

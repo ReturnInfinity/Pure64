@@ -66,33 +66,33 @@ struct pure64_gpt_header {
 	 * that it is a GPT partitioned disk. */
 	char signature[8];
 	/** The version of the GPT layout. */
-	uint32_t version;
+	pure64_uint32 version;
 	/** The size of this header on disk. */
-	uint32_t header_size;
+	pure64_uint32 header_size;
 	/** The 32-bit CRC checksum of this header. */
-	uint32_t checksum;
+	pure64_uint32 checksum;
 	/** Reserved */
-	uint32_t reserved;
+	pure64_uint32 reserved;
 	/** The LBA that contains this header. */
-	uint64_t current_lba;
+	pure64_uint64 current_lba;
 	/** The LBA that contains the backup header. */
-	uint64_t backup_lba;
+	pure64_uint64 backup_lba;
 	/** The first LBA that may be used by a partition. */
-	uint64_t first_usable_lba;
+	pure64_uint64 first_usable_lba;
 	/** The last LBA that may be used by a partition. */
-	uint64_t last_usable_lba;
+	pure64_uint64 last_usable_lba;
 	/** The UUID of the disk containing this partition table. */
 	struct pure64_uuid disk_uuid;
 	/** The starting LBA of the partition entries. */
-	uint64_t partition_entries_lba;
+	pure64_uint64 partition_entries_lba;
 	/** The number of partition entries. This does not
 	 * indicate the number of partition entries that are
 	 * currently used, only how many are reserved for use. */
-	uint32_t partition_entry_count;
+	pure64_uint32 partition_entry_count;
 	/** The size of a single partition entry. */
-	uint32_t partition_entry_size;
+	pure64_uint32 partition_entry_size;
 	/** The 32-bit CRC checksum of the partition entries. */
-	uint32_t partition_entries_checksum;
+	pure64_uint32 partition_entries_checksum;
 };
 
 /** Exports a GPT header to a stream.
@@ -119,15 +119,15 @@ struct pure64_gpt_entry {
 	struct pure64_uuid entry_uuid;
 	/** The first LBA containing
 	 * the partition data. */
-	uint64_t first_lba;
+	pure64_uint64 first_lba;
 	/** The last LBA containing
 	 * partition data. */
-	uint64_t last_lba;
+	pure64_uint64 last_lba;
 	/** Partition attributes */
-	uint64_t attributes;
+	pure64_uint64 attributes;
 	/** The name of the partition,
 	 * encoded as UTF-16LE. */
-	uint16_t name[36];
+	pure64_uint16 name[36];
 };
 
 /** Initializes a GPT partition entry.
@@ -168,14 +168,14 @@ int pure64_gpt_entry_is_type(const struct pure64_gpt_entry *entry,
  * @returns The offset of the partition data on disk.
  * */
 
-uint64_t pure64_gpt_entry_get_offset(const struct pure64_gpt_entry *entry);
+pure64_uint64 pure64_gpt_entry_get_offset(const struct pure64_gpt_entry *entry);
 
 /** Get the size of the partition, in terms of bytes.
  * @param entry The entry to get the size of.
  * @returns The size of the partition, in terms of bytes.
  * */
 
-uint64_t pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
+pure64_uint64 pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
 
 /** Export a GPT entry to a stream.
  * This function should only be used
@@ -238,9 +238,9 @@ void pure64_gpt_set_disk_uuid(struct pure64_gpt *gpt,
  * on failure.
  * */
 
-uint32_t pure64_gpt_alloc(struct pure64_gpt *gpt,
+pure64_uint32 pure64_gpt_alloc(struct pure64_gpt *gpt,
                           const struct pure64_uuid *uuid,
-                          uint64_t lba_count);
+                          pure64_uint64 lba_count);
 
 /** This function formats the GPT structure
  * according to the size of the disk.
@@ -253,7 +253,7 @@ uint32_t pure64_gpt_alloc(struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_format(struct pure64_gpt *gpt,
-                      uint64_t disk_size);
+                      pure64_uint64 disk_size);
 
 /** Locates the first unused entry in the partition
  * header entry array.
@@ -267,7 +267,7 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_find_unused_entry(const struct pure64_gpt *gpt,
-                                 uint32_t *entry_index);
+                                 pure64_uint32 *entry_index);
 
 /** Gets the offset, in bytes, of a partition described
  * in the partition table.
@@ -279,8 +279,8 @@ int pure64_gpt_find_unused_entry(const struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_get_partition_offset(const struct pure64_gpt *gpt,
-                                    uint32_t entry_index,
-                                    uint64_t *offset);
+                                    pure64_uint32 entry_index,
+                                    pure64_uint64 *offset);
 
 /** Gets the size, in bytes, of a partition described
  * in the partition table.
@@ -292,8 +292,8 @@ int pure64_gpt_get_partition_offset(const struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_get_partition_size(const struct pure64_gpt *gpt,
-                                  uint32_t entry_index,
-                                  uint64_t *size);
+                                  pure64_uint32 entry_index,
+                                  pure64_uint64 *size);
 
 /** Import GPT data from a stream.
  * @param gpt The GPT structure to hold the data.
@@ -327,7 +327,7 @@ int pure64_gpt_export(const struct pure64_gpt *gpt,
  * */
 
 const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt,
-                                                    uint32_t index);
+                                                    pure64_uint32 index);
 
 /** Sets the UUID type of the partition entry.
  * @param gpt An initialized GPT structure.
@@ -342,7 +342,7 @@ const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt
  * */
 
 int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
-                              uint32_t entry_index,
+                              pure64_uint32 entry_index,
                               const char *type_uuid);
 
 /** Sets the name of a GPT entry.
@@ -353,8 +353,8 @@ int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
-                              uint32_t entry_index,
-                              const uint16_t *name);
+                              pure64_uint32 entry_index,
+                              const pure64_uint16 *name);
 
 /** Sets the size of a certain partition entry.
  * This function will find the appropriate space
@@ -367,8 +367,8 @@ int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
  * */
 
 int pure64_gpt_set_entry_size(struct pure64_gpt *gpt,
-                              uint32_t entry_index,
-                              uint64_t size);
+                              pure64_uint32 entry_index,
+                              pure64_uint64 size);
 
 #ifdef __cplusplus
 } /* extern "C" { */

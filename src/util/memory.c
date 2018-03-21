@@ -8,11 +8,11 @@
 
 #include <stdlib.h>
 
-void *pure64_malloc(uint64_t size) {
+void *pure64_malloc(pure64_uint64 size) {
 	return malloc(size);
 }
 
-void *pure64_realloc(void *addr, uint64_t size) {
+void *pure64_realloc(void *addr, pure64_uint64 size) {
 	return realloc(addr, size);
 }
 
