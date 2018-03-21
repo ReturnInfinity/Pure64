@@ -27,7 +27,7 @@ extern "C" {
 #define NULL pure64_null
 #endif
 
-typedef unsigned long int pure64_uint64;
+typedef unsigned long long int pure64_uint64;
 
 typedef unsigned int pure64_uint32;
 
