@@ -546,12 +546,8 @@ static int stream_read(void *stream_ptr, void *buf, pure64_uint64 size) {
 	int err;
 	pure64_uint64 sector;
 	pure64_uint64 sector_count;
-	pure64_uint64 tailing_bytes;
 	pure64_uint64 byte;
-	unsigned char *buf8;
 	struct ahci_stream *stream;
-
-	buf8 = (unsigned char *) buf;
 
 	stream = (struct ahci_stream *) stream_ptr;
 
