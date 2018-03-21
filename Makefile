@@ -1,6 +1,8 @@
 VERSION ?= 0.9.0
 
-export CROSS_COMPILE ?= /opt/cross/bin/x86_64-none-elf-
+export CROSS_COMPILE ?= x86_64-none-elf-
+
+export HOST_CROSS_COMPILE ?=
 
 .PHONY: all clean install
 all clean install:
