@@ -6,15 +6,17 @@ PREFIX ?= /usr/local
 
 VPATH += $(top)/src/hostlib
 
+CC = $(HOST_CROSS_COMPILE)gcc
+
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
 CFLAGS += -g
 
 targets += rc
-targets += pure64
-targets += config-test
-targets += token-test
+targets += pure64$(EXE)
+targets += config-test$(EXE)
+targets += token-test$(EXE)
 
 pure64_files += pure64.o
 
@@ -46,10 +48,12 @@ generated_headers += stage-three-data.h
 all: $(targets)
 
 rc: rc.o
+	gcc $< -o $@
 
 rc.o: rc.c
+	gcc -Wall -Wextra -Werror -Wfatal-errors -std=gnu99 -c $< -o $@
 
-pure64: $(pure64_files) -lpure64
+pure64$(EXE): $(pure64_files) -lpure64
 
 pure64.o: pure64.c fstream.h util.h $(generated_headers)
 
@@ -57,7 +61,7 @@ config.o: config.c config.h
 
 config-test.o: config-test.c config.h
 
-config-test: config-test.o config.o token.o $(bootsector_files)
+config-test$(EXE): config-test.o config.o token.o $(bootsector_files)
 
 fstream.o: fstream.c fstream.h
 
@@ -97,9 +101,13 @@ token.o: token.c token.h
 
 token-test.o: token-test.c token.h
 
-token-test: token-test.o token.o
+token-test$(EXE): token-test.o token.o
 
 util.o: util.c util.h fstream.h
+
+%.exe: %.o
+	@echo "LD      $@"
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 %: %.o
 	@echo "LD      $@"
