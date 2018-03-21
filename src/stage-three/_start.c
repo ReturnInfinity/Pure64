@@ -15,7 +15,6 @@
 #include <pure64/path.h>
 
 #include "ahci.h"
-#include "alloc.h"
 #include "debug.h"
 #include "e820.h"
 #include "hooks.h"
