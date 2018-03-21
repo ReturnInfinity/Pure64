@@ -12,6 +12,8 @@
 #include <pure64/partition.h>
 #include <pure64/string.h>
 
+#include <pure64/path.h>
+
 #include "ahci.h"
 #include "alloc.h"
 #include "debug.h"
@@ -22,6 +24,12 @@
 #ifndef NULL
 #define NULL ((void *) 0x00)
 #endif
+
+void memset(void *a, void *b, unsigned long int size) {
+	(void) a;
+	(void) b;
+	(void) size;
+}
 
 typedef void (*kernel_entry)(void);
 
@@ -45,119 +53,95 @@ void _start(void) {
 	find_file_system(&map);
 }
 
-static int ahci_visit_port(void *map_ptr, volatile struct ahci_port *port) {
+static int load_file_system(struct pure64_map *map, struct pure64_stream *stream) {
 
 	struct pure64_fs fs;
-	struct pure64_file *kernel;
-	struct ahci_stream stream;
-	struct pure64_gpt gpt;
-	struct pure64_partition fs_partition;
 
-	/* Bail out if port isn't SATA */
-	if (!ahci_port_is_sata_drive(port))
-		return 0;
-
-	/* Initialize the port as a stream. */
-	ahci_stream_init(&stream, port);
-
-	/* Initialize the GPT structure */
-	pure64_gpt_init(&gpt);
-
-	/* Attempt to read the GPT from the AHCI port. */
-	int err = pure64_gpt_import(&gpt, &stream.base);
-	if (err != 0) {
-		debug("not a GPT drive\n");
-		/* Not a GPT formatted drive. */
-		pure64_gpt_done(&gpt);
-		return 0;
-	}
-
-	/* The file system entry will be set to
-	 * this variable if it is found. */
-	const struct pure64_gpt_entry *fs_entry = NULL;
-
-	/* Look for the file system partition. */
-	for (uint32_t i = 0; i < PURE64_GPT_ENTRY_COUNT; i++) {
-
-		const struct pure64_gpt_entry *entry = pure64_gpt_get_entry(&gpt, i);
-
-		/* Make sure that the entry is a valid one. */
-		if (entry == NULL)
-			continue;
-
-		if (!pure64_gpt_entry_is_used(entry))
-			continue;
-
-		if (pure64_gpt_entry_is_type(entry, PURE64_UUID_FILE_SYSTEM)) {
-			/* Found the file system, exit
-			 * the loop. */
-			fs_entry = entry;
-			break;
-		}
-	}
-
-	/* Check if the loop found the file system. */
-	if (fs_entry == NULL) {
-		debug("does not contain file system partition.\n");
-		/* The file system was not found. */
-		pure64_gpt_done(&gpt);
-		return 0;
-	}
-
-	debug("Found file system partition.\n");
-
-	/* Initialize the file system partition. */
-	pure64_partition_init(&fs_partition);
-
-	/* Set the starting position of the partition. */
-	pure64_partition_set_offset(&fs_partition, pure64_gpt_entry_get_offset(fs_entry));
-
-	/* Set the size of the partition. */
-	pure64_partition_set_size(&fs_partition, pure64_gpt_entry_get_size(fs_entry));
-
-	/* Done with the GPT structure.
-	 * Release its memory. */
-	pure64_gpt_done(&gpt);
-
-	/* Set the disk to the AHCI port stream. */
-	pure64_partition_set_disk(&fs_partition, &stream.base);
-
-	/* Initialize the file system. */
 	pure64_fs_init(&fs);
 
-	/* Import the file system from the
-	 * AHCI stream. */
-	err = pure64_fs_import(&fs, &fs_partition.stream);
+	int err = pure64_fs_import(&fs, stream);
 	if (err != 0) {
-		if (err == PURE64_EINVAL)
-			debug("Failed to import FS: Invalid file system signature.\n");
-		else
-			debug("Failed to import FS: %s\n", pure64_strerror(err));
-		pure64_fs_free(&fs);
-		return 0;
+		debug("Failed to import file system.\n");
+		return PURE64_EINVAL;
 	}
 
-	debug("Found file system.\n");
-
-	kernel = pure64_fs_open_file(&fs, "/boot/kernel");
+	struct pure64_file *kernel = pure64_fs_open_file(&fs, "/boot/kernel");
 	if (kernel == NULL) {
-		debug("Failed to open kernel.\n");
-		debug("Ensure that '/boot/kernel' exists.\n");
-		pure64_fs_free(&fs);
-		return 0;
+		debug("Failed to open '/boot/kernel'.\n");
+		return PURE64_EINVAL;
 	}
 
-	debug("Loading kernel.\n");
-
-	load_kernel((struct pure64_map *) map_ptr, kernel);
+	err = load_kernel(map, kernel);
+	if (err != 0) {
+		debug("Failed to load kernel.\n");
+		return err;
+	}
 
 	debug("Kernel exited.\n");
 
-	pure64_fs_free(&fs);
+	return 0;
+}
 
-	/* One means stop the AHCI visitor */
+static int ahci_visit_port(void *map_ptr, volatile struct ahci_port *port) {
 
-	return 1;
+	struct ahci_stream stream;
+
+	ahci_stream_init(&stream, port);
+
+	int err = pure64_stream_set_pos(&stream.base, 512);
+	if (err != 0) {
+		debug("Failed to seek AHCI position.\n");
+		return 0;
+	}
+
+	struct pure64_gpt_header primary_header;
+
+	err = pure64_gpt_header_import(&primary_header, &stream.base);
+	if (err != 0) {
+		debug("Failed to read primary GPT header.\n");
+		return 0;
+	}
+
+	if (pure64_memcmp(&primary_header.signature, "EFI PART", 8) != 0) {
+		debug("Disk is not GPT formatted.\n");
+		return 0;
+	}
+
+	err = pure64_stream_set_pos(&stream.base, primary_header.partition_entries_lba * 512);
+	if (err != 0) {
+		debug("Failed to seek to partition headers.\n");
+		return 0;
+	}
+
+	for (pure64_uint64 i = 0; i < primary_header.partition_entry_count; i++) {
+
+		struct pure64_gpt_entry entry;
+
+		pure64_gpt_entry_init(&entry);
+
+		err = pure64_gpt_entry_import(&entry, &stream.base);
+		if (err != 0) {
+			debug("Failed to import GPT entry.\n");
+			return 0;
+		}
+
+		if (pure64_gpt_entry_is_type(&entry, PURE64_UUID_FILE_SYSTEM)) {
+			struct pure64_partition partition;
+			pure64_partition_init(&partition);
+			pure64_partition_set_offset(&partition, pure64_gpt_entry_get_offset(&entry));
+			pure64_partition_set_size(&partition, pure64_gpt_entry_get_size(&entry));
+			pure64_partition_set_disk(&partition, &stream.base);
+			err = load_file_system((struct pure64_map *) map_ptr, &partition.stream);
+			if (err != 0)
+				return 0;
+			else
+				return 1;
+		}
+	}
+
+	/* File system partition not found. */
+
+	return 0;
 }
 
 static int find_file_system(struct pure64_map *map) {
@@ -321,6 +305,9 @@ static int load_kernel(struct pure64_map *map,
 
 	const unsigned char *data;
 	uint64_t data_size;
+
+	if (map == NULL)
+		return 0;
 
 	data = (const unsigned char *) kernel->data;
 
