@@ -107,6 +107,14 @@ struct pure64_gpt_header {
 
 int pure64_gpt_header_export(const struct pure64_gpt_header *header, struct pure64_stream *stream);
 
+/** Imports a GPT header from a stream.
+ * @param header A GPT header
+ * @param stream The stream to import the header from.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_gpt_header_import(struct pure64_gpt_header *header, struct pure64_stream *stream);
+
 /** This structure represents a
  * partition entry in a GPT formatted
  * medium.
@@ -188,6 +196,14 @@ pure64_uint64 pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
  * */
 
 int pure64_gpt_entry_export(const struct pure64_gpt_entry *entry, struct pure64_stream *stream);
+
+/** Import a GPT entry from a stream.
+ * @param entry An initialized GPT entry structure.
+ * @param stream The stream to import the entry from.
+ * @returns Zero on success, an error code on failure.
+ * */
+
+int pure64_gpt_entry_import(struct pure64_gpt_entry *entry, struct pure64_stream *stream);
 
 /** This structure represents a
  * GUID partition table.
