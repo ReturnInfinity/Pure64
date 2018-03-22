@@ -7,6 +7,7 @@ rm -f file.o
 rm -f fs.o
 rm -f mbr.o
 rm -f misc.o
+rm -f partition.o
 rm -f path.o
 rm -f stream.o
 rm -f string.o
