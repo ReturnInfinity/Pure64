@@ -3,9 +3,7 @@ addons:
   apt:
     packages:
     - nasm
-compiler:
-- gcc
-- clang
+compiler: gcc
 script:
 - make pure64-0.9.0.tar.gz
 deploy:

@@ -7,7 +7,7 @@ targets += pxestart.sys
 all: $(targets)
 
 %.sys: %.asm
-	@echo "NASM $@"
+	@echo "NASM    $@"
 	nasm $< -o $@
 
 .PHONY: clean

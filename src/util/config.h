@@ -84,6 +84,8 @@ struct pure64_config_error {
 	const char *desc;
 	/** The line that the error occured on. */
 	unsigned long int line;
+	/** The column that the error occured on. */
+	unsigned long int column;
 };
 
 /** Represents a disk configuration file.
@@ -104,6 +106,8 @@ struct pure64_config {
 	enum pure64_stage_three stage_three;
 	/** The size, in bytes, of the disk. */
 	unsigned long int disk_size;
+	/** The size, in bytes, to reserve for the file system. */
+	unsigned long int fs_size;
 	/** The path of the kernel to load. This option
 	 * is only valid if the stage three loader is
 	 * specified to load a kernel. */

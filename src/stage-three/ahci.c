@@ -12,6 +12,8 @@
 #include <pure64/string.h>
 #include <pure64/memory.h>
 
+#include "debug.h"
+
 /* * * * * *
  * Constants
  * * * * * */
@@ -45,7 +47,7 @@
 #endif
 
 #ifndef AHCI_CACHE_MAX
-#define AHCI_CACHE_MAX 0x4000
+#define AHCI_CACHE_MAX (4 * 1024 * 1024)
 #endif
 
 /* * * * * * * * * * * * * * *
@@ -54,209 +56,209 @@
 
 struct reg_d2h {
 	/** Frame information structure type (0x5f) */
-	uint8_t fis_type;
+	pure64_uint8 fis_type;
 	/** Port multiplier */
-	uint8_t port_multiplier:4;
+	pure64_uint8 port_multiplier:4;
 	/** Reserved */
-	uint8_t reserved0:1;
+	pure64_uint8 reserved0:1;
 	/** Data transfer direction. One
 	 * means device to host and zero
 	 * means host to device. */
-	uint8_t data_transfer_direction:1;
+	pure64_uint8 data_transfer_direction:1;
 	/** Interrupt bit */
-	uint8_t interrupt_bit;
+	pure64_uint8 interrupt_bit;
 	/** Reserved */
-	uint8_t reserved1:1;
+	pure64_uint8 reserved1:1;
 	/** Status register */
-	uint8_t status;
+	pure64_uint8 status;
 	/** Error register */
-	uint8_t error;
+	pure64_uint8 error;
 	/** LBA register 7:0 */
-	uint8_t lba0;
+	pure64_uint8 lba0;
 	/** LBA register 15:8 */
-	uint8_t lba1;
+	pure64_uint8 lba1;
 	/** LBA register 23:16 */
-	uint8_t lba2;
+	pure64_uint8 lba2;
 	/** Device register */
-	uint8_t device;
+	pure64_uint8 device;
 	/** LBA register 31:24 */
-	uint8_t lba3;
+	pure64_uint8 lba3;
 	/** LBA register 39:32 */
-	uint8_t lba4;
+	pure64_uint8 lba4;
 	/** LBA register 47:40 */
-	uint8_t lba5;
+	pure64_uint8 lba5;
 	/** Reserved */
-	uint8_t reserved2;
+	pure64_uint8 reserved2;
 	/** Count register 7:0 */
-	uint8_t count_low;
+	pure64_uint8 count_low;
 	/** Count register 15:8 */
-	uint8_t count_high;
+	pure64_uint8 count_high;
 	/** Reserved */
-	uint8_t reserved3[6];
+	pure64_uint8 reserved3[6];
 };
 
 struct reg_h2d {
 	/* FIS_TYPE_REG_H2D */
-	uint8_t fis_type;
+	pure64_uint8 fis_type;
 	/* Port multiplier */
-	uint8_t pmport:4;
+	pure64_uint8 pmport:4;
 	/* Reserved */
-	uint8_t rsv0:3;
+	pure64_uint8 rsv0:3;
 	/* 1: Command, 0: Control */
-	uint8_t c:1;
+	pure64_uint8 c:1;
 	/* Command register */
-	uint8_t command;
+	pure64_uint8 command;
 	/* Feature register, 7:0 */
-	uint8_t featurel;
+	pure64_uint8 featurel;
 	/* LBA low register, 7:0 */
-	uint8_t lba0;
+	pure64_uint8 lba0;
 	/* LBA mid register, 15:8 */
-	uint8_t lba1;
+	pure64_uint8 lba1;
 	/* LBA high register, 23:16 */
-	uint8_t lba2;
+	pure64_uint8 lba2;
 	/* Device register */
-	uint8_t device;
+	pure64_uint8 device;
 	/* LBA register, 31:24 */
-	uint8_t lba3;
+	pure64_uint8 lba3;
 	/* LBA register, 39:32 */
-	uint8_t lba4;
+	pure64_uint8 lba4;
 	/* LBA register, 47:40 */
-	uint8_t lba5;
+	pure64_uint8 lba5;
 	/* Feature register, 15:8 */
-	uint8_t featureh;
+	pure64_uint8 featureh;
 	/* Count register, 7:0 */
-	uint8_t countl;
+	pure64_uint8 countl;
 	/* Count register, 15:8 */
-	uint8_t counth;
+	pure64_uint8 counth;
 	/* Isochronous command completion */
-	uint8_t icc;
+	pure64_uint8 icc;
 	/* Control register */
-	uint8_t control;
+	pure64_uint8 control;
 	/* Reserved */
-	uint8_t rsv1[4];
+	pure64_uint8 rsv1[4];
 };
 
 struct pio_setup {
 	/** Frame information structure type (0x5f) */
-	uint8_t fis_type;
+	pure64_uint8 fis_type;
 	/** Port multiplier */
-	uint8_t port_multiplier:4;
+	pure64_uint8 port_multiplier:4;
 	/** Reserved */
-	uint8_t reserved0:1;
+	pure64_uint8 reserved0:1;
 	/** Data transfer direction. One
 	 * means device to host and zero
 	 * means host to device. */
-	uint8_t data_transfer_direction:1;
+	pure64_uint8 data_transfer_direction:1;
 	/** Interrupt bit */
-	uint8_t interrupt_bit;
+	pure64_uint8 interrupt_bit;
 	/** Reserved */
-	uint8_t reserved1:1;
+	pure64_uint8 reserved1:1;
 	/** Status register */
-	uint8_t status;
+	pure64_uint8 status;
 	/** Error register */
-	uint8_t error;
+	pure64_uint8 error;
 	/** LBA register 7:0 */
-	uint8_t lba0;
+	pure64_uint8 lba0;
 	/** LBA register 15:8 */
-	uint8_t lba1;
+	pure64_uint8 lba1;
 	/** LBA register 23:16 */
-	uint8_t lba2;
+	pure64_uint8 lba2;
 	/** Device register */
-	uint8_t device;
+	pure64_uint8 device;
 	/** LBA register 31:24 */
-	uint8_t lba3;
+	pure64_uint8 lba3;
 	/** LBA register 39:32 */
-	uint8_t lba4;
+	pure64_uint8 lba4;
 	/** LBA register 47:40 */
-	uint8_t lba5;
+	pure64_uint8 lba5;
 	/** Reserved */
-	uint8_t reserved2;
+	pure64_uint8 reserved2;
 	/** Count register 7:0 */
-	uint8_t count_low;
+	pure64_uint8 count_low;
 	/** Count register 15:8 */
-	uint8_t count_high;
+	pure64_uint8 count_high;
 	/** Reserved */
-	uint8_t reserved3;
+	pure64_uint8 reserved3;
 	/** New value of status register */
-	uint8_t e_status;
+	pure64_uint8 e_status;
 	/** Transfer count register */
-	uint16_t transfer_count;
+	pure64_uint16 transfer_count;
 	/** Reserved */
-	uint8_t reserved4[2];
+	pure64_uint8 reserved4[2];
 };
 
 struct dma_setup {
 	/** FIS type (0x41) */
-	uint8_t fis_type;
+	pure64_uint8 fis_type;
 	/** Port multiplier */
-	uint8_t port_multiplier:4;
+	pure64_uint8 port_multiplier:4;
 	/** Reserved */
-	uint8_t reserved0:1;
+	pure64_uint8 reserved0:1;
 	/** Zero means host to device
 	 * and one means device to host. */
-	uint8_t data_transfer_direction:1;
+	pure64_uint8 data_transfer_direction:1;
 	/** Interrupt bit */
-	uint8_t interrupt_bit:1;
+	pure64_uint8 interrupt_bit:1;
 	/** Auto activate */
-	uint8_t activate:1;
+	pure64_uint8 activate:1;
 	/** Reserved */
-	uint8_t reserved1[2];
+	pure64_uint8 reserved1[2];
 	/** Direct memory access buffer identifier */
-	uint64_t dma_buffer_id;
+	pure64_uint64 dma_buffer_id;
 	/** Reserved */
-	uint8_t reserved2[4];
+	pure64_uint8 reserved2[4];
 	/** Byte offset into buffer. The first
 	 * two bits must be zero. */
-	uint32_t dma_buffer_offset;
+	pure64_uint32 dma_buffer_offset;
 	/** Number of bytes to transfer. */
-	uint32_t transfer_count;
+	pure64_uint32 transfer_count;
 	/** Reserved */
-	uint8_t reserved3[4];
+	pure64_uint8 reserved3[4];
 };
 
 struct ahci_fis {
 	/** Direct memory access setup FIS */
 	struct dma_setup dsfis;
 	/** Padding */
-	uint8_t pad0[4];
+	pure64_uint8 pad0[4];
 	/** PIO setup FIS */
 	struct pio_setup psfs;
 	/** Padding */
-	uint8_t pad1[12];
+	pure64_uint8 pad1[12];
 	/** D2H register fis */
 	struct reg_d2h rfis;
 	/** Padding */
-	uint8_t pad2[4];
+	pure64_uint8 pad2[4];
 	/** Set device bits FIS */
-	uint64_t sdbfis;
+	pure64_uint64 sdbfis;
 	/** */
-	uint8_t ufis[64];
+	pure64_uint8 ufis[64];
 	/** Reserved */
-	uint8_t reserved[0x100 - 0xa0];
+	pure64_uint8 reserved[0x100 - 0xa0];
 };
 
 struct command_header {
 	/** Command FIS length, counted in 32-bit words */
-	uint8_t cfl:5;
+	pure64_uint8 cfl:5;
 	/** ATAPI */
-	uint8_t atapi:1;
-	uint8_t write:1;
-	uint8_t prefetchable:1;
-	uint8_t reset:1;
-	uint8_t bist:1;
-	uint8_t clear:1;
-	uint8_t reserved0:1;
-	uint8_t multiplier_port:1;
+	pure64_uint8 atapi:1;
+	pure64_uint8 write:1;
+	pure64_uint8 prefetchable:1;
+	pure64_uint8 reset:1;
+	pure64_uint8 bist:1;
+	pure64_uint8 clear:1;
+	pure64_uint8 reserved0:1;
+	pure64_uint8 multiplier_port:1;
 	/** Physical region descriptor table length,
 	 * counted in entries */
-	uint16_t prdt_length;
+	pure64_uint16 prdt_length;
 	/** Physical region descriptor byte count
 	 * transferred. */
-	volatile uint32_t prd_byte_count;
+	volatile pure64_uint32 prd_byte_count;
 	/** Command table base address */
 	struct ahci_addr command_table;
 	/** Reserved */
-	uint8_t reserved1[16];
+	pure64_uint8 reserved1[16];
 };
 
 struct command_list {
@@ -267,22 +269,22 @@ struct prdt_entry {
 	/** Data base address */
 	struct ahci_addr data;
 	/** Reserved */
-	uint32_t reserved0;
+	pure64_uint32 reserved0;
 	/** Data byte count */
-	uint32_t byte_count:22;
+	pure64_uint32 byte_count:22;
 	/** Reserved */
-	uint32_t reserved1:9;
+	pure64_uint32 reserved1:9;
 	/** Interrupt on completion */
-	uint32_t i:1;
+	pure64_uint32 i:1;
 };
 
 struct command_table {
 	/** Command FIS */
-	uint8_t cfis[64];
+	pure64_uint8 cfis[64];
 	/** ATAPI command */
-	uint8_t acmd[16];
+	pure64_uint8 acmd[16];
 	/** Reserved */
-	uint8_t reserved[48];
+	pure64_uint8 reserved[48];
 	/** PRDT entries */
 	struct prdt_entry entries[PRDT_COUNT];
 };
@@ -293,34 +295,34 @@ struct command_table {
 
 void *ahci_addr_get(const volatile struct ahci_addr *addr) {
 
-	uint64_t ptr64;
+	pure64_uint64 ptr64;
 
 	ptr64 = 0;
-	ptr64 |= (((uint64_t) addr->upper) << 0x20) & 0xffffffff00000000;
-	ptr64 |= (((uint64_t) addr->lower) << 0x00) & 0x00000000ffffffff;
+	ptr64 |= (((pure64_uint64) addr->upper) << 0x20) & 0xffffffff00000000;
+	ptr64 |= (((pure64_uint64) addr->lower) << 0x00) & 0x00000000ffffffff;
 
 	return (void *) ptr64;
 }
 
 void ahci_addr_set(volatile struct ahci_addr *addr, void *ptr) {
 
-	uint64_t ptr64;
+	pure64_uint64 ptr64;
 
-	ptr64 = (uint64_t) ptr;
+	ptr64 = (pure64_uint64) ptr;
 
-	addr->upper = (uint32_t) ((ptr64 >> 0x20) & 0xffffffff);
-	addr->lower = (uint32_t) ((ptr64 >> 0x00) & 0xffffffff);
+	addr->upper = (pure64_uint32) ((ptr64 >> 0x20) & 0xffffffff);
+	addr->lower = (pure64_uint32) ((ptr64 >> 0x00) & 0xffffffff);
 }
 
 /* * * * * * * * * * *
  * AHCI Port Functions
  * * * * * * * * * * */
 
-uint32_t find_cmdslot(volatile struct ahci_port *port) {
+pure64_uint32 find_cmdslot(volatile struct ahci_port *port) {
 
-	uint32_t i;
+	pure64_uint32 i;
 	// If not set in SACT and CI, the slot is free
-	uint32_t slots = (port->sact | port->ci);
+	pure64_uint32 slots = (port->sact | port->ci);
 
 	for (i = 0; i < 32; i++) {
 
@@ -339,23 +341,23 @@ int ahci_port_is_sata_drive(const volatile struct ahci_port *port) {
 }
 
 int ahci_port_read(volatile struct ahci_port *port,
-                   uint64_t sector,
-                   uint32_t sector_count,
+                   pure64_uint64 sector,
+                   pure64_uint32 sector_count,
                    void *buf) {
 
-	uint32_t spin;
-	uint32_t slot;
-	uint64_t byte_count;
+	pure64_uint32 spin;
+	pure64_uint32 slot;
+	pure64_uint64 byte_count;
 	unsigned char *buf8;
-	uint64_t buf_offset;
+	pure64_uint64 buf_offset;
 	struct command_list *cmd_list;
 	struct command_header *cmd_header;
 	struct command_table *cmd_table;
 	struct reg_h2d *cmd_fis;
 
-	uint32_t prdt_count;
-	uint32_t prdt_payload = 0x8000;
-	uint32_t i;
+	pure64_uint32 prdt_count;
+	pure64_uint32 prdt_payload = 0x8000;
+	pure64_uint32 i;
 
 	port->is = ~0;
 
@@ -385,7 +387,7 @@ int ahci_port_read(volatile struct ahci_port *port,
 	cmd_list = (struct command_list *) ahci_addr_get(&port->command_list);
 
 	cmd_header = &cmd_list->headers[slot];
-	cmd_header->cfl = sizeof(struct reg_h2d) / sizeof(uint32_t);
+	cmd_header->cfl = sizeof(struct reg_h2d) / sizeof(pure64_uint32);
 	cmd_header->write = 0;
 	cmd_header->prdt_length = prdt_count;
 
@@ -472,7 +474,7 @@ int ahci_port_read(volatile struct ahci_port *port,
  * AHCI Base Functions
  * * * * * * * * * * */
 
-uint32_t ahci_base_ports_implemented(const volatile struct ahci_base *base) {
+pure64_uint32 ahci_base_ports_implemented(const volatile struct ahci_base *base) {
 	return base->pi;
 }
 
@@ -480,7 +482,7 @@ uint32_t ahci_base_ports_implemented(const volatile struct ahci_base *base) {
  * AHCI Visitor Functions
  * * * * * * * * * * * * */
 
-static int find_ahci(void *data, uint8_t bus, uint8_t slot) {
+static int find_ahci(void *data, pure64_uint8 bus, pure64_uint8 slot) {
 
 	int ret;
 	unsigned int i;
@@ -500,7 +502,7 @@ static int find_ahci(void *data, uint8_t bus, uint8_t slot) {
 
 	/* get base address of memory */
 
-	base = (struct ahci_base *) ((uint64_t) pci_read_bar5(bus, slot));
+	base = (struct ahci_base *) ((pure64_uint64) pci_read_bar5(bus, slot));
 
 	/* notify the visitor of the base */
 
@@ -520,7 +522,7 @@ static int find_ahci(void *data, uint8_t bus, uint8_t slot) {
 
 		/* 0x100 is the offset from the base to the first port */
 		/* 0x80 is the size of a port */
-		port = (struct ahci_port *)(((uint8_t *) base) + 0x100 + (i * 0x80));
+		port = (struct ahci_port *)(((pure64_uint8 *) base) + 0x100 + (i * 0x80));
 
 		/* notify visitor of port */
 
@@ -539,17 +541,13 @@ int ahci_visit(struct ahci_visitor *visitor) {
 	return pci_visit(find_ahci, visitor);
 }
 
-static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
+static int stream_read(void *stream_ptr, void *buf, pure64_uint64 size) {
 
 	int err;
-	uint64_t sector;
-	uint64_t sector_count;
-	uint64_t tailing_bytes;
-	uint64_t byte;
-	unsigned char *buf8;
+	pure64_uint64 sector;
+	pure64_uint64 sector_count;
+	pure64_uint64 byte;
 	struct ahci_stream *stream;
-
-	buf8 = (unsigned char *) buf;
 
 	stream = (struct ahci_stream *) stream_ptr;
 
@@ -559,16 +557,16 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	/* Get the byte index within the sector */
 	byte = stream->position % 512;
 
+	/* Get the number of sectors to read */
 	sector_count = (size + 511) / 512;
 
 	/* Check if the read operation
 	 * can be done from the cache */
 	if ((sector >= stream->buf_sector)
-	 && (sector < (stream->buf_sector + stream->buf_sector_count))
 	 && ((sector + sector_count) <= (stream->buf_sector + stream->buf_sector_count))) {
 
 		/* Calculate the cache position */
-		uint64_t cache_pos = (sector - stream->buf_sector) * 512;
+		pure64_uint64 cache_pos = (sector - stream->buf_sector) * 512;
 		cache_pos += byte;
 
 		/* Copy over the cache data. */
@@ -584,7 +582,7 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 	 * at the beginning of the sector
 	 * and reads less than a sector,
 	 * then it should be cached. */
-	if ((byte == 0) && (size <= AHCI_CACHE_MAX)) {
+	if (size <= AHCI_CACHE_MAX) {
 
 		unsigned char *tmp = pure64_realloc(stream->buf, sector_count * 512);
 		if (tmp == NULL)
@@ -593,69 +591,30 @@ static int stream_read(void *stream_ptr, void *buf, uint64_t size) {
 		/* Read the data from the port */
 		err = ahci_port_read(stream->port, sector, sector_count, stream->buf);
 		if (err != 0)
-			return -1;
+			return PURE64_EIO;
 
 		/* Set the cache parameters */
 		stream->buf_sector = sector;
 		stream->buf_sector_count = sector_count;
 
 		/* Copy the data to caller buffer */
-		pure64_memcpy(buf, stream->buf, size);
+		pure64_memcpy(buf, &stream->buf[byte], size);
 
 		/* Update the position */
 		stream->position += size;
 
 		/* Done */
 		return 0;
-	}
-
-	/* The read operation could not
-	 * be done from cache, so reset
-	 * the cache parameters */
-	stream->buf_sector = 0;
-	stream->buf_sector_count = 0;
-
-	err = ahci_port_read(stream->port,
-	                     sector,
-	                     1 /* one sector */,
-	                     stream->buf);
-	if (err != 0)
-		return -1;
-
-	if (size < (512 - byte)) {
-		pure64_memcpy(buf8, &stream->buf[byte], size);
-		buf8 += size;
 	} else {
-		pure64_memcpy(buf8, &stream->buf[byte], 512 - byte);
-		buf8 +=  512 - byte;
+		/* TODO : partitial reads must first
+		 * be supported by the stream structure. */
+		return PURE64_EIO;
 	}
-
-	sector_count = size / 512;
-
-	if (sector_count > 0) {
-		err = ahci_port_read(stream->port, sector + 1, sector_count - 1, buf8);
-		if (err != 0)
-			return -1;
-
-		buf8 += (sector_count - 1) * 512;
-	}
-
-	tailing_bytes = size % 512;
-
-	if (tailing_bytes > 0) {
-		err = ahci_port_read(stream->port, sector + sector_count, 1, stream->buf);
-		if (err != 0)
-			return -1;
-
-		pure64_memcpy(buf8, stream->buf, tailing_bytes);
-	}
-
-	stream->position += size;
 
 	return 0;
 }
 
-static int stream_get_pos(void *stream_ptr, uint64_t *pos) {
+static int stream_get_pos(void *stream_ptr, pure64_uint64 *pos) {
 
 	struct ahci_stream *ahci_stream;
 
@@ -666,7 +625,7 @@ static int stream_get_pos(void *stream_ptr, uint64_t *pos) {
 	return 0;
 }
 
-static int stream_set_pos(void *stream_ptr, uint64_t pos) {
+static int stream_set_pos(void *stream_ptr, pure64_uint64 pos) {
 
 	struct ahci_stream *ahci_stream;
 

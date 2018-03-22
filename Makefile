@@ -1,11 +1,16 @@
 VERSION ?= 0.9.0
 
+export CROSS_COMPILE ?= x86_64-none-elf-
+export HOST_CROSS_COMPILE ?=
+export EXE ?=
+
 .PHONY: all clean install
 all clean install:
 	$(MAKE) -C include/pure64 $@
 	$(MAKE) -C src $@
 	$(MAKE) -C src/bootsectors $@
-	$(MAKE) -C src/lib $@
+	$(MAKE) -C src/targetlib $@
+	$(MAKE) -C src/hostlib $@
 	$(MAKE) -C src/stage-three $@
 	$(MAKE) -C src/util $@
 
@@ -16,11 +21,22 @@ pure64-$(VERSION):
 	$(MAKE) install DESTDIR=$(PWD)/$@ PREFIX=/
 
 .PHONY: test
-test: pure64.img
-	./test.sh
+test: test1
 
-pure64.img: all testing/kernel examples/example1-config.txt
-	./src/util/pure64 init --config examples/example1-config.txt
+.PHONY: test1
+test1: testing/test1.img
+	./test.sh $<
+
+.PHONY: test2
+test2: testing/test2.img
+	./test.sh $<
+
+testing/test1.img: testing/test1-config.txt testing/kernel all
+	./src/util/pure64 --disk $@ --config $< init
+
+testing/test2.img: testing/test2-config.txt testing/kernel all
+	./src/util/pure64 --disk $@ --config $< init
+	./src/util/pure64 --disk $@ --config $< cp testing/kernel /boot/kernel
 
 testing/kernel.sys: testing/kernel
 	objcopy -O binary $< $@

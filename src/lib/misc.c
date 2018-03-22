@@ -8,7 +8,7 @@
 
 #include <pure64/stream.h>
 
-int encode_uint16(uint16_t n, struct pure64_stream *file) {
+int encode_uint16(pure64_uint16 n, struct pure64_stream *file) {
 
 	int err;
 	unsigned char buf[2];
@@ -23,7 +23,7 @@ int encode_uint16(uint16_t n, struct pure64_stream *file) {
 	return 0;
 }
 
-int encode_uint32(uint32_t n, struct pure64_stream *file) {
+int encode_uint32(pure64_uint32 n, struct pure64_stream *file) {
 
 	unsigned char buf[4];
 	buf[0] = (n >> 0) & 0xff;
@@ -38,7 +38,7 @@ int encode_uint32(uint32_t n, struct pure64_stream *file) {
 	return 0;
 }
 
-int encode_uint64(uint64_t n, struct pure64_stream *file) {
+int encode_uint64(pure64_uint64 n, struct pure64_stream *file) {
 
 	int err;
 	unsigned char buf[8];
@@ -59,7 +59,7 @@ int encode_uint64(uint64_t n, struct pure64_stream *file) {
 	return 0;
 }
 
-int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file) {
+int decode_uint16(pure64_uint16 *n_ptr, struct pure64_stream *file) {
 
 	unsigned char buf[2];
 
@@ -67,16 +67,16 @@ int decode_uint16(uint16_t *n_ptr, struct pure64_stream *file) {
 	if (err != 0)
 		return err;
 
-	uint16_t n = 0;
-	n |= ((uint16_t) buf[0]) << 0;
-	n |= ((uint16_t) buf[1]) << 8;
+	pure64_uint16 n = 0;
+	n |= ((pure64_uint16) buf[0]) << 0;
+	n |= ((pure64_uint16) buf[1]) << 8;
 
 	*n_ptr = n;
 
 	return 0;
 }
 
-int decode_uint32(uint32_t *n_ptr, struct pure64_stream *file) {
+int decode_uint32(pure64_uint32 *n_ptr, struct pure64_stream *file) {
 
 	unsigned char buf[4];
 
@@ -84,18 +84,18 @@ int decode_uint32(uint32_t *n_ptr, struct pure64_stream *file) {
 	if (err != 0)
 		return err;
 
-	uint32_t n = 0;
-	n |= ((uint32_t) buf[0]) << 0;
-	n |= ((uint32_t) buf[1]) << 8;
-	n |= ((uint32_t) buf[2]) << 16;
-	n |= ((uint32_t) buf[3]) << 24;
+	pure64_uint32 n = 0;
+	n |= ((pure64_uint32) buf[0]) << 0;
+	n |= ((pure64_uint32) buf[1]) << 8;
+	n |= ((pure64_uint32) buf[2]) << 16;
+	n |= ((pure64_uint32) buf[3]) << 24;
 
 	*n_ptr = n;
 
 	return 0;
 }
 
-int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file) {
+int decode_uint64(pure64_uint64 *n_ptr, struct pure64_stream *file) {
 
 	int err;
 	unsigned char buf[8];
@@ -104,15 +104,15 @@ int decode_uint64(uint64_t *n_ptr, struct pure64_stream *file) {
 	if (err != 0)
 		return err;
 
-	uint64_t n = 0;
-	n |= ((uint64_t) buf[0] << 0x00);
-	n |= ((uint64_t) buf[1] << 0x08);
-	n |= ((uint64_t) buf[2] << 0x10);
-	n |= ((uint64_t) buf[3] << 0x18);
-	n |= ((uint64_t) buf[4] << 0x20);
-	n |= ((uint64_t) buf[5] << 0x28);
-	n |= ((uint64_t) buf[6] << 0x30);
-	n |= ((uint64_t) buf[7] << 0x38);
+	pure64_uint64 n = 0;
+	n |= ((pure64_uint64) buf[0] << 0x00);
+	n |= ((pure64_uint64) buf[1] << 0x08);
+	n |= ((pure64_uint64) buf[2] << 0x10);
+	n |= ((pure64_uint64) buf[3] << 0x18);
+	n |= ((pure64_uint64) buf[4] << 0x20);
+	n |= ((pure64_uint64) buf[5] << 0x28);
+	n |= ((pure64_uint64) buf[6] << 0x30);
+	n |= ((pure64_uint64) buf[7] << 0x38);
 
 	*n_ptr = n;
 

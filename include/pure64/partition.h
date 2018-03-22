@@ -12,8 +12,7 @@
 #define PURE64_PARTITION_H
 
 #include <pure64/stream.h>
-
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -32,14 +31,14 @@ struct pure64_partition {
 	struct pure64_stream *disk;
 	/** The beginning of the partition,
 	 * in bytes.  */
-	uint64_t offset;
+	pure64_uint64 offset;
 	/** The number of bytes that
 	 * are occupied by the partition. */
-	uint64_t size;
+	pure64_uint64 size;
 	/** The position of the next read
 	 * or write operation within the
 	 * partition. */
-	uint64_t position;
+	pure64_uint64 position;
 };
 
 /** Initializes a Pure64 partition.
@@ -80,7 +79,7 @@ void pure64_partition_set_disk(struct pure64_partition *partition,
  * */
 
 void pure64_partition_set_size(struct pure64_partition *partition,
-                               uint64_t size);
+                               pure64_uint64 size);
 
 /** Set the starting point of the partition, in terms
  * of bytes. After using this function, read and write
@@ -92,7 +91,7 @@ void pure64_partition_set_size(struct pure64_partition *partition,
  * */
 
 void pure64_partition_set_offset(struct pure64_partition *partition,
-                                 uint64_t offset);
+                                 pure64_uint64 offset);
 
 #ifdef __cplusplus
 } /* extern "C" { */

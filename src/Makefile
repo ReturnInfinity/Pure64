@@ -10,7 +10,7 @@ pure64_deps += sysvar.asm
 all: pure64.sys
 
 pure64.sys: pure64.asm $(pure64_deps)
-	@echo "NASM $@"
+	@echo "NASM    $@"
 	nasm $< -o $@
 
 .PHONY: clean

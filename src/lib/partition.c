@@ -12,7 +12,7 @@
 #define NULL ((void *) 0x00)
 #endif
 
-static int partition_read(void *partition_ptr, void *buf, uint64_t buf_size) {
+static int partition_read(void *partition_ptr, void *buf, pure64_uint64 buf_size) {
 
 	struct pure64_partition *partition = (struct pure64_partition *) partition_ptr;
 	if ((partition == NULL) || (partition->disk == NULL))
@@ -27,7 +27,7 @@ static int partition_read(void *partition_ptr, void *buf, uint64_t buf_size) {
 	return pure64_stream_read(partition->disk, buf, buf_size);
 }
 
-static int partition_write(void *partition_ptr, const void *buf, uint64_t buf_size) {
+static int partition_write(void *partition_ptr, const void *buf, pure64_uint64 buf_size) {
 
 	struct pure64_partition *partition = (struct pure64_partition *) partition_ptr;
 	if ((partition == NULL) || (partition->disk == NULL))
@@ -42,7 +42,7 @@ static int partition_write(void *partition_ptr, const void *buf, uint64_t buf_si
 	return pure64_stream_write(partition->disk, buf, buf_size);
 }
 
-static int partition_set_pos(void *partition_ptr, uint64_t pos) {
+static int partition_set_pos(void *partition_ptr, pure64_uint64 pos) {
 
 	struct pure64_partition *partition = (struct pure64_partition *) partition_ptr;
 	if ((partition == NULL)|| (partition->disk == NULL))
@@ -56,7 +56,7 @@ static int partition_set_pos(void *partition_ptr, uint64_t pos) {
 	return 0;
 }
 
-static int partition_get_pos(void *partition_ptr, uint64_t *pos) {
+static int partition_get_pos(void *partition_ptr, pure64_uint64 *pos) {
 
 	struct pure64_partition *partition = (struct pure64_partition *) partition_ptr;
 	if (partition == NULL)
@@ -68,7 +68,7 @@ static int partition_get_pos(void *partition_ptr, uint64_t *pos) {
 	return 0;
 }
 
-static int partition_get_size(void *partition_ptr, uint64_t *size) {
+static int partition_get_size(void *partition_ptr, pure64_uint64 *size) {
 
 	struct pure64_partition *partition = (struct pure64_partition *) partition_ptr;
 	if (partition == NULL)
@@ -107,13 +107,13 @@ void pure64_partition_set_disk(struct pure64_partition *partition,
 }
 
 void pure64_partition_set_size(struct pure64_partition *partition,
-                               uint64_t size) {
+                               pure64_uint64 size) {
 
 	partition->size = size;
 }
 
 void pure64_partition_set_offset(struct pure64_partition *partition,
-                                 uint64_t offset) {
+                                 pure64_uint64 offset) {
 
 	partition->offset = offset;
 }

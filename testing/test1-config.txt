@@ -1,0 +1,5 @@
+arch: x86_64
+bootsector: mbr
+stage_three: kernel
+kernel_path: "testing/kernel"
+disk_size: 1MiB

@@ -9,34 +9,29 @@
 #include "map.h"
 
 #include <pure64/memory.h>
+#include <pure64/types.h>
 
-#include <stdint.h>
-
-#ifndef NULL
-#define NULL ((void *) 0x00)
-#endif
-
-struct pure64_map *hooks_map = NULL;
+struct pure64_map *hooks_map = pure64_null;
 
 void pure64_init_memory_hooks(struct pure64_map *map) {
 	hooks_map = map;
 }
 
-void *pure64_malloc(uint64_t size) {
-	if (hooks_map == NULL)
-		return NULL;
+void *pure64_malloc(pure64_uint64 size) {
+	if (hooks_map == pure64_null)
+		return pure64_null;
 	else
 		return pure64_map_malloc(hooks_map, size);
 }
 
-void *pure64_realloc(void *addr, uint64_t size) {
-	if (hooks_map == NULL)
-		return NULL;
+void *pure64_realloc(void *addr, pure64_uint64 size) {
+	if (hooks_map == pure64_null)
+		return pure64_null;
 	else
 		return pure64_map_realloc(hooks_map, addr, size);
 }
 
 void pure64_free(void *addr) {
-	if (hooks_map != NULL)
+	if (hooks_map != pure64_null)
 		pure64_map_free(hooks_map, addr);
 }

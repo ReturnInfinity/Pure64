@@ -9,7 +9,7 @@
 #ifndef PURE64_STREAM_H
 #define PURE64_STREAM_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,15 +22,15 @@ struct pure64_stream {
 	/** Implementation data */
 	void *data;
 	/** Get size callback */
-	int (*get_size)(void *data, uint64_t *size);
+	int (*get_size)(void *data, pure64_uint64 *size);
 	/** Get position callback */
-	int (*get_pos)(void *data, uint64_t *offset);
+	int (*get_pos)(void *data, pure64_uint64 *offset);
 	/** Read callback */
-	int (*read)(void *data, void *buf, uint64_t buf_size);
+	int (*read)(void *data, void *buf, pure64_uint64 buf_size);
 	/** Set position callback */
-	int (*set_pos)(void *data, uint64_t offset);
+	int (*set_pos)(void *data, pure64_uint64 offset);
 	/** Write callback */
-	int (*write)(void *data, const void *buf, uint64_t buf_size);
+	int (*write)(void *data, const void *buf, pure64_uint64 buf_size);
 };
 
 /** Initializes the stream for use.
@@ -49,7 +49,7 @@ void pure64_stream_init(struct pure64_stream *stream);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_stream_get_size(struct pure64_stream *stream, uint64_t *size);
+int pure64_stream_get_size(struct pure64_stream *stream, pure64_uint64 *size);
 
 /** Gets the current position of the stream.
  * @param stream An initialized stream structure.
@@ -58,7 +58,7 @@ int pure64_stream_get_size(struct pure64_stream *stream, uint64_t *size);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_stream_get_pos(struct pure64_stream *stream, uint64_t *pos);
+int pure64_stream_get_pos(struct pure64_stream *stream, pure64_uint64 *pos);
 
 /** Reads data from the stream.
  * @param stream An initialized stream structure.
@@ -68,7 +68,7 @@ int pure64_stream_get_pos(struct pure64_stream *stream, uint64_t *pos);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_stream_read(struct pure64_stream *stream, void *buf, uint64_t buf_size);
+int pure64_stream_read(struct pure64_stream *stream, void *buf, pure64_uint64 buf_size);
 
 /** Sets the position of the stream.
  * @param stream An initialized stream structure.
@@ -76,7 +76,7 @@ int pure64_stream_read(struct pure64_stream *stream, void *buf, uint64_t buf_siz
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_stream_set_pos(struct pure64_stream *stream, uint64_t pos);
+int pure64_stream_set_pos(struct pure64_stream *stream, pure64_uint64 pos);
 
 /** Writes data to the stream.
  * @param stream An initialized stream structure.
@@ -85,7 +85,7 @@ int pure64_stream_set_pos(struct pure64_stream *stream, uint64_t pos);
  * @returns Zero on success, non-zero on failure.
  * */
 
-int pure64_stream_write(struct pure64_stream *stream, const void *buf, uint64_t buf_size);
+int pure64_stream_write(struct pure64_stream *stream, const void *buf, pure64_uint64 buf_size);
 
 #ifdef __cplusplus
 } /* extern "C" { */

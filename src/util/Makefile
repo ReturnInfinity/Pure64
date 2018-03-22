@@ -4,7 +4,9 @@ DESTDIR ?=
 
 PREFIX ?= /usr/local
 
-VPATH += $(top)/src/lib
+VPATH += $(top)/src/hostlib
+
+CC = $(HOST_CROSS_COMPILE)gcc
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
@@ -12,20 +14,26 @@ CFLAGS += -I $(top)/include
 CFLAGS += -g
 
 targets += rc
-targets += pure64
-targets += config-test
+targets += pure64$(EXE)
+targets += config-test$(EXE)
+targets += token-test$(EXE)
 
 pure64_files += pure64.o
 
+# Generated sources
 bootsector_files += mbr-data.o
 bootsector_files += multiboot-data.o
 bootsector_files += multiboot2-data.o
 bootsector_files += pxe-data.o
 
-pure64_files += config.o
-pure64_files += fstream.o
+# Generated sources
 pure64_files += stage-three-data.o
 pure64_files += pure64-data.o
+
+pure64_files += config.o
+pure64_files += fstream.o
+pure64_files += memory.o
+pure64_files += token.o
 pure64_files += util.o
 pure64_files += $(bootsector_files)
 
@@ -40,10 +48,12 @@ generated_headers += stage-three-data.h
 all: $(targets)
 
 rc: rc.o
+	gcc $< -o $@
 
 rc.o: rc.c
+	gcc -Wall -Wextra -Werror -Wfatal-errors -std=gnu99 -c $< -o $@
 
-pure64: $(pure64_files) -lpure64
+pure64$(EXE): $(pure64_files) -lpure64
 
 pure64.o: pure64.c fstream.h util.h $(generated_headers)
 
@@ -51,9 +61,11 @@ config.o: config.c config.h
 
 config-test.o: config-test.c config.h
 
-config-test: config-test.o config.o $(bootsector_files)
+config-test$(EXE): config-test.o config.o token.o $(bootsector_files)
 
 fstream.o: fstream.c fstream.h
+
+memory.o: memory.c
 
 mbr-data.o: mbr-data.c
 
@@ -85,26 +97,36 @@ stage-three-data.o: stage-three-data.c
 stage-three-data.c stage-three-data.h: $(top)/src/stage-three/stage-three.sys rc
 	./rc --input $< --source stage-three-data.c --header stage-three-data.h --name stage_three_data
 
+token.o: token.c token.h
+
+token-test.o: token-test.c token.h
+
+token-test$(EXE): token-test.o token.o
+
 util.o: util.c util.h fstream.h
 
+%.exe: %.o
+	@echo "LD      $@"
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
 %: %.o
-	@echo "LD $@"
+	@echo "LD      $@"
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 %.o: %.c
-	@echo "CC $@"
+	@echo "CC      $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
-	$(RM) mbr-data.h mbr-data.c mbr-data.o
-	$(RM) pure64-data.h pure64-data.c pure64-data.o
-	$(RM) stage-three-data.h stage-three-data.c stage-three-data.o
-	$(RM) pure64.o pure64
-	$(RM) rc.o rc
+	$(RM) pure64 $(pure64_files)
+	$(RM) config-test config-test.o
+	$(RM) token-test token-test.o
+	$(RM) rc rc.o
 
 .PHONY: test
 test: config-test
+	./token-test
 	./config-test
 
 install: pure64 $(DESTDIR)$(PREFIX)/bin

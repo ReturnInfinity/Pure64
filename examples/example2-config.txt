@@ -12,19 +12,22 @@ arch: x86_64
 
 bootsector: mbr
 
+# This option indicates that the disk should
+# be formatted with GPT partitions.
+
+partition_scheme: gpt
+
 # Stage three is the code that is
 # started after the CPU enters a full
 # 64-bit state. It can either be a kernel
 # or a file system loader, called 'loader'.
 
-stage_three: kernel
+stage_three: loader
 
-# This specifies where to find the kernel,
-# so that it can be copied into the disk.
-# This is only checked if 'stage-three' is
-# set to 'kernel' and not 'loader'.
+# This option indicates how much space to
+# reserve for the file system partition.
 
-kernel_path: "testing/kernel"
+fs_size: 512KiB
 
 # This options specifies how big the disk
 # size should be when it is created. Some

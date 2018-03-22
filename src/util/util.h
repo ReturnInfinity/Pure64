@@ -3,6 +3,7 @@
 
 #include <pure64/fs.h>
 
+#include "config.h"
 #include "fstream.h"
 
 #ifdef __cplusplus
@@ -12,6 +13,7 @@ extern "C" {
 struct pure64_uuid;
 
 struct pure64_util {
+	struct pure64_config config;
 	/** The file associated with the
 	 * Pure64 disk image. */
 	struct pure64_fstream disk_file;
@@ -38,13 +40,11 @@ void pure64_util_done(struct pure64_util *util);
 
 /** Creates a new disk image.
  * @param util An initialized utility structure.
- * @param config_path The path of the configuration file.
  * @param path The path to create the disk image at.
  * @returns Zero on success, an error code on failure.
  * */
 
 int pure64_util_create_disk(struct pure64_util *util,
-                            const char *config_path,
                             const char *path);
 
 /** Opens an existing disk image.
@@ -56,40 +56,25 @@ int pure64_util_create_disk(struct pure64_util *util,
 int pure64_util_open_disk(struct pure64_util *util,
                           const char *path);
 
-/** Creates a partition table in GPT format.
+/** Opens a configuration file.
  * @param util An initialized utility structure.
- * @param disk_uuid The UUID to use for the disk.
+ * @param path The path of the config file.
  * @returns Zero on success, an error code on failure.
  * */
 
-int pure64_util_mkgpt(struct pure64_util *util,
-                      const struct pure64_uuid *disk_uuid);
+int pure64_util_open_config(struct pure64_util *util,
+                            const char *path);
 
-/** Sets the bootsector of the disk image.
- * @param util An initialized utility structure.
- * @param bootsector_data The boot sector data
- * @param bootsector_size The number of bytes occupied
- * by the bootsector. This should be equal to or
- * less than 512 bytes.
- * @returns Zero on success, an error code on failure.
- * */
-
-int pure64_util_set_bootsector(struct pure64_util *util,
-                               const void *bootsector_data,
-                               uint64_t bootsector_size);
-
-/** Sets the second stage loader onto the image.
- * If the disk is GPT formatted, then stage two
- * is added to a new partition. If it is not GPT
- * formatted, then stage two falls right after the
- * boot sector.
+/** Saves information in memory onto the disk.
+ * This should be called before @ref pure64_util_done,
+ * if the changes made to the disk should remain.
+ * This does not have to be called after creating
+ * a disk.
  * @param util An initialized utility structure.
  * @returns Zero on success, an error code on failure.
  * */
 
-int pure64_util_set_stage_two(struct pure64_util *util,
-                              const void *stage_two_data,
-                              uint64_t stage_two_size);
+int pure64_util_save_disk(struct pure64_util *util);
 
 #ifdef __cplusplus
 } /* extern "C" { */

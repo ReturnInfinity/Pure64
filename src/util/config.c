@@ -5,160 +5,132 @@
 #include "multiboot2-data.h"
 #include "pxe-data.h"
 
+#include "token.h"
+
 #include <pure64/error.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-static unsigned char is_whitespace(char c) {
-	if ((c == ' ')
-	 || (c == '\t'))
+/** Used for iterating a token
+ * buffer.
+ * */
+
+struct token_iterator {
+	/** The token buffer. */
+	struct pure64_tokenbuf *tokenbuf;
+	/** The token index within the token buffer. */
+	unsigned long int index;
+};
+
+static unsigned char token_iterator_end(const struct token_iterator *it) {
+	if (it->index >= it->tokenbuf->token_count)
+		return 1;
+	else if (it->tokenbuf->token_array[it->index].type == PURE64_TOKEN_END)
 		return 1;
 	else
 		return 0;
+}
+
+static void token_iterator_next(struct token_iterator *it) {
+	if (!token_iterator_end(it))
+		it->index++;
+}
+
+static const struct pure64_token *token_iterator_deref(const struct token_iterator *it) {
+	if (!token_iterator_end(it))
+		return &it->tokenbuf->token_array[it->index];
+	else
+		return &pure64_eof_token;
 }
 
 struct pure64_var {
 	const char *key;
-	unsigned int key_size;
+	unsigned long int key_size;
 	const char *value;
-	unsigned int value_size;
+	unsigned long int value_size;
 };
 
-static unsigned int skip_whitespace(const char *line,
-                                    unsigned int line_pos,
-                                    unsigned int line_size) {
-
-	unsigned int i = line_pos;
-
-	while (i < line_size) {
-
-		if (!is_whitespace(line[i]))
-			break;
-
-		i++;
-	}
-
-	return i;
+static void pure64_var_init(struct pure64_var *var) {
+	var->key = NULL;
+	var->key_size = 0;
+	var->value = NULL;
+	var->value_size = 0;
 }
 
-static int parse_var(struct pure64_var *var,
-                     const char *line,
-                     unsigned int line_size,
-                     struct pure64_config_error *error) {
+static int pure64_var_parse(struct pure64_var *var,
+                            struct token_iterator *it,
+                            struct pure64_config_error *error) {
 
-	unsigned int i = skip_whitespace(line, 0, line_size);
-
-	/* get key size */
-
-	var->key = &line[i];
-
-	var->key_size = 0;
-
-	unsigned char colon_found = 0;
-
-	while (i < line_size) {
-
-		char c = line[i];
-
-		if (c == ':') {
-			i++;
-			colon_found = 1;
-			break;
-		} else if (is_whitespace(c)) {
-			break;
-		}
-
-		i++;
-
-		var->key_size++;
-	}
-
-	/* skip trailing whitespace */
-
-	if (!colon_found) {
-		i = skip_whitespace(line, i, line_size);
-		if ((i >= line_size) || (line[i] != ':')) {
-			error->desc = "Expected ':'";
-			return PURE64_EINVAL;
-		}
-		i++;
-	}
-
-	if (i >= line_size) {
-		error->desc = "Expected a value following variable key";
+	const struct pure64_token *var_key = token_iterator_deref(it);
+	if ((var_key->type != PURE64_TOKEN_IDENTIFIER)
+	 && (var_key->type != PURE64_TOKEN_SINGLE_QUOTE)
+	 && (var_key->type != PURE64_TOKEN_DOUBLE_QUOTE)) {
+		error->desc = "Expected an identifier";
+		error->line = var_key->line;
+		error->column = var_key->column;
 		return PURE64_EINVAL;
 	}
 
-	i = skip_whitespace(line, i, line_size);
+	var->key = var_key->data;
+	var->key_size = var_key->size;
 
-	/* parse value */
+	token_iterator_next(it);
 
-	var->value = &line[i];
-
-	var->value_size = 0;
-
-	while (i < line_size) {
-
-		char c = line[i];
-		if (c == '\n')
-			break;
-		else if ((var->value_size > 0) && is_whitespace(c))
-			break;
-
-		i++;
-
-		var->value_size++;
+	const struct pure64_token *colon = token_iterator_deref(it);
+	if (colon->type != PURE64_TOKEN_COLON) {
+		error->desc = "Expected a ':'";
+		error->line = colon->line;
+		error->column = colon->column;
+		return PURE64_EINVAL;
 	}
+
+	token_iterator_next(it);
+
+	const struct pure64_token *var_value = token_iterator_deref(it);
+	if ((var_value->type != PURE64_TOKEN_IDENTIFIER)
+	 && (var_value->type != PURE64_TOKEN_SINGLE_QUOTE)
+	 && (var_value->type != PURE64_TOKEN_DOUBLE_QUOTE)
+	 && (var_value->type != PURE64_TOKEN_NUMERICAL)) {
+		error->desc = "Expected a string or a numerical";
+		error->line = var_value->line;
+		error->column = var_value->column;
+		return PURE64_EINVAL;
+	}
+
+	var->value = var_value->data;
+	var->value_size = var_value->size;
+
+	token_iterator_next(it);
 
 	return 0;
 }
 
-static unsigned char is_blank(const char *line, unsigned int line_size) {
-	if (skip_whitespace(line, 0, line_size) == line_size)
-		return 1;
+static unsigned char pure64_var_cmp_key(const struct pure64_var *var,
+                                        const char *key) {
+
+	unsigned long int key_size = strlen(key);
+
+	if (key_size != var->key_size)
+		return 0;
+	else if (memcmp(var->key, key, key_size) != 0)
+		return 0;
 	else
-		return 0;
-}
-
-static unsigned char is_comment(const char *line, unsigned int line_size) {
-
-	unsigned int i = 0;
-
-	i = skip_whitespace(line, 0, line_size);
-	if (i == line_size)
-		return 0;
-	else if (line[i] == '#')
 		return 1;
+}
+
+static unsigned char pure64_var_cmp_value(const struct pure64_var *var,
+                                          const char *value) {
+
+	unsigned long int value_size = strlen(value);
+
+	if (value_size != var->value_size)
+		return 0;
+	else if (memcmp(var->value, value, value_size) != 0)
+		return 0;
 	else
-		return 0;
-}
-
-static unsigned char is_key(const struct pure64_var *var, const char *key) {
-
-	unsigned int key_size = strlen(key);
-
-	if (var->key_size != key_size) {
-		return 0;
-	} else if (memcmp(var->key, key, key_size) != 0) {
-		return 0;
-	}
-
-	return 1;
-}
-
-static unsigned char is_value(const struct pure64_var *var, const char *value) {
-
-	unsigned int value_size = strlen(value);
-
-	if (var->value_size != value_size) {
-		return 0;
-	} else if (memcmp(var->value, value, value_size) != 0) {
-		return 0;
-	}
-
-	return 1;
+		return 1;
 }
 
 static unsigned char file_exists(const char *path) {
@@ -173,9 +145,8 @@ static unsigned char file_exists(const char *path) {
 	return 1;
 }
 
-static int parse_disk_size(struct pure64_config *config,
-                           const char *str,
-                           unsigned int str_size) {
+static int parse_size(const struct pure64_var *var,
+                      unsigned long int *size_ptr) {
 
 	const unsigned long int TiB = 1024UL * 1024UL * 1024UL * 1024UL;
 	const unsigned long int GiB = 1024UL * 1024UL * 1024UL;
@@ -187,12 +158,17 @@ static int parse_disk_size(struct pure64_config *config,
 	const unsigned long int MB = 1000UL * 1000UL;
 	const unsigned long int KB = 1000UL;
 
+	const char *str = var->value;
+
+	unsigned long int str_size = var->value_size;
+
 	if (str_size == 0)
-		return -1;
+		return PURE64_EINVAL;
 
 	char *tmp = malloc(str_size + 1);
-	if (tmp == NULL)
-		return -1;
+	if (tmp == NULL) {
+		return PURE64_ENOMEM;
+	}
 
 	memcpy(tmp, str, str_size);
 
@@ -246,12 +222,12 @@ static int parse_disk_size(struct pure64_config *config,
 
 	tmp[str_size] = 0;
 
-	if (sscanf(tmp, "%lu", &config->disk_size) != 1) {
+	if (sscanf(tmp, "%lu", size_ptr) != 1) {
 		free(tmp);
-		return -1;
+		return PURE64_EINVAL;
 	}
 
-	config->disk_size *= multiplier;
+	*size_ptr *= multiplier;
 
 	free(tmp);
 
@@ -262,20 +238,20 @@ static int handle_var(struct pure64_config *config,
                       const struct pure64_var *var,
                       struct pure64_config_error *error) {
 
-	if (is_key(var, "bootsector")) {
-		if (is_value(var, "mbr")) {
+	if (pure64_var_cmp_key(var, "bootsector")) {
+		if (pure64_var_cmp_value(var, "mbr")) {
 			config->bootsector = PURE64_BOOTSECTOR_MBR;
-		} else if (is_value(var, "pxe")) {
+		} else if (pure64_var_cmp_value(var, "pxe")) {
 			config->bootsector = PURE64_BOOTSECTOR_PXE;
-		} else if (is_value(var, "multiboot")) {
+		} else if (pure64_var_cmp_value(var, "multiboot")) {
 			config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT;
-		} else if (is_value(var, "multiboot2")) {
+		} else if (pure64_var_cmp_value(var, "multiboot2")) {
 			config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT2;
 		} else {
 			error->desc = "Unknown bootsector type";
 			return PURE64_EINVAL;
 		}
-	} else if (is_key(var, "kernel")) {
+	} else if (pure64_var_cmp_key(var, "kernel_path")) {
 		free(config->kernel);
 		config->kernel = malloc(var->value_size + 1);
 		if (config->kernel == NULL) {
@@ -288,38 +264,47 @@ static int handle_var(struct pure64_config *config,
 			error->desc = "Kernel does not exist";
 			return PURE64_ENOENT;
 		}
-	} else if (is_key(var, "stage-three")) {
-		if (is_value(var, "kernel")) {
+	} else if (pure64_var_cmp_key(var, "stage_three")) {
+		if (pure64_var_cmp_value(var, "kernel")) {
 			config->stage_three = PURE64_STAGE_THREE_KERNEL;
-		} else if (is_value(var, "loader")) {
+		} else if (pure64_var_cmp_value(var, "loader")) {
 			config->stage_three = PURE64_STAGE_THREE_LOADER;
 		} else {
 			error->desc = "Unknown stage three type";
 			return PURE64_EINVAL;
 		}
-	} else if (is_key(var, "partition-scheme")) {
-		if (is_value(var, "none")) {
+	} else if (pure64_var_cmp_key(var, "partition_scheme")) {
+		if (pure64_var_cmp_value(var, "none")) {
 			config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
-		} else if (is_value(var, "gpt")) {
+		} else if (pure64_var_cmp_value(var, "gpt")) {
 			config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
 		} else {
 			error->desc = "Unknown partition scheme";
 			return PURE64_EINVAL;
 		}
-	} else if (is_key(var, "disk-size")) {
+	} else if (pure64_var_cmp_key(var, "disk_size")) {
 		if (var->value_size == 0) {
-			error->desc = "Size not specified";
-			return -1;
-		}
-		if (parse_disk_size(config, var->value, var->value_size) != 0) {
-			error->desc = "Invalid size";
+			error->desc = "Disk size not specified";
 			return PURE64_EINVAL;
 		}
-	} else if (is_key(var, "arch")) {
-		if (is_value(var, "x86_64")) {
+		if (parse_size(var, &config->disk_size) != 0) {
+			error->desc = "Invalid disk size";
+			return PURE64_EINVAL;
+		}
+	} else if (pure64_var_cmp_key(var, "arch")) {
+		if (pure64_var_cmp_value(var, "x86_64")) {
 			config->arch = PURE64_ARCH_x86_64;
 		} else {
 			error->desc = "Unsupported architecture";
+			return PURE64_EINVAL;
+		}
+	} else if (pure64_var_cmp_key(var, "fs_size")) {
+		if (var->value_size == 0) {
+			error->desc = "File system size not specified";
+			return PURE64_EINVAL;
+		}
+		if (parse_size(var, &config->fs_size) != 0) {
+			error->desc = "Invalid file system size";
 			return PURE64_EINVAL;
 		}
 	} else {
@@ -399,7 +384,8 @@ void pure64_config_init(struct pure64_config *config) {
 	config->bootsector = PURE64_BOOTSECTOR_NONE;
 	config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
 	config->stage_three = PURE64_STAGE_THREE_NONE;
-	config->disk_size = 0;
+	config->disk_size = 1 * 1024 * 1024;
+	config->fs_size = 512 * 1024;
 	config->kernel = NULL;
 }
 
@@ -412,57 +398,49 @@ int pure64_config_parse(struct pure64_config *config,
                         const char *source,
                         struct pure64_config_error *error) {
 
-	unsigned int i = 0;
-	unsigned int line_number = 1;
+	struct pure64_tokenbuf tokenbuf;
 
-	while (source[i] != 0) {
+	pure64_tokenbuf_init(&tokenbuf);
+	pure64_tokenbuf_reject_comments(&tokenbuf);
+	pure64_tokenbuf_reject_whitespace(&tokenbuf);
 
-		const char *line = &source[i];
+	int err = pure64_tokenbuf_parse(&tokenbuf, source);
+	if (err != 0) {
+		error->desc = "Failed to scan source";
+		error->line = 0;
+		pure64_tokenbuf_done(&tokenbuf);
+		return err;
+	}
 
-		unsigned int line_size = 0;
+	struct token_iterator it;
+	it.index = 0;
+	it.tokenbuf = &tokenbuf;
 
-		/* get line size */
-		while ((source[i] != 0) && (source[i] != '\n')) {
-			i++;
-			line_size++;
-		}
-
-		if (source[i] == '\n')
-			i++;
-		else if ((source[i] == '\r')
-		      && (source[i] == '\n'))
-			i += 2;
-		else if ((source[i] == '\n')
-		      && (source[i] == '\r'))
-			i += 2;
-
-		if (line_size == 0)
-			continue;
-		else if (is_blank(line, line_size))
-			continue;
-		else if (is_comment(line, line_size))
-			continue;
+	while (!token_iterator_end(&it)) {
 
 		struct pure64_var var;
 
-		int err = parse_var(&var, line, line_size, error);
+		pure64_var_init(&var);
+
+		err = pure64_var_parse(&var, &it, error);
 		if (err != 0) {
-			error->line = line_number;
+			pure64_tokenbuf_done(&tokenbuf);
 			return err;
 		}
-
+		
 		err = handle_var(config, &var, error);
 		if (err != 0) {
-			error->line = line_number;
+			pure64_tokenbuf_done(&tokenbuf);
 			return err;
 		}
-
-		line_number++;
 	}
 
-	int err = validate_vars(config, error);
+	pure64_tokenbuf_done(&tokenbuf);
+
+	err = validate_vars(config, error);
 	if (err != 0) {
 		error->line = 0;
+		error->column = 0;
 		return err;
 	}
 
@@ -476,12 +454,14 @@ int pure64_config_load(struct pure64_config *config,
 	FILE *file = fopen(filename, "rb");
 	if (file == NULL) {
 		error->desc = "Failed to open file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_END) != 0) {
 		fclose(file);
 		error->desc = "Failed to seek to end of file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
@@ -489,12 +469,14 @@ int pure64_config_load(struct pure64_config *config,
 	if (file_size == -1L) {
 		fclose(file);
 		error->desc = "Failed to tell file position";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_SET) != 0) {
 		fclose(file);
 		error->desc = "Failed to seek to start of file";
+		error->line = 0;
 		return PURE64_EINVAL;
 	}
 
@@ -502,6 +484,7 @@ int pure64_config_load(struct pure64_config *config,
 	if (source == NULL) {
 		fclose(file);
 		error->desc = "Failed to allocate file memory";
+		error->line = 0;
 		return PURE64_ENOMEM;
 	}
 
@@ -511,6 +494,7 @@ int pure64_config_load(struct pure64_config *config,
 		free(source);
 		fclose(file);
 		error->desc = "Failed to read file";
+		error->line = 0;
 		return PURE64_EIO;
 	}
 

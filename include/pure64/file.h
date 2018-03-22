@@ -9,7 +9,7 @@
 #ifndef PURE64_FILE_H
 #define PURE64_FILE_H
 
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,9 +22,9 @@ struct pure64_stream;
 
 struct pure64_file {
 	/** The number of characters in the file name. */
-	uint64_t name_size;
+	pure64_uint64 name_size;
 	/** The number of bytes in the file data. */
-	uint64_t data_size;
+	pure64_uint64 data_size;
 	/** The name of the file. */
 	char *name;
 	/** The file data. */

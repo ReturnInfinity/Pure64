@@ -27,10 +27,10 @@ void pure64_dir_free(struct pure64_dir *dir) {
 
 	pure64_free(dir->name);
 
-	for (uint64_t i = 0; i < dir->subdir_count; i++)
+	for (pure64_uint64 i = 0; i < dir->subdir_count; i++)
 		pure64_dir_free(&dir->subdirs[i]);
 
-	for (uint64_t i = 0; i < dir->file_count; i++)
+	for (pure64_uint64 i = 0; i < dir->file_count; i++)
 		pure64_file_free(&dir->files[i]);
 
 	pure64_free(dir->subdirs);
@@ -45,7 +45,7 @@ int pure64_dir_add_file(struct pure64_dir *dir, const char *name) {
 
 	int err;
 	struct pure64_file *files;
-	uint64_t files_size;
+	pure64_uint64 files_size;
 
 	if (pure64_dir_name_exists(dir, name))
 		return PURE64_EEXIST;
@@ -78,7 +78,7 @@ int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name) {
 
 	int err;
 	struct pure64_dir *subdirs;
-	uint64_t subdirs_size;
+	pure64_uint64 subdirs_size;
 
 	if (pure64_dir_name_exists(dir, name))
 		return PURE64_EEXIST;
@@ -127,13 +127,13 @@ int pure64_dir_export(struct pure64_dir *dir, struct pure64_stream *out) {
 	if (err != 0)
 		return err;
 
-	for (uint64_t i = 0; i < dir->subdir_count; i++) {
+	for (pure64_uint64 i = 0; i < dir->subdir_count; i++) {
 		err = pure64_dir_export(&dir->subdirs[i], out);
 		if (err != 0)
 			return err;
 	}
 
-	for (uint64_t i = 0; i < dir->file_count; i++) {
+	for (pure64_uint64 i = 0; i < dir->file_count; i++) {
 		err = pure64_file_export(&dir->files[i], out);
 		if (err != 0)
 			return err;
@@ -176,19 +176,19 @@ int pure64_dir_import(struct pure64_dir *dir, struct pure64_stream *in) {
 
 	dir->name[dir->name_size] = 0;
 
-	for (uint64_t i = 0; i < dir->subdir_count; i++)
+	for (pure64_uint64 i = 0; i < dir->subdir_count; i++)
 		pure64_dir_init(&dir->subdirs[i]);
 
-	for (uint64_t i = 0; i < dir->file_count; i++)
+	for (pure64_uint64 i = 0; i < dir->file_count; i++)
 		pure64_file_init(&dir->files[i]);
 
-	for (uint64_t i = 0; i < dir->subdir_count; i++) {
+	for (pure64_uint64 i = 0; i < dir->subdir_count; i++) {
 		err = pure64_dir_import(&dir->subdirs[i], in);
 		if (err != 0)
 			return err;
 	}
 
-	for (uint64_t i = 0; i < dir->file_count; i++) {
+	for (pure64_uint64 i = 0; i < dir->file_count; i++) {
 		err = pure64_file_import(&dir->files[i], in);
 		if (err != 0)
 			return err;
@@ -197,27 +197,27 @@ int pure64_dir_import(struct pure64_dir *dir, struct pure64_stream *in) {
 	return 0;
 }
 
-bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name) {
+pure64_bool pure64_dir_name_exists(const struct pure64_dir *dir, const char *name) {
 
-	uint64_t i;
+	pure64_uint64 i;
 
 	for (i = 0; i < dir->file_count; i++) {
 		if (pure64_strcmp(dir->files[i].name, name) == 0)
-			return true;
+			return pure64_true;
 	}
 
 	for (i = 0; i < dir->subdir_count; i++) {
 		if (pure64_strcmp(dir->subdirs[i].name, name) == 0)
-			return true;
+			return pure64_true;
 	}
 
-	return false;
+	return pure64_false;
 }
 
 int pure64_dir_set_name(struct pure64_dir *dir, const char *name) {
 
 	char *tmp_name;
-	uint64_t name_size;
+	pure64_uint64 name_size;
 
 	name_size = pure64_strlen(name);
 

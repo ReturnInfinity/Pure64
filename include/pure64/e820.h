@@ -9,8 +9,7 @@
 #ifndef PURE64_E820_H
 #define PURE64_E820_H
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,13 +23,13 @@ struct pure64_e820 {
 	void *addr;
 	/** The number of bytes occupied by
 	 * this record. */
-	uint64_t size;
+	pure64_uint64 size;
 	/** Type 1 is usable, type 2 is not. */
-	uint32_t type;
+	pure64_uint32 type;
 	/** ACPI 3.0 Extended Attributes */
-	uint64_t attr;
+	pure64_uint64 attr;
 	/** Padding for 32-byte alignment */
-	uint64_t padding;
+	pure64_uint64 padding;
 };
 
 /** Get the next entry in the E820 map.
@@ -42,7 +41,7 @@ struct pure64_e820 {
  * Otherwise, it is zero.
  * */
 
-const struct pure64_e820 *pure64_e820_probe(uint64_t index);
+const struct pure64_e820 *pure64_e820_probe(pure64_uint64 index);
 
 #ifdef __cplusplus
 } /* extern "C" { */

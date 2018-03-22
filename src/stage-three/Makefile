@@ -1,21 +1,23 @@
 top ?= ../..
 
-VPATH += $(top)/src/lib
+VPATH += $(top)/src/targetlib
 VPATH += $(top)/include/pure64
 
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)gcc
+OBJCOPY = $(CROSS_COMPILE)objcopy
+
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
-CFLAGS += -std=gnu99
 CFLAGS += -I $(top)/include
-CFLAGS += -fno-stack-protector
-CFLAGS += -fomit-frame-pointer
-CFLAGS += -mno-red-zone
-CFLAGS += -Os
-CFLAGS += -g
+CFLAGS += -Os -g
+CFLAGS += -ffreestanding
 
 LDFLAGS += -T stage-three.ld
-LDFLAGS += -L $(top)/src/lib
+LDFLAGS += -L $(top)/src/targetlib
+LDFLAGS += -nostdlib
 
 LDLIBS += -lpure64
+LDLIBS += -lgcc
 
 stage_three_files += _start.o
 stage_three_files += ahci.o
@@ -30,11 +32,11 @@ all: stage-three.sys
 
 stage-three.sys: stage-three
 	@echo "OBJCOPY $@"
-	objcopy -O binary $< $@
+	$(OBJCOPY) -O binary $< $@
 
 stage-three: $(stage_three_files) stage-three.ld -lpure64
-	@echo "LD $@"
-	ld $(stage_three_files) $(LDFLAGS) $(LDLIBS) -o $@
+	@echo "LD      $@"
+	$(LD) $(stage_three_files) $(LDFLAGS) $(LDLIBS) -o $@
 
 _start.o: _start.c ahci.h debug.h
 
@@ -51,7 +53,7 @@ map.o: map.c map.h
 pci.o: pci.c pci.h
 
 %.o: %.c
-	@echo "CC $@"
+	@echo "CC      $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean

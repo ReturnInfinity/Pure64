@@ -16,7 +16,7 @@
  * version of the string "Pure64FS".
  * */
 
-#define PURE64_SIGNATURE 0x5346343665727550
+#define PURE64_SIGNATURE 0x5346343665727550ULL
 
 /** The sector that contains the file
  * system used by Pure64.
@@ -40,12 +40,12 @@ struct pure64_stream;
 
 struct pure64_fs {
 	/** File system signature (see @ref PURE64_SIGNATURE). */
-	uint64_t signature;
+	pure64_uint64 signature;
 	/** The number of bytes occupied by the file system. This
 	 * is useful for determining the amount of memory needed
 	 * to load the file system. This value is calculed only
 	 * when the file system is exported. */
-	uint64_t size;
+	pure64_uint64 size;
 	/** The root directory of the
 	 * file system. */
 	struct pure64_dir root;

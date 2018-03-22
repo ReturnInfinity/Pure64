@@ -8,8 +8,7 @@
 #define PURE64_AHCI_H
 
 #include <pure64/stream.h>
-
-#include <stdint.h>
+#include <pure64/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,9 +22,9 @@ extern "C" {
 
 struct ahci_addr {
 	/** The lower 32-bits of the address. */
-	uint32_t lower;
+	pure64_uint32 lower;
 	/** The upper 32-bits of the address. */
-	uint32_t upper;
+	pure64_uint32 upper;
 };
 
 /** Get the address of an AHCI address field.
@@ -56,73 +55,73 @@ struct ahci_port {
 	 * base address */
 	struct ahci_addr fis;
 	/* interrupt status */
-	uint32_t is;
+	pure64_uint32 is;
 	/* interrupt enable */
-	uint32_t ie;
+	pure64_uint32 ie;
 	/* command and status */
-	uint32_t cmd;
+	pure64_uint32 cmd;
 	/* Reserved */
-	uint32_t reserved;
+	pure64_uint32 reserved;
 	/* task file data */
-	uint32_t tfd;
+	pure64_uint32 tfd;
 	/* signature */
-	uint32_t sig;
+	pure64_uint32 sig;
 	/* SATA status (SCR0:SStatus) */
-	uint32_t ssts;
+	pure64_uint32 ssts;
 	/* SATA control (SCR2:SControl) */
-	uint32_t sctl;
+	pure64_uint32 sctl;
 	/* SATA error (SCR1:SError) */
-	uint32_t serr;
+	pure64_uint32 serr;
 	/* SATA active (SCR3:SActive) */
-	uint32_t sact;
+	pure64_uint32 sact;
 	/* command issue */
-	uint32_t ci;
+	pure64_uint32 ci;
 	/* SATA notification (SCR4:SNotification) */
-	uint32_t sntf;
+	pure64_uint32 sntf;
 	/* FIS-based switch control */
-	uint32_t fbs;
+	pure64_uint32 fbs;
 	/* reserved */
-	uint32_t reserved1[11];
+	pure64_uint32 reserved1[11];
 	/* vendor specific */
-	uint32_t vendor[4];
+	pure64_uint32 vendor[4];
 };
 
 int ahci_port_is_sata_drive(const volatile struct ahci_port *port);
 
 int ahci_port_read(volatile struct ahci_port *port,
-                   uint64_t sector_index,
-                   uint32_t sector_count,
+                   pure64_uint64 sector_index,
+                   pure64_uint32 sector_count,
                    void *buffer);
 
 struct ahci_base {
 	/* host capability */
-	uint32_t cap;
+	pure64_uint32 cap;
 	/* global host control */
-	uint32_t ghc;
+	pure64_uint32 ghc;
 	/* interrupt status */
-	uint32_t is;
+	pure64_uint32 is;
 	/* port implemented */
-	uint32_t pi;
+	pure64_uint32 pi;
 	/* version */
-	uint32_t vs;
+	pure64_uint32 vs;
 	/* command completion coalescing control */
-	uint32_t ccc_ctl;	// 0x14, Command completion coalescing control
+	pure64_uint32 ccc_ctl;	// 0x14, Command completion coalescing control
 	/* command completion coalescing ports */
-	uint32_t ccc_pts;	// 0x18, Command completion coalescing ports
+	pure64_uint32 ccc_pts;	// 0x18, Command completion coalescing ports
 	/* enclosure management location */
-	uint32_t em_loc;
+	pure64_uint32 em_loc;
 	/* enclosure management control */
-	uint32_t em_ctl;
+	pure64_uint32 em_ctl;
 	/* host capabilities extended */
-	uint32_t cap2;
+	pure64_uint32 cap2;
 	/* bios/os control and status */
-	uint32_t bohc;
-	uint8_t  reserved[0xA0-0x2C];
-	uint8_t  vendor_specific[0x100-0xA0];
+	pure64_uint32 bohc;
+	pure64_uint8  reserved[0xA0-0x2C];
+	pure64_uint8  vendor_specific[0x100-0xA0];
 	struct ahci_port ports[];
 };
 
-uint32_t ahci_base_ports_implemented(const volatile struct ahci_base *base);
+pure64_uint32 ahci_base_ports_implemented(const volatile struct ahci_base *base);
 
 struct ahci_visitor {
 	void *data;
@@ -144,15 +143,15 @@ struct ahci_stream {
 	volatile struct ahci_port *port;
 	/** The position of the stream
 	 * within the AHCI disk, in bytes. */
-	uint64_t position;
+	pure64_uint64 position;
 	/** A buffer to cache read operations. */
-	uint8_t *buf;
+	pure64_uint8 *buf;
 	/** The sector of the last cached
 	 * read operation. */
-	uint64_t buf_sector;
+	pure64_uint64 buf_sector;
 	/** The number of sectors that were
 	 * read in the last cached read operation. */
-	uint64_t buf_sector_count;
+	pure64_uint64 buf_sector_count;
 };
 
 /** Initializes an AHCI port stream.
