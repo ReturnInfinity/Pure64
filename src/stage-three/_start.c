@@ -24,12 +24,6 @@
 #define NULL ((void *) 0x00)
 #endif
 
-void memset(void *a, void *b, unsigned long int size) {
-	(void) a;
-	(void) b;
-	(void) size;
-}
-
 typedef void (*kernel_entry)(void);
 
 static int find_file_system(struct pure64_map *map);
