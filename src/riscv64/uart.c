@@ -8,7 +8,8 @@
 
 /* This UART driver was implemented
  * by referencing the Freedom E310 manual
- * at */
+ * at https://www.sifive.com/documentation/chips/freedom-e310-g000-manual/ */
+
 typedef unsigned int pure64_uint32;
 
 void uart_init(void) {
