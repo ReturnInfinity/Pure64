@@ -69,27 +69,27 @@ memory.o: memory.c
 
 mbr-data.o: mbr-data.c
 
-mbr-data.c mbr-data.h: $(top)/src/bootsectors/mbr.sys rc
+mbr-data.c mbr-data.h: $(top)/src/arch/x86_64/bootsectors/mbr.sys rc
 	./rc --input $< --source mbr-data.c --header mbr-data.h --name mbr_data
 
 multiboot-data.o: multiboot-data.c
 
-multiboot-data.c multiboot-data.h: $(top)/src/bootsectors/multiboot.sys rc
+multiboot-data.c multiboot-data.h: $(top)/src/arch/x86_64/bootsectors/multiboot.sys rc
 	./rc --input $< --source multiboot-data.c --header multiboot-data.h --name multiboot_data
 
 multiboot2-data.o: multiboot2-data.c
 
-multiboot2-data.c multiboot2-data.h: $(top)/src/bootsectors/multiboot2.sys rc
+multiboot2-data.c multiboot2-data.h: $(top)/src/arch/x86_64/bootsectors/multiboot2.sys rc
 	./rc --input $< --source multiboot2-data.c --header multiboot2-data.h --name multiboot2_data
 
 pure64-data.o: pure64-data.c
 
-pure64-data.c pure64-data.h: $(top)/src/pure64.sys rc
+pure64-data.c pure64-data.h: $(top)/src/arch/x86_64/pure64.sys rc
 	./rc --input $< --source pure64-data.c --header pure64-data.h --name pure64_data
 
 pxe-data.o: pxe-data.c
 
-pxe-data.c pxe-data.h: $(top)/src/bootsectors/pxestart.sys rc
+pxe-data.c pxe-data.h: $(top)/src/arch/x86_64/bootsectors/pxestart.sys rc
 	./rc --input $< --source pxe-data.c --header pxe-data.h --name pxe_data
 
 stage-three-data.o: stage-three-data.c

@@ -1,14 +1,14 @@
 VERSION ?= 0.9.0
 
-export CROSS_COMPILE ?= x86_64-none-elf-
+export ARCH ?= x86_64
+export CROSS_COMPILE ?= $(ARCH)-none-elf-
 export HOST_CROSS_COMPILE ?=
 export EXE ?=
 
 .PHONY: all clean install
 all clean install:
 	$(MAKE) -C include/pure64 $@
-	$(MAKE) -C src $@
-	$(MAKE) -C src/bootsectors $@
+	$(MAKE) -C src/arch/$(ARCH) $@
 	$(MAKE) -C src/targetlib $@
 	$(MAKE) -C src/hostlib $@
 	$(MAKE) -C src/stage-three $@
