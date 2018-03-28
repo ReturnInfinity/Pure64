@@ -2,6 +2,9 @@ ENTRY(_start)
 
 SECTIONS {
 	. = 0x1000;
+	.text.start : {
+		*(.text.start)
+	}
 	.text : {
 		*(.text)
 	}
