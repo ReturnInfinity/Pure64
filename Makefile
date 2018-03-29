@@ -1,50 +1,68 @@
-VERSION ?= 0.9.0
+.PHONY: all
+all: all-pure64
 
-export ARCH ?= x86_64
-export CROSS_COMPILE ?= $(ARCH)-none-elf-
-export HOST_CROSS_COMPILE ?=
-export EXE ?=
-
-.PHONY: all clean install
-all clean install:
-	$(MAKE) -C include/pure64 $@
-	$(MAKE) -C src/arch/$(ARCH) $@
-	$(MAKE) -C src/targetlib $@
-	$(MAKE) -C src/hostlib $@
-	$(MAKE) -C src/stage-three $@
-	$(MAKE) -C src/util $@
-
-pure64-$(VERSION).tar.gz: pure64-$(VERSION)
-	tar -pcvzf $@ $<
-
-pure64-$(VERSION):
-	$(MAKE) install DESTDIR=$(PWD)/$@ PREFIX=/
+.PHONY: clean
+clean: clean-pure64
 
 .PHONY: test
-test: test1
+test: test-pure64
 
-.PHONY: test1
-test1: testing/test1.img
-	./test.sh $<
+.PHONY: all-pure64
+all-pure64:
+	$(MAKE) -C src/lib all
+	$(MAKE) -C src/util all
 
-.PHONY: test2
-test2: testing/test2.img
-	./test.sh $<
+.PHONY: clean-pure64
+clean-pure64:
+	$(MAKE) -C src/lib clean
+	$(MAKE) -C src/util clean
 
-testing/test1.img: testing/test1-config.txt testing/kernel all
-	./src/util/pure64 --disk $@ --config $< init
+.PHONY: test-pure64
+test-pure64: all-pure64
+	$(MAKE) -C src/util test
 
-testing/test2.img: testing/test2-config.txt testing/kernel all
-	./src/util/pure64 --disk $@ --config $< init
-	./src/util/pure64 --disk $@ --config $< cp testing/kernel /boot/kernel
+.PHONY: install-pure64
+install-pure64: all-pure64
+	$(MAKE) -C src/lib install
+	$(MAKE) -C src/util install
 
-testing/kernel.sys: testing/kernel
-	objcopy -O binary $< $@
+.PHONY: all-pure64-x86_64
+all-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors all
+	$(MAKE) -C src/arch/x86_64 all
+	$(MAKE) -C src/lib all
+	$(MAKE) -C src/stage-three all
 
-testing/kernel: testing/kernel.o
-	ld $< -o $@
+.PHONY: clean-pure64-x86_64
+clean-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors clean
+	$(MAKE) -C src/arch/x86_64 clean
+	$(MAKE) -C src/lib clean
+	$(MAKE) -C src/stage-three clean
 
-testing/kernel.o: testing/kernel.asm
-	nasm $< -f elf64 -o $@
+.PHONY: install-pure64-x86_64
+install-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors install
+	$(MAKE) -C src/arch/x86_64 install
+	$(MAKE) -C src/lib install
+	$(MAKE) -C src/stage-three install
+
+.PHONY: all-pure64-riscv64
+all-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 all
+	$(MAKE) -C src/lib all
+	$(MAKE) -C src/stage-three all
+
+.PHONY: clean-pure64-riscv64
+clean-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 clean
+	$(MAKE) -C src/lib clean
+	$(MAKE) -C src/stage-three clean
+
+.PHONY: install-pure64-riscv64
+install-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 install
+	$(MAKE) -C src/lib install
+	$(MAKE) -C src/stage-three install
 
 $(V).SILENT:
