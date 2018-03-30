@@ -10,6 +10,8 @@
 
 #include <stdarg.h>
 
+#if defined PURE64_ARCH_x86_64
+
 static void outb(unsigned short int port, unsigned char value) {
 	asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
 }
@@ -30,6 +32,20 @@ void serial_putc(char c) {
 	}
 	outb(COM1, c);
 }
+
+#elif defined PURE64_ARCH_riscv64
+
+#include "uart.h"
+
+void serial_putc(char c) {
+	uart_putc(c);
+}
+
+#else
+
+#error "Unknown architecture"
+
+#endif
 
 static int pure64_isdigit(char c) {
 	if ((c >= '0') && (c <= '9'))
