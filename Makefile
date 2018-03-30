@@ -1,3 +1,5 @@
+include version.mk
+
 .PHONY: all
 all: all-pure64
 
@@ -64,5 +66,12 @@ install-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 install
 	$(MAKE) -C src/lib install
 	$(MAKE) -C src/stage-three install
+
+pure64-$(PURE64_VERSION).tar.gz:
+	$(MAKE) all-pure64
+	$(MAKE) install-pure64 PREFIX=$(shell pwd)/pure64-$(PURE64_VERSION)
+	tar --create --file $@ pure64-$(PURE64_VERSION)
+	gzip pure64-$(PURE64_VERSION).tar
+	$(MAKE) clean-pure64
 
 $(V).SILENT:
