@@ -9,6 +9,9 @@ clean: clean-pure64
 .PHONY: test
 test: test-pure64
 
+.PHONY: install
+install: install-pure64
+
 .PHONY: all-pure64
 all-pure64:
 	$(MAKE) -C src/lib all
