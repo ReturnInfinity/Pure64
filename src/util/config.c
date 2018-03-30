@@ -1,10 +1,5 @@
 #include "config.h"
 
-#include "mbr-data.h"
-#include "multiboot-data.h"
-#include "multiboot2-data.h"
-#include "pxe-data.h"
-
 #include "token.h"
 
 #include <pure64/error.h>
@@ -251,6 +246,11 @@ static int handle_var(struct pure64_config *config,
 			error->desc = "Unknown bootsector type";
 			return PURE64_EINVAL;
 		}
+	} else if (pure64_var_cmp_key(var, "resource_path")) {
+		free(config->resource_path);
+		config->resource_path = malloc(var->value_size + 1);
+		memcpy(config->resource_path, var->value, var->value_size);
+		config->resource_path[var->value_size] = 0;
 	} else if (pure64_var_cmp_key(var, "kernel_path")) {
 		free(config->kernel);
 		config->kernel = malloc(var->value_size + 1);
@@ -343,40 +343,13 @@ static int validate_vars(const struct pure64_config *config,
 	return 0;
 }
 
-const void *pure64_bootsector_data(enum pure64_bootsector bootsector) {
-
-	switch (bootsector) {
-	case PURE64_BOOTSECTOR_MBR:
-		return mbr_data;
-	case PURE64_BOOTSECTOR_MULTIBOOT:
-		return multiboot_data;
-	case PURE64_BOOTSECTOR_MULTIBOOT2:
-		return multiboot2_data;
-	case PURE64_BOOTSECTOR_PXE:
-		return pxe_data;
-	default:
-		break;
-	}
-
-	return NULL;
-}
-
 unsigned long int pure64_bootsector_size(enum pure64_bootsector bootsector) {
-
 	switch (bootsector) {
-	case PURE64_BOOTSECTOR_MBR:
-		return mbr_data_size;
-	case PURE64_BOOTSECTOR_MULTIBOOT:
-		return multiboot_data_size;
-	case PURE64_BOOTSECTOR_MULTIBOOT2:
-		return multiboot2_data_size;
 	case PURE64_BOOTSECTOR_PXE:
-		return pxe_data_size;
+		return 1024;
 	default:
-		break;
+		return 512;
 	}
-
-	return 0;
 }
 
 void pure64_config_init(struct pure64_config *config) {
@@ -387,6 +360,7 @@ void pure64_config_init(struct pure64_config *config) {
 	config->disk_size = 1 * 1024 * 1024;
 	config->fs_size = 512 * 1024;
 	config->kernel = NULL;
+	config->resource_path = NULL;
 }
 
 void pure64_config_done(struct pure64_config *config) {
