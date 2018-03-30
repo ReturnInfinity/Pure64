@@ -15,7 +15,7 @@ builddir=gcc-$ver/build/$target
 
 mkdir -p $builddir
 cd $builddir
-../../configure --target $target --disable-nls --enable-languages=c --without-headers
+../../configure --prefix "$prefix" --target $target --disable-nls --enable-languages=c --without-headers
 make all-gcc
 make all-target-libgcc
 make install-gcc
