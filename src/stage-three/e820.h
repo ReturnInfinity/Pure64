@@ -39,6 +39,16 @@ struct pure64_e820 {
 	uint64_t padding;
 };
 
+/** Gets a pointer to the E820 table.
+ * This should be the first function that
+ * is called if the caller wants to determine
+ * the memory map. @ref pure64_e820_next can
+ * be called to get the next entry.
+ * @returns A pointer to the E820 table.
+ * */
+
+const struct pure64_e820 *pure64_e820_get(void);
+
 /** Returns next entry in the E820 array.
  * @param e820 A valid E820 structure.
  * Use @ref pure64_e820_end to make sure
@@ -47,7 +57,7 @@ struct pure64_e820 {
  * @returns The next E820 entry.
  * */
 
-struct pure64_e820 *pure64_e820_next(struct pure64_e820 *e820);
+const struct pure64_e820 *pure64_e820_next(const struct pure64_e820 *e820);
 
 /** Indicates whether or not an E820 entry
  * is the terminating entry.

@@ -10,7 +10,11 @@
 #define NULL ((void *) 0x00)
 #endif
 
-struct pure64_e820 *pure64_e820_next(struct pure64_e820 *e820) {
+const struct pure64_e820 *pure64_e820_get(void) {
+	return (const struct pure64_e820 *) 0x6000;
+}
+
+const struct pure64_e820 *pure64_e820_next(const struct pure64_e820 *e820) {
 	return ++e820;
 }
 
