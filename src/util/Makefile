@@ -1,10 +1,9 @@
 TOP ?= ../..
-PREFIX ?= /opt/return-infinity
-VPATH += $(TOP)/src/lib
 
 include $(TOP)/make/patterns.mk
+include $(TOP)/make/config.mk
 
-CC = $(HOST_CROSS_COMPILE)gcc
+VPATH += $(TOP)/src/lib
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99

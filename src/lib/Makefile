@@ -1,8 +1,9 @@
 TOP ?= ../..
-PREFIX ?= /opt/return-infinity
-VPATH += $(TOP)/include/pure64
 
 include $(TOP)/make/patterns.mk
+include $(TOP)/make/config.mk
+
+VPATH += $(TOP)/include/pure64
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
