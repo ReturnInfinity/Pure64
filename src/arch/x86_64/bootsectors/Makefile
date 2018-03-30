@@ -1,7 +1,7 @@
-bootsectors += bootsectors/mbr.sys
-bootsectors += bootsectors/multiboot.sys
-bootsectors += bootsectors/multiboot2.sys
-bootsectors += bootsectors/pxestart.sys
+bootsectors += mbr.sys
+bootsectors += multiboot.sys
+bootsectors += multiboot2.sys
+bootsectors += pxestart.sys
 
 install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)/bootsectors
 
