@@ -1,11 +1,10 @@
-top ?= ../..
-DESTDIR ?=
-PREFIX ?= /usr/local
-VPATH += $(top)/include/pure64
+TOP ?= ../..
+PREFIX ?= /opt/return-infinity
+VPATH += $(TOP)/include/pure64
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
-CFLAGS += -I $(top)/include
+CFLAGS += -I $(TOP)/include
 CFLAGS += -g
 
 ARFLAGS = rcs
@@ -25,6 +24,8 @@ libfiles += string.o
 libfiles += uuid.o
 
 targets += libpure64.a
+
+install_dir ?= $(DESTDIR)$(PREFIX)/lib
 
 .PHONY: all
 all: $(targets)
@@ -66,18 +67,14 @@ uuid.o: uuid.c uuid.h string.h
 .PHONY: clean
 clean:
 	$(RM) $(libfiles)
-	$(RM) libpure64.a
+	$(RM) $(targets)
 
 .PHONY: test
 test:
 
 .PHONY: install
-install: $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/lib/libpure64.a
-
-$(DESTDIR)$(PREFIX)/lib:
-	mkdir -p $@
-
-$(DESTDIR)$(PREFIX)/lib/libpure64.a: libpure64.a
-	cp $< $@
+install: all
+	mkdir -p $(install_dir)
+	cp libpure64.a $(install_dir)
 
 $(V).SILENT:
