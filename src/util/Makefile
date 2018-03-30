@@ -2,6 +2,8 @@ TOP ?= ../..
 PREFIX ?= /opt/return-infinity
 VPATH += $(TOP)/src/lib
 
+include $(TOP)/make/patterns.mk
+
 CC = $(HOST_CROSS_COMPILE)gcc
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
@@ -46,18 +48,6 @@ token-test.o: token-test.c token.h
 token-test$(EXE): token-test.o token.o
 
 util.o: util.c util.h fstream.h
-
-%.exe: %.o
-	@echo "LD      $@"
-	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
-
-%: %.o
-	@echo "LD      $@"
-	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
-
-%.o: %.c
-	@echo "CC      $@"
-	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:

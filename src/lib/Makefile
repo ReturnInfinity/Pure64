@@ -2,6 +2,8 @@ TOP ?= ../..
 PREFIX ?= /opt/return-infinity
 VPATH += $(TOP)/include/pure64
 
+include $(TOP)/make/patterns.mk
+
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
 CFLAGS += -I $(TOP)/include
@@ -31,8 +33,6 @@ install_dir ?= $(DESTDIR)$(PREFIX)/lib
 all: $(targets)
 
 libpure64.a: $(libfiles)
-	@echo "AR      $@"
-	$(AR) $(ARFLAGS) $@ $^
 
 dap.o: dap.c dap.h misc.h stream.h
 
@@ -59,10 +59,6 @@ stream.o: stream.c stream.h
 string.o: string.c string.h
 
 uuid.o: uuid.c uuid.h string.h
-
-%.o: %.c
-	@echo "CC      $@"
-	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
