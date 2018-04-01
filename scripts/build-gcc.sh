@@ -17,6 +17,8 @@ mkdir -p $builddir
 cd $builddir
 ../../configure --prefix "$prefix" --target $target --disable-nls --enable-languages=c --without-headers
 make all-gcc
-make all-target-libgcc
 make install-gcc
-make install-target-libgcc
+if [[ "$target" == "riscv64-none-elf" ]]; then
+	make all-target-libgcc
+	make install-target-libgcc
+fi
