@@ -50,17 +50,17 @@ util.o: util.c util.h fstream.h
 
 .PHONY: clean
 clean:
-	$(RM) pure64 $(pure64_files)
-	$(RM) config-test config-test.o
-	$(RM) token-test token-test.o
+	$(RM) pure64$(EXE) $(pure64_files)
+	$(RM) config-test$(EXE) config-test.o
+	$(RM) token-test$(EXE) token-test.o
 
 .PHONY: test
 test: config-test token-test
-	./token-test
-	./config-test
+	./token-test$(EXE)
+	./config-test$(EXE)
 
 install: all
 	mkdir -p $(install_dir)
-	cp pure64 $(install_dir)
+	cp pure64$(EXE) $(install_dir)
 
 $(V).SILENT:
