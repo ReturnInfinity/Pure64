@@ -6,6 +6,10 @@
 	@echo "LD      $@"
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
+%.exe: %.o
+	@echo "LD      $@"
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
 %.a:
 	@echo "AR      $@"
 	$(AR) $(ARFLAGS) $@ $^
