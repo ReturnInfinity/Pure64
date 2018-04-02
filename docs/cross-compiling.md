@@ -1,20 +1,20 @@
 Cross Compilation
 =================
 
-Both the utility and the boot code that runs on the target computer can be cross compiled.
+To cross compile the utility, use the `CROSS_COMPILE` variable (and the `EXE` variable, if needed).
 
-To cross compile the utility, use the `HOST_CROSS_COMPILE` variable when invoking make.
-For example, to cross compile the utility for Windows, you'd do this:
+For example, cross compiling the utility for Windows is done like this:
 
-```
-make HOST_CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe
-```
+    make CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe
 
-To cross compile the utility for aarch64 on a Linux distribution, you'd do this:
+And to install it, this is done:
 
-```
-make HOST_CROSS_COMPILE=aarch64-linux-gnu-
-```
+    make CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe install PREFIX=/some/install/path
 
-The only supported cross compilation target for the boot code is x86_64-none-elf,
-since that is currently the only supported architecture.
+The bootloader is setup to be cross compiled by default.
+There are existing targets in the top level Makefile to assist with this.
+For xample, to cross compile for x86_64:
+
+    make clean-pure64-x86_64
+    make all-pure64-x86_64
+    make install-pure64-x86_64
