@@ -346,7 +346,7 @@ static int handle_var(struct pure64_config *config,
 	return 0;
 }
 
-static int validate_vars(const struct pure64_config *config,
+static int validate_vars(struct pure64_config *config,
                          struct pure64_config_error *error) {
 
 	if (config->arch == PURE64_ARCH_NONE) {
