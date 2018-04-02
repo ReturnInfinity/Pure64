@@ -75,19 +75,27 @@ The flags added to the command are there to help GCC produce could that will run
 
 ## Creating a Disk Image
 
-Once Pure64 is installed, use the following set of commands to create a disk image.
+Once Pure64 is installed, you'll have to create the configuration file for the disk image.
+
+Here's a very simple one:
+
+    arch: x86_64
+    bootsector: mbr
+    partition_scheme: gpt
+
+It creates a disk image for x86_64 systems, using MBR bootsector, formatted with a GPT partition table.
+Name the file `pure64-config.txt` for now.
+You can now do this to create the image.
 
 ```
-pure64 mkfs
-pure64 mkdir /boot
+pure64 init
 pure64 cp my-kernel.bin /boot/kernel
 ```
 
-Here's a breakdown of what each command is doing:
+Here's a breakdown of what these commands are doing.
 
-  - The first command, `pure64 mkfs` creates an image called `pure64.img` and inserts the boot loader and file system, so that it runs when it's read by the computer firmware.
-  - The second command creates a directory in the file system contained in `pure64.img` and calls it `/boot`. This is important because the loader opens for the kernel at `/boot/kernel`.
-  - The last command copies the kernel into the file system contained in `pure64.img`, at `/boot/kernel`.
+ - `init` reads `pure64-config.txt` and creates `pure64.img` based on the variables in there.
+ - `cp` copies a file from the host system to the disk image. In this case, it copies the kernel.
 
 When the kernel is loaded, it is loaded at the address `0x100000`. They entry point must be at the beginning of the binary.
 
@@ -102,8 +110,7 @@ To run the disk image with qemu, enter the Pure64 directory and run `test.sh`.
 Like this:
 
 ```
-pure64 mkfs
-pure64 mkdir /boot
+pure64 init
 pure64 cp my-kernel.bin /boot/kernel
 ./test.sh
 ```
