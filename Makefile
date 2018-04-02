@@ -1,16 +1,24 @@
-include version.mk
+TOP ?= $(CURDIR)
+
+include $(TOP)/version.mk
+include $(TOP)/make/config.mk
+include $(TOP)/make/patterns.mk
+
+-include config.mk
+
+default_target ?= pure64
 
 .PHONY: all
-all: all-pure64
+all: all-$(default_target)
 
 .PHONY: clean
-clean: clean-pure64
+clean: clean-$(default_target)
 
 .PHONY: test
-test: test-pure64
+test: test-$(default_target)
 
 .PHONY: install
-install: install-pure64
+install: install-$(default_target)
 
 .PHONY: all-pure64
 all-pure64:
@@ -35,40 +43,40 @@ install-pure64: all-pure64
 all-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors all
 	$(MAKE) -C src/arch/x86_64 all
-	$(MAKE) -C src/lib all
-	$(MAKE) -C src/stage-three all
+	$(MAKE) -C src/lib all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/stage-three all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
 
 .PHONY: clean-pure64-x86_64
 clean-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors clean
 	$(MAKE) -C src/arch/x86_64 clean
-	$(MAKE) -C src/lib clean
-	$(MAKE) -C src/stage-three clean
+	$(MAKE) -C src/lib clean ARCH=x86_64
+	$(MAKE) -C src/stage-three clean ARCH=x86_64
 
 .PHONY: install-pure64-x86_64
 install-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors install
 	$(MAKE) -C src/arch/x86_64 install
-	$(MAKE) -C src/lib install
-	$(MAKE) -C src/stage-three install
+	$(MAKE) -C src/lib install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/stage-three install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
 
 .PHONY: all-pure64-riscv64
 all-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 all
-	$(MAKE) -C src/lib all
-	$(MAKE) -C src/stage-three all
+	$(MAKE) -C src/lib all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/stage-three all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 
 .PHONY: clean-pure64-riscv64
 clean-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 clean
-	$(MAKE) -C src/lib clean
-	$(MAKE) -C src/stage-three clean
+	$(MAKE) -C src/lib clean ARCH=riscv64
+	$(MAKE) -C src/stage-three clean ARCH=riscv64
 
 .PHONY: install-pure64-riscv64
 install-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 install
-	$(MAKE) -C src/lib install
-	$(MAKE) -C src/stage-three install
+	$(MAKE) -C src/lib install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/stage-three install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 
 pure64-$(PURE64_VERSION).tar.gz:
 	$(MAKE) all-pure64
