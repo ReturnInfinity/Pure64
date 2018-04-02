@@ -1,15 +1,10 @@
 TOP ?= ../../../
 
-CROSS_COMPILE=riscv64-none-elf-
-AS=$(CROSS_COMPILE)as
-CC=$(CROSS_COMPILE)gcc
-LD=$(CROSS_COMPILE)ld
-OBJCOPY=$(CROSS_COMPILE)objcopy
+include $(TOP)/make/config.mk
+include $(TOP)/make/patterns.mk
 
 ASFLAGS += -g
 
-CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
-CFLAGS += -std=c11
 CFLAGS += -g
 CFLAGS += -ffreestanding
 CFLAGS += -I $(TOP)/include
@@ -28,16 +23,10 @@ endif
 all: pure64.sys
 
 pure64.sys: pure64
-	@echo "OBJCOPY $@"
-	$(OBJCOPY) -O binary $< $@
 
 pure64: pure64.o
-	@echo "LD      $@"
-	$(LD) $(LDFLAGS) $^ -o $@
 
 pure64.o: pure64.S
-	@echo "AS      $@"
-	$(AS) $(ASFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
