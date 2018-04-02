@@ -78,6 +78,16 @@ install-pure64-riscv64:
 	$(MAKE) -C src/lib install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 	$(MAKE) -C src/stage-three install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 
+pure64-$(PURE64_VERSION).zip:
+	$(MAKE) all-pure64 CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe
+	$(MAKE) install-pure64 CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64 EXE=.exe
+	$(MAKE) all-pure64-x86_64
+	$(MAKE) install-pure64-x86_64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64-x86_64
+	zip -9 -y -r -q pure64-$(PURE64_VERSION).zip pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64
+
 pure64-$(PURE64_VERSION).tar.gz:
 	$(MAKE) all-pure64
 	$(MAKE) install-pure64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
