@@ -5,14 +5,19 @@ project("Pure64" C)
 include("version.cmake")
 
 option (PURE64_WITH_UTIL "Build the Pure64 utility program." ON)
+option (PURE64_WITH_BOOTLOADER "Build the Pure64 boot loader." OFF)
 
 include_directories("include")
 
 add_subdirectory("src/lib")
 
-if (PURE64_WITH_UTIL)
+if (PURE64_WITH_BOOTLOADER)
+	message(WARNING "CMake cannot currently build the bootloader.")
+	add_subdirectory("src/arch/${PURE64_ARCH}")
+	add_subdirectory("src/stage-three")
+elseif (PURE64_WITH_UTIL)
 	add_subdirectory("src/util")
-endif (PURE64_WITH_UTIL)
+endif (PURE64_WITH_BOOTLOADER)
 
 set (CPACK_PACKAGE_NAME "Pure64")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "A bootloader for 64-bit systems.")
