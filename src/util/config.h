@@ -31,13 +31,6 @@ enum pure64_bootsector {
 	PURE64_BOOTSECTOR_MULTIBOOT2
 };
 
-/** Gets the data associated with a bootsector.
- * @param bootsector The bootsector to get the data for.
- * @returns The bootsector data.
- * */
-
-const void *pure64_bootsector_data(enum pure64_bootsector bootsector);
-
 /** Gets the size of a specified bootsector.
  * @param bootsector The bootsector to get the size of.
  * @returns The size, in bytes, of the specified bootsector.
@@ -112,6 +105,9 @@ struct pure64_config {
 	 * is only valid if the stage three loader is
 	 * specified to load a kernel. */
 	char *kernel;
+	/** The root path to Pure64's bootsectors,
+	 * initialization code, and more. */
+	char *resource_path;
 };
 
 /** Initializes a configuration file with default values.

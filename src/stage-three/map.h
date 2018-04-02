@@ -32,7 +32,7 @@ struct pure64_map {
 	struct pure64_info *info;
 	/** The base address for the
 	 * E820 memory entries. */
-	struct pure64_e820 *e820;
+	const struct pure64_e820 *e820;
 };
 
 /** Initializes a Pure64 map.

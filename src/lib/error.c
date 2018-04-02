@@ -20,6 +20,8 @@ const char *pure64_strerror(int err) {
 		return "Entry is a directory.";
 	case PURE64_ENOTDIR:
 		return "Entry is not a directory.";
+	case PURE64_ENOENT:
+		return "No such file or directory.";
 	case PURE64_EEXIST:
 		return "Entry exists already.";
 	case PURE64_EINVAL:
@@ -28,8 +30,6 @@ const char *pure64_strerror(int err) {
 		return "Functionality not implemented.";
 	case PURE64_EIO:
 		return "I/O error occured";
-	default:
-		return "Unknown error has occurred.";
 	}
 
 	return "Success";

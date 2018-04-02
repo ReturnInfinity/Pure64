@@ -1,50 +1,92 @@
-VERSION ?= 0.9.0
+TOP ?= $(CURDIR)
 
-export CROSS_COMPILE ?= x86_64-none-elf-
-export HOST_CROSS_COMPILE ?=
-export EXE ?=
+include $(TOP)/version.mk
+include $(TOP)/make/config.mk
+include $(TOP)/make/patterns.mk
 
-.PHONY: all clean install
-all clean install:
-	$(MAKE) -C include/pure64 $@
-	$(MAKE) -C src $@
-	$(MAKE) -C src/bootsectors $@
-	$(MAKE) -C src/targetlib $@
-	$(MAKE) -C src/hostlib $@
-	$(MAKE) -C src/stage-three $@
-	$(MAKE) -C src/util $@
+-include config.mk
 
-pure64-$(VERSION).tar.gz: pure64-$(VERSION)
-	tar -pcvzf $@ $<
+default_target ?= pure64
 
-pure64-$(VERSION):
-	$(MAKE) install DESTDIR=$(PWD)/$@ PREFIX=/
+.PHONY: all
+all: all-$(default_target)
+
+.PHONY: clean
+clean: clean-$(default_target)
 
 .PHONY: test
-test: test1
+test: test-$(default_target)
 
-.PHONY: test1
-test1: testing/test1.img
-	./test.sh $<
+.PHONY: install
+install: install-$(default_target)
 
-.PHONY: test2
-test2: testing/test2.img
-	./test.sh $<
+.PHONY: all-pure64
+all-pure64:
+	$(MAKE) -C src/lib all
+	$(MAKE) -C src/util all
 
-testing/test1.img: testing/test1-config.txt testing/kernel all
-	./src/util/pure64 --disk $@ --config $< init
+.PHONY: clean-pure64
+clean-pure64:
+	$(MAKE) -C src/lib clean
+	$(MAKE) -C src/util clean
 
-testing/test2.img: testing/test2-config.txt testing/kernel all
-	./src/util/pure64 --disk $@ --config $< init
-	./src/util/pure64 --disk $@ --config $< cp testing/kernel /boot/kernel
+.PHONY: test-pure64
+test-pure64: all-pure64
+	$(MAKE) -C src/util test
 
-testing/kernel.sys: testing/kernel
-	objcopy -O binary $< $@
+.PHONY: install-pure64
+install-pure64: all-pure64
+	$(MAKE) -C src/lib install
+	$(MAKE) -C src/util install
 
-testing/kernel: testing/kernel.o
-	ld $< -o $@
+.PHONY: all-pure64-x86_64
+all-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors all
+	$(MAKE) -C src/arch/x86_64 all
+	$(MAKE) -C src/lib all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/stage-three all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
 
-testing/kernel.o: testing/kernel.asm
-	nasm $< -f elf64 -o $@
+.PHONY: clean-pure64-x86_64
+clean-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors clean
+	$(MAKE) -C src/arch/x86_64 clean
+	$(MAKE) -C src/lib clean ARCH=x86_64
+	$(MAKE) -C src/stage-three clean ARCH=x86_64
+
+.PHONY: install-pure64-x86_64
+install-pure64-x86_64:
+	$(MAKE) -C src/arch/x86_64/bootsectors install
+	$(MAKE) -C src/arch/x86_64 install
+	$(MAKE) -C src/lib install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/stage-three install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+
+.PHONY: all-pure64-riscv64
+all-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 all
+	$(MAKE) -C src/lib all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/stage-three all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+
+.PHONY: clean-pure64-riscv64
+clean-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 clean
+	$(MAKE) -C src/lib clean ARCH=riscv64
+	$(MAKE) -C src/stage-three clean ARCH=riscv64
+
+.PHONY: install-pure64-riscv64
+install-pure64-riscv64:
+	$(MAKE) -C src/arch/riscv64 install
+	$(MAKE) -C src/lib install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/stage-three install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+
+pure64-$(PURE64_VERSION).tar.gz:
+	$(MAKE) all-pure64
+	$(MAKE) install-pure64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64
+	$(MAKE) all-pure64-x86_64
+	$(MAKE) install-pure64-x86_64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64-x86_64
+	tar --create --file pure64-$(PURE64_VERSION).tar pure64-$(PURE64_VERSION)
+	gzip pure64-$(PURE64_VERSION).tar
+	$(MAKE) clean-pure64
 
 $(V).SILENT:

@@ -10,8 +10,25 @@
 #define NULL ((void *) 0x00)
 #endif
 
+const struct pure64_e820 e820_table[] = {
+	{
+		(void *) 0x80000000 /* addr */,
+		0x10000000 /* size */,
+		1 /* type (usable) */,
+		0 /* attr (none) */,
+		0 /* padding */
+	},
+	{
+		NULL /* addr */,
+		0 /* size */,
+		0 /* type */,
+		0 /* attr */,
+		0 /* padding */
+	}
+};
+
 const struct pure64_e820 *pure64_e820_get(void) {
-	return (const struct pure64_e820 *) 0x6000;
+	return e820_table;
 }
 
 const struct pure64_e820 *pure64_e820_next(const struct pure64_e820 *e820) {
