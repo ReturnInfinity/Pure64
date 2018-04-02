@@ -8,6 +8,9 @@ addons:
     - libmpfr-dev
     - libmpc-dev
 compiler: gcc
+cache:
+  directories:
+    - toolchains
 script:
 - scripts/build-toolchains.sh
 - export PATH=$PATH:~/.local/bin
