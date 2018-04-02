@@ -95,7 +95,7 @@ static const char *get_root_resource_path(const struct pure64_config *config) {
 		if (respath != NULL)
 			return respath;
 
-		return PURE64_INSTALL_PATH;
+		return PURE64_RESOURCE_PATH;
 
 	} else {
 		return config->resource_path;
