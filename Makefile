@@ -80,7 +80,11 @@ install-pure64-riscv64:
 
 pure64-$(PURE64_VERSION).tar.gz:
 	$(MAKE) all-pure64
-	$(MAKE) install-pure64 PREFIX=$(shell pwd)/pure64-$(PURE64_VERSION)
+	$(MAKE) install-pure64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64
+	$(MAKE) all-pure64-x86_64
+	$(MAKE) install-pure64-x86_64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
+	$(MAKE) clean-pure64-x86_64
 	tar --create --file pure64-$(PURE64_VERSION).tar pure64-$(PURE64_VERSION)
 	gzip pure64-$(PURE64_VERSION).tar
 	$(MAKE) clean-pure64
