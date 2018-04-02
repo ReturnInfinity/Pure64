@@ -13,7 +13,7 @@ cache:
     - toolchains
 script:
 - scripts/build-toolchains.sh
-- export PATH=$PATH:~/.local/bin
+- export PATH=$PATH:$PWD/toolchains/bin
 - make pure64-0.9.0.tar.gz
 deploy:
   provider: releases
