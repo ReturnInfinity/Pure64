@@ -1,20 +1,11 @@
 TOP ?= ../..
 
-ARCH ?= x86_64
-
-ARCH_$(ARCH) = 1
-
-CROSS_COMPILE ?= $(ARCH)-none-elf-
+include $(TOP)/make/patterns.mk
+include $(TOP)/make/config.mk
 
 VPATH += $(TOP)/include/pure64
 VPATH += $(TOP)/src/lib
 
-CC = $(CROSS_COMPILE)gcc
-LD = $(CROSS_COMPILE)gcc
-OBJCOPY = $(CROSS_COMPILE)objcopy
-
-CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
-CFLAGS += -I $(TOP)/include
 CFLAGS += -Os -g
 CFLAGS += -ffreestanding
 
@@ -56,12 +47,10 @@ install_dir = $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)
 all: stage-three.sys
 
 stage-three.sys: stage-three
-	@echo "OBJCOPY $@"
-	$(OBJCOPY) -O binary $< $@
 
-stage-three: $(stage_three_files) loader-$(ARCH).ld -lpure64
+stage-three: $(stage_three_files) -lpure64 loader-$(ARCH).ld
 	@echo "LD      $@"
-	$(LD) $(stage_three_files) $(LDFLAGS) $(LDLIBS) -o $@
+	$(LD) $(LDFLAGS) $(stage_three_files) -o $@ $(LDLIBS)
 
 _start.o: _start.c ahci.h debug.h
 
@@ -82,10 +71,6 @@ map.o: map.c map.h
 pci.o: pci.c pci.h
 
 uart.o: uart.c uart.h
-
-%.o: %.c
-	@echo "CC      $@"
-	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: clean
 clean:
