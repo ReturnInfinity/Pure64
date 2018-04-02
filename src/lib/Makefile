@@ -1,11 +1,13 @@
-top ?= ../..
-DESTDIR ?=
-PREFIX ?= /usr/local
-VPATH += $(top)/include/pure64
+TOP ?= ../..
+
+include $(TOP)/make/patterns.mk
+include $(TOP)/make/config.mk
+
+VPATH += $(TOP)/include/pure64
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
-CFLAGS += -I $(top)/include
+CFLAGS += -I $(TOP)/include
 CFLAGS += -g
 
 ARFLAGS = rcs
@@ -26,12 +28,12 @@ libfiles += uuid.o
 
 targets += libpure64.a
 
+install_dir ?= $(DESTDIR)$(PREFIX)/lib
+
 .PHONY: all
 all: $(targets)
 
 libpure64.a: $(libfiles)
-	@echo "AR      $@"
-	$(AR) $(ARFLAGS) $@ $^
 
 dap.o: dap.c dap.h misc.h stream.h
 
@@ -59,25 +61,17 @@ string.o: string.c string.h
 
 uuid.o: uuid.c uuid.h string.h
 
-%.o: %.c
-	@echo "CC      $@"
-	$(CC) $(CFLAGS) -c $< -o $@
-
 .PHONY: clean
 clean:
 	$(RM) $(libfiles)
-	$(RM) libpure64.a
+	$(RM) $(targets)
 
 .PHONY: test
 test:
 
 .PHONY: install
-install: $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/lib/libpure64.a
-
-$(DESTDIR)$(PREFIX)/lib:
-	mkdir -p $@
-
-$(DESTDIR)$(PREFIX)/lib/libpure64.a: libpure64.a
-	cp $< $@
+install: all
+	mkdir -p $(install_dir)
+	cp libpure64.a $(install_dir)
 
 $(V).SILENT:

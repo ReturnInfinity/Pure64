@@ -3,8 +3,17 @@ addons:
   apt:
     packages:
     - nasm
+    - libcloog-isl-dev
+    - libgmp-dev
+    - libmpfr-dev
+    - libmpc-dev
 compiler: gcc
+cache:
+  directories:
+    - toolchains
 script:
+- scripts/build-toolchains.sh
+- export PATH=$PATH:~/.local/bin
 - make pure64-0.9.0.tar.gz
 deploy:
   provider: releases

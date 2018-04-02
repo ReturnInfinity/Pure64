@@ -18,7 +18,13 @@
 
 #define BOUNDARY 0x1000
 
+#if defined (__x86_64)
 #define FREE_START 0x70000
+#elif defined (__riscv)
+#define FREE_START 0x81000000
+#else
+#error "Unknown architecture"
+#endif
 
 static struct pure64_alloc *append_alloc(struct pure64_map *map, struct pure64_alloc *alloc) {
 
@@ -62,9 +68,9 @@ bubbleSortLoop:
 		addr_a = (uint64_t) a->addr;
 		addr_b = (uint64_t) b->addr;
 		if (addr_a > addr_b) {
-			tmp = *a;
-			*a = *b;
-			*b = tmp;
+			pure64_memcpy(&tmp, a, sizeof(struct pure64_alloc));
+			pure64_memcpy(a, b, sizeof(struct pure64_alloc));
+			pure64_memcpy(b, a, sizeof(struct pure64_alloc));
 			sorted_flag = 1;
 		}
 	}
@@ -75,7 +81,6 @@ bubbleSortLoop:
 
 static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 
-	struct pure64_e820 *e820;
 	struct pure64_alloc *alloc;
 	/* candidate address */
 	uint64_t addr;
@@ -89,7 +94,7 @@ static void *find_suitable_addr(struct pure64_map *map, uint64_t size) {
 	uint64_t size3;
 	uint64_t i;
 
-	e820 = map->e820;
+	const struct pure64_e820 *e820 = map->e820;
 
 	/* Initial address is one.
 	 * It should not be zero,
@@ -212,15 +217,9 @@ static struct pure64_alloc *find_alloc_entry(struct pure64_map *map, void *addr)
 
 void pure64_map_init(struct pure64_map *map) {
 
-	uint64_t addr;
-	uint64_t size;
-	struct pure64_e820 *e820;
-
-	addr = 0;
-
 	/* Initialize E820 address */
 
-	e820 = (struct pure64_e820 *) 0x6000;
+	const struct pure64_e820 *e820 = pure64_e820_get();
 
 	map->e820 = e820;
 
@@ -228,6 +227,8 @@ void pure64_map_init(struct pure64_map *map) {
 	 * allocation table at. It will
 	 * move locations when it needs to.
 	 */
+
+	uint64_t addr = FREE_START;
 
 	while (!pure64_e820_end(e820)) {
 
@@ -240,7 +241,9 @@ void pure64_map_init(struct pure64_map *map) {
 		/* Check that the memory is not already
 		 * used by Pure64. */
 		addr = (uint64_t) e820->addr;
-		size = e820->size;
+
+		uint64_t size = e820->size;
+
 		if ((addr + size) < FREE_START) {
 			e820 = pure64_e820_next(e820);
 			continue;
@@ -282,8 +285,8 @@ void pure64_map_init(struct pure64_map *map) {
 		map->alloc_count = 2;
 		/* Pure64 initial memory map */
 		map->alloc_table[0].addr = (void *) 0x00;
-		map->alloc_table[0].size = 0x70000;
-		map->alloc_table[0].reserved = 0x70000;
+		map->alloc_table[0].size = FREE_START;
+		map->alloc_table[0].reserved = FREE_START;
 		/* allocation table (self reference) */
 		map->alloc_table[1].addr = map->alloc_table;
 		map->alloc_table[1].size = sizeof(struct pure64_alloc) * 2;
@@ -299,11 +302,10 @@ int pure64_map_reserve(struct pure64_map *map, void *ptr, uint64_t size) {
 	/* Either E820 address or
 	 * allocation address */
 	uint64_t addr2;
-	struct pure64_e820 *e820;
 
 	addr = (uint64_t) ptr;
 
-	e820 = map->e820;
+	const struct pure64_e820 *e820 = map->e820;
 
 	/* Search the E820 entries and make
 	 * sure that the memory is usable
