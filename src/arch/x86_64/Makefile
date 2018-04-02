@@ -6,7 +6,9 @@ pure64_deps += init/smp.asm
 pure64_deps += interrupt.asm
 pure64_deps += sysvar.asm
 
-pure64_install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)
+ARCH ?= x86_64
+
+install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)
 
 NASM ?= nasm
 

@@ -8,6 +8,8 @@ listfiles += multiboot.lst
 listfiles += multiboot2.lst
 listfiles += pxestart.lst
 
+ARCH ?= x86_64
+
 install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)/bootsectors
 
 .PHONY: all
