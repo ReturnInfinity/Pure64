@@ -355,8 +355,18 @@ static int validate_vars(const struct pure64_config *config,
 	}
 
 	if (config->stage_three == PURE64_STAGE_THREE_NONE) {
-		error->desc = "Stage three not specified";
-		return PURE64_EINVAL;
+		/* Allow default value of 'loader' */
+		config->stage_three = PURE64_STAGE_THREE_LOADER;
+	}
+
+	if (config->bootsector == PURE64_BOOTSECTOR_NONE) {
+		/* Allow the 'mbr' bootsector to be the default one. */
+		config->bootsector = PURE64_BOOTSECTOR_MBR;
+	}
+
+	if (config->partition_scheme == PURE64_PARTITION_SCHEME_NONE) {
+		/* Allow GPT to be the default partition scheme */
+		config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
 	}
 
 	if ((config->stage_three == PURE64_STAGE_THREE_LOADER)
