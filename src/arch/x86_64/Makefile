@@ -1,3 +1,8 @@
+TOP ?= ../../..
+
+include $(TOP)/make/config.mk
+include $(TOP)/make/patterns.mk
+
 pure64_deps += init/smp_ap.asm
 pure64_deps += init/acpi.asm
 pure64_deps += init/cpu.asm

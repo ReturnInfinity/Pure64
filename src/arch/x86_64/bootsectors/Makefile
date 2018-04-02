@@ -1,3 +1,8 @@
+TOP ?= ../../../..
+
+include $(TOP)/make/config.mk
+include $(TOP)/make/patterns.mk
+
 bootsectors += mbr.sys
 bootsectors += multiboot.sys
 bootsectors += multiboot2.sys
@@ -7,8 +12,6 @@ listfiles += mbr.lst
 listfiles += multiboot.lst
 listfiles += multiboot2.lst
 listfiles += pxestart.lst
-
-ARCH ?= x86_64
 
 install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)/bootsectors
 
