@@ -703,7 +703,9 @@ int pure64_util_open_config(struct pure64_util *util,
 
 	int err = pure64_config_load(&util->config, path, &error);
 	if (err != 0) {
-		if (error.line > 0)
+		if ((error.line > 0) && (error.column > 0))
+			fprintf(util->errlog, "%s:%lu:%lu: %s\n", path, error.line, error.column, error.desc);
+		else if (error.line > 0)
 			fprintf(util->errlog, "%s:%lu: %s\n", path, error.line, error.desc);
 		else
 			fprintf(util->errlog, "%s: %s\n", path, error.desc);

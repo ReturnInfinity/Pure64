@@ -41,17 +41,23 @@ static const struct pure64_token *token_iterator_deref(const struct token_iterat
 }
 
 struct pure64_var {
+	unsigned long int line;
 	const char *key;
 	unsigned long int key_size;
+	unsigned long int key_column;
 	const char *value;
 	unsigned long int value_size;
+	unsigned long int value_column;
 };
 
 static void pure64_var_init(struct pure64_var *var) {
+	var->line = 1;
 	var->key = NULL;
 	var->key_size = 0;
+	var->key_column = 1;
 	var->value = NULL;
 	var->value_size = 0;
+	var->value_column = 1;
 }
 
 static int pure64_var_parse(struct pure64_var *var,
@@ -68,8 +74,11 @@ static int pure64_var_parse(struct pure64_var *var,
 		return PURE64_EINVAL;
 	}
 
+	var->line = var_key->line;
+
 	var->key = var_key->data;
 	var->key_size = var_key->size;
+	var->key_column = var_key->column;
 
 	token_iterator_next(it);
 
@@ -96,6 +105,7 @@ static int pure64_var_parse(struct pure64_var *var,
 
 	var->value = var_value->data;
 	var->value_size = var_value->size;
+	var->value_column = var_value->column;
 
 	token_iterator_next(it);
 
@@ -244,6 +254,8 @@ static int handle_var(struct pure64_config *config,
 			config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT2;
 		} else {
 			error->desc = "Unknown bootsector type";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "resource_path")) {
@@ -256,12 +268,15 @@ static int handle_var(struct pure64_config *config,
 		config->kernel = malloc(var->value_size + 1);
 		if (config->kernel == NULL) {
 			error->desc = "Failed to allocate memory for kernel path";
+			error->line = 0;
 			return PURE64_ENOMEM;
 		}
 		memcpy(config->kernel, var->value, var->value_size);
 		config->kernel[var->value_size] = 0;
 		if (!file_exists(config->kernel)) {
 			error->desc = "Kernel does not exist";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_ENOENT;
 		}
 	} else if (pure64_var_cmp_key(var, "stage_three")) {
@@ -271,6 +286,8 @@ static int handle_var(struct pure64_config *config,
 			config->stage_three = PURE64_STAGE_THREE_LOADER;
 		} else {
 			error->desc = "Unknown stage three type";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "partition_scheme")) {
@@ -280,15 +297,21 @@ static int handle_var(struct pure64_config *config,
 			config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
 		} else {
 			error->desc = "Unknown partition scheme";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "disk_size")) {
 		if (var->value_size == 0) {
 			error->desc = "Disk size not specified";
+			error->line = var->line;
+			error->column = var->key_column;
 			return PURE64_EINVAL;
 		}
 		if (parse_size(var, &config->disk_size) != 0) {
 			error->desc = "Invalid disk size";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "arch")) {
@@ -296,19 +319,27 @@ static int handle_var(struct pure64_config *config,
 			config->arch = PURE64_ARCH_x86_64;
 		} else {
 			error->desc = "Unsupported architecture";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else if (pure64_var_cmp_key(var, "fs_size")) {
 		if (var->value_size == 0) {
 			error->desc = "File system size not specified";
+			error->line = var->line;
+			error->column = var->key_column;
 			return PURE64_EINVAL;
 		}
 		if (parse_size(var, &config->fs_size) != 0) {
 			error->desc = "Invalid file system size";
+			error->line = var->line;
+			error->column = var->value_column;
 			return PURE64_EINVAL;
 		}
 	} else {
 		error->desc = "Unknown variable key";
+		error->line = var->line;
+		error->column = var->key_column;
 		return PURE64_EINVAL;
 	}
 
@@ -371,6 +402,10 @@ void pure64_config_done(struct pure64_config *config) {
 int pure64_config_parse(struct pure64_config *config,
                         const char *source,
                         struct pure64_config_error *error) {
+
+	error->line = 0;
+	error->column = 0;
+	error->desc = "";
 
 	struct pure64_tokenbuf tokenbuf;
 
