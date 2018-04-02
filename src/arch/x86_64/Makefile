@@ -8,13 +8,14 @@ pure64_deps += sysvar.asm
 
 pure64_install_dir ?= $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)
 
+NASM ?= nasm
+
 .PHONY: all
 all: pure64.sys
 
 pure64.sys: pure64.asm $(pure64_deps)
-
-%.sys: %.asm
 	@echo "NASM    $@"
+	$(NASM) $(NASMFLAGS) pure64.asm -o $@ -l pure64.lst
 
 .PHONY: clean
 clean:
@@ -27,5 +28,6 @@ test: all
 install: all
 	mkdir -p $(install_dir)
 	cp pure64.sys $(install_dir)
+	cp pure64.lst $(install_dir)
 
 $(V).SILENT:
