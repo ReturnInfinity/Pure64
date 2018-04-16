@@ -17,7 +17,7 @@ init_cpu:
 ; Flush Cache
 	wbinvd
 
-; Diable Paging Global Extensions
+; Disable Paging Global Extensions
 	mov rax, cr4
 	btr rax, 7			; Clear Paging Global Extensions (Bit 7)
 	mov cr4, rax
