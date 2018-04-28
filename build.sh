@@ -3,7 +3,7 @@
 set -e
 
 function build_dir {
-	echo "Entering $1"
+	echo "Entering ${PWD}/$1"
 	cd $1
 	./build.sh
 	cd ../..

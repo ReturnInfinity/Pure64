@@ -13,7 +13,7 @@ CFLAGS="$CFLAGS -I ../../include"
 function compile_file {
 	src=${srcdir}$1
 	obj=${objdir}`basename $1`.o
-	echo "CC     $PWD/$obj"
+	echo " CC      $PWD/$obj"
 	$CC $CFLAGS -c $src -o $obj
 }
 
@@ -23,7 +23,7 @@ AR=${CROSS_COMPILE}ar
 ARFLAGS=rcs
 
 function link_static {
-	echo "AR     $PWD/$1"
+	echo " AR      $PWD/$1"
 	$AR $ARFLAGS $1 ${@:2}
 }
 
@@ -35,6 +35,6 @@ LDFLAGS=
 LDLIBS=
 
 function link_executable {
-	echo "LD     $PWD/$1"
+	echo " LD      $PWD/$1"
 	$LD $LDFLAGS ${@:2} -o $1 $LDLIBS
 }
