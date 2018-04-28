@@ -12,7 +12,7 @@ extern "C" {
 enum pure64_arch {
 	/** This means no architecture
 	 * was specified. */
-	PURE64_ARCH_NONE,
+	PURE64_ARCH_none,
 	/** This means the architecture is x86_64. */
 	PURE64_ARCH_x86_64
 };

@@ -1,4 +1,4 @@
-#include "token.h"
+#include <pure64/lang/token.h>
 
 #include <pure64/error.h>
 

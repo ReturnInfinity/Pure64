@@ -1,7 +1,7 @@
 #ifndef PURE64_CONFIG_H
 #define PURE64_CONFIG_H
 
-#include "arch.h"
+#include <pure64/arch.h>
 
 #ifdef __cplusplus
 extern "C" {

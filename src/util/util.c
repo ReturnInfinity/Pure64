@@ -6,7 +6,7 @@
 
 #include "util.h"
 
-#include "config.h"
+#include <pure64/lang/config.h>
 
 #include <pure64/error.h>
 #include <pure64/gpt.h>

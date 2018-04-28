@@ -10,6 +10,7 @@ option (PURE64_WITH_BOOTLOADER "Build the Pure64 boot loader." OFF)
 include_directories("include")
 
 add_subdirectory("src/lib")
+add_subdirectory("src/lib/lang")
 
 if (PURE64_WITH_BOOTLOADER)
 	message(WARNING "CMake cannot currently build the bootloader.")
@@ -18,6 +19,8 @@ if (PURE64_WITH_BOOTLOADER)
 elseif (PURE64_WITH_UTIL)
 	add_subdirectory("src/util")
 endif (PURE64_WITH_BOOTLOADER)
+
+enable_testing()
 
 set (CPACK_PACKAGE_NAME "Pure64")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "A bootloader for 64-bit systems.")

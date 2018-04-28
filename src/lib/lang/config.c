@@ -1,6 +1,6 @@
-#include "config.h"
+#include <pure64/lang/config.h>
 
-#include "token.h"
+#include <pure64/lang/token.h>
 
 #include <pure64/error.h>
 
@@ -349,7 +349,7 @@ static int handle_var(struct pure64_config *config,
 static int validate_vars(struct pure64_config *config,
                          struct pure64_config_error *error) {
 
-	if (config->arch == PURE64_ARCH_NONE) {
+	if (config->arch == PURE64_ARCH_none) {
 		error->desc = "Architecture not specified";
 		return PURE64_EINVAL;
 	}
@@ -394,7 +394,7 @@ unsigned long int pure64_bootsector_size(enum pure64_bootsector bootsector) {
 }
 
 void pure64_config_init(struct pure64_config *config) {
-	config->arch = PURE64_ARCH_NONE;
+	config->arch = PURE64_ARCH_none;
 	config->bootsector = PURE64_BOOTSECTOR_NONE;
 	config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
 	config->stage_three = PURE64_STAGE_THREE_NONE;

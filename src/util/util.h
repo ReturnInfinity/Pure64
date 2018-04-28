@@ -3,7 +3,8 @@
 
 #include <pure64/fs.h>
 
-#include "config.h"
+#include <pure64/lang/config.h>
+
 #include "fstream.h"
 
 #ifdef __cplusplus

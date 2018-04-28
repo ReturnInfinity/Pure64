@@ -1,4 +1,4 @@
-#include "config.h"
+#include <pure64/lang/config.h>
 
 #include <assert.h>
 #include <stdio.h>
