@@ -1,31 +1,19 @@
-#!/bin/sh
+#!/bin/bash
 
-# Enable all compiler warnings, treat warnings as errors
-CFLAGS="$CFLAGS -Wall -Wextra -Werror -Wfatal-errors"
-# Enable C11 standard with GNU extensions
-CFLAGS="$CFLAGS -std=gnu11"
-# Pass flags required for use in kernel environment
-# Pass the include directory
-CFLAGS="$CFLAGS -I ../../include"
-# Compiler is GNU
-CC=${CROSS_COMPILE}gcc
-# Build the object files
-$CC $CFLAGS -c ${srcdir}dap.c
-$CC $CFLAGS -c ${srcdir}dir.c
-$CC $CFLAGS -c ${srcdir}error.c
-$CC $CFLAGS -c ${srcdir}file.c
-$CC $CFLAGS -c ${srcdir}fs.c
-$CC $CFLAGS -c ${srcdir}gpt.c
-$CC $CFLAGS -c ${srcdir}mbr.c
-$CC $CFLAGS -c ${srcdir}misc.c
-$CC $CFLAGS -c ${srcdir}partition.c
-$CC $CFLAGS -c ${srcdir}path.c
-$CC $CFLAGS -c ${srcdir}stream.c
-$CC $CFLAGS -c ${srcdir}string.c
-$CC $CFLAGS -c ${srcdir}uuid.c
-# Use ar from binutils
-AR=ar
-# Flags for creating library
-ARFLAGS=rcs
-# Create library
-$AR $ARFLAGS libpure64.a *.o
+source ../../bash/common.sh
+
+compile_file dap.c
+compile_file dir.c
+compile_file error.c
+compile_file file.c
+compile_file fs.c
+compile_file gpt.c
+compile_file mbr.c
+compile_file misc.c
+compile_file partition.c
+compile_file path.c
+compile_file stream.c
+compile_file string.c
+compile_file uuid.c
+
+link_static libpure64-core.a *.o
