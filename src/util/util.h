@@ -1,8 +1,7 @@
 #ifndef PURE64_UTIL_H
 #define PURE64_UTIL_H
 
-#include <pure64/fs.h>
-
+#include <pure64/core/fs.h>
 #include <pure64/lang/config.h>
 
 #include "fstream.h"

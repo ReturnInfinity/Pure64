@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include <pure64/string.h>
+#include <pure64/core/string.h>
 
 void pure64_memset(void *dst, int value, pure64_uint64 size) {
 

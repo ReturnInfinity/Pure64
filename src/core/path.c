@@ -4,10 +4,10 @@
  * =============================================================================
  */
 
-#include <pure64/path.h>
-#include <pure64/error.h>
-#include <pure64/memory.h>
-#include <pure64/string.h>
+#include <pure64/core/path.h>
+#include <pure64/core/error.h>
+#include <pure64/core/memory.h>
+#include <pure64/core/string.h>
 
 static int is_separator(char c) {
 	if ((c == '/') || (c == '\\'))

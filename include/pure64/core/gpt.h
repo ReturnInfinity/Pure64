@@ -9,7 +9,7 @@
 #ifndef PURE64_GPT_H
 #define PURE64_GPT_H
 
-#include <pure64/uuid.h>
+#include <pure64/core/uuid.h>
 
 #ifndef PURE64_GPT_INVALID_LBA
 

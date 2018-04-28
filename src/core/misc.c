@@ -6,7 +6,7 @@
 
 #include "misc.h"
 
-#include <pure64/stream.h>
+#include <pure64/core/stream.h>
 
 int encode_uint16(pure64_uint16 n, struct pure64_stream *file) {
 

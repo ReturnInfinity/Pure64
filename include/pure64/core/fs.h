@@ -9,7 +9,7 @@
 #ifndef PURE64_FS_H
 #define PURE64_FS_H
 
-#include <pure64/dir.h>
+#include <pure64/core/dir.h>
 
 /** The correct value of a Pure64 file
  * system signature. This is a hexidecimal

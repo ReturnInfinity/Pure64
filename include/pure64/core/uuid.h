@@ -48,7 +48,7 @@
 
 #endif
 
-#include <pure64/types.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
 extern "C" {

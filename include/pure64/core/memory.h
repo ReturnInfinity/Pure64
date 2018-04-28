@@ -9,7 +9,7 @@
 #ifndef PURE64_MEMORY_H
 #define PURE64_MEMORY_H
 
-#include <pure64/types.h>
+#include <pure64/core/types.h>
 
 /** Represents an invalid memory
  * reference.

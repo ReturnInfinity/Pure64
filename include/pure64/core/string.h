@@ -9,7 +9,7 @@
 #ifndef PURE64_STRING_H
 #define PURE64_STRING_H
 
-#include <pure64/types.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
 extern "C" {

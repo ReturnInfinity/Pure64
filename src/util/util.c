@@ -8,10 +8,10 @@
 
 #include <pure64/lang/config.h>
 
-#include <pure64/error.h>
-#include <pure64/gpt.h>
-#include <pure64/mbr.h>
-#include <pure64/partition.h>
+#include <pure64/core/error.h>
+#include <pure64/core/gpt.h>
+#include <pure64/core/mbr.h>
+#include <pure64/core/partition.h>
 
 #include <stdlib.h>
 #include <string.h>

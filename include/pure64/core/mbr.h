@@ -9,8 +9,8 @@
 #ifndef PURE64_MBR_H
 #define PURE64_MBR_H
 
-#include <pure64/dap.h>
-#include <pure64/types.h>
+#include <pure64/core/dap.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
 extern "C" {

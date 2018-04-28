@@ -4,9 +4,9 @@
  * =============================================================================
  */
 
-#include <pure64/partition.h>
+#include <pure64/core/partition.h>
 
-#include <pure64/error.h>
+#include <pure64/core/error.h>
 
 #ifndef NULL
 #define NULL ((void *) 0x00)

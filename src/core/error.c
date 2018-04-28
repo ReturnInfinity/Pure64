@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include <pure64/error.h>
+#include <pure64/core/error.h>
 
 const char *pure64_strerror(int err) {
 

@@ -6,9 +6,9 @@
 
 #include "util.h"
 
-#include <pure64/error.h>
-#include <pure64/file.h>
-#include <pure64/types.h>
+#include <pure64/core/error.h>
+#include <pure64/core/file.h>
+#include <pure64/core/types.h>
 
 #include <stdio.h>
 #include <stdlib.h>

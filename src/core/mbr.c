@@ -4,11 +4,11 @@
  * =============================================================================
  */
 
-#include <pure64/mbr.h>
+#include <pure64/core/mbr.h>
 
-#include <pure64/error.h>
-#include <pure64/string.h>
-#include <pure64/stream.h>
+#include <pure64/core/error.h>
+#include <pure64/core/string.h>
+#include <pure64/core/stream.h>
 
 #include "misc.h"
 

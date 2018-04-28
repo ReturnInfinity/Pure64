@@ -4,9 +4,9 @@
  * =============================================================================
  */
 
-#include <pure64/dap.h>
+#include <pure64/core/dap.h>
 
-#include <pure64/stream.h>
+#include <pure64/core/stream.h>
 
 #include "misc.h"
 

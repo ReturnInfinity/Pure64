@@ -4,13 +4,13 @@
  * =============================================================================
  */
 
-#include <pure64/gpt.h>
+#include <pure64/core/gpt.h>
 
-#include <pure64/error.h>
-#include <pure64/memory.h>
-#include <pure64/stream.h>
-#include <pure64/string.h>
-#include <pure64/uuid.h>
+#include <pure64/core/error.h>
+#include <pure64/core/memory.h>
+#include <pure64/core/stream.h>
+#include <pure64/core/string.h>
+#include <pure64/core/uuid.h>
 
 #include "misc.h"
 

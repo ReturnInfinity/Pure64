@@ -4,13 +4,13 @@
  * =============================================================================
  */
 
-#include <pure64/dir.h>
-#include <pure64/error.h>
-#include <pure64/file.h>
-#include <pure64/memory.h>
-#include <pure64/path.h>
-#include <pure64/stream.h>
-#include <pure64/string.h>
+#include <pure64/core/dir.h>
+#include <pure64/core/error.h>
+#include <pure64/core/file.h>
+#include <pure64/core/memory.h>
+#include <pure64/core/path.h>
+#include <pure64/core/stream.h>
+#include <pure64/core/string.h>
 
 #include "misc.h"
 

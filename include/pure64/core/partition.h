@@ -11,8 +11,8 @@
 #ifndef PURE64_PARTITION_H
 #define PURE64_PARTITION_H
 
-#include <pure64/stream.h>
-#include <pure64/types.h>
+#include <pure64/core/stream.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
 extern "C" {

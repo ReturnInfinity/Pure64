@@ -1,6 +1,6 @@
-#include <pure64/uuid.h>
+#include <pure64/core/uuid.h>
 
-#include <pure64/string.h>
+#include <pure64/core/string.h>
 
 static char pure64_tolower(char c) {
 

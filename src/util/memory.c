@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include <pure64/memory.h>
+#include <pure64/core/memory.h>
 
 #include <stdlib.h>
 
