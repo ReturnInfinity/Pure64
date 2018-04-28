@@ -1,8 +1,7 @@
 #include <pure64/lang/config.h>
 
 #include <pure64/lang/token.h>
-
-#include <pure64/error.h>
+#include <pure64/core/error.h>
 
 #include <stdio.h>
 #include <stdlib.h>

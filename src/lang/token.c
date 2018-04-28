@@ -1,6 +1,6 @@
 #include <pure64/lang/token.h>
 
-#include <pure64/error.h>
+#include <pure64/core/error.h>
 
 #include <ctype.h>
 #include <stdlib.h>
