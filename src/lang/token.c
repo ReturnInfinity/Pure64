@@ -349,3 +349,37 @@ int pure64_tokenbuf_push(struct pure64_tokenbuf *tokenbuf, const struct pure64_t
 
 	return 0;
 }
+
+void pure64_scanner_init(struct pure64_scanner *scanner) {
+	pure64_tokenbuf_init(&scanner->tokenbuf);
+	scanner->index = 0;
+}
+
+void pure64_scanner_done(struct pure64_scanner *scanner) {
+	pure64_tokenbuf_done(&scanner->tokenbuf);
+	scanner->index = 0;
+}
+
+pure64_bool pure64_scanner_eof(const struct pure64_scanner *scanner) {
+	if (scanner->index >= scanner->tokenbuf.token_count)
+		return pure64_true;
+	else
+		return pure64_false;
+}
+
+void pure64_scanner_begin(struct pure64_scanner *scanner) {
+	scanner->index = 0;
+}
+
+int pure64_scanner_scan(struct pure64_scanner *scanner,
+                        const char *source) {
+
+	return pure64_tokenbuf_parse(&scanner->tokenbuf, source);
+}
+
+const struct pure64_token *pure64_scanner_next(struct pure64_scanner *scanner) {
+	if (pure64_scanner_eof(scanner))
+		return pure64_null;
+	else
+		return &scanner->tokenbuf.token_array[scanner->index];
+}
