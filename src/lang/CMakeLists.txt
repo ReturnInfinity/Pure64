@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 2.6)
 
 add_library("pure64-lang"
 	"config.c"
-	"token.c")
+	"token.c"
+	"var.c")
 
 add_executable("config-test" "config-test.c")
 target_link_libraries("config-test" "pure64-lang")

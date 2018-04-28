@@ -6,4 +6,4 @@ add_executable("pure64"
 	"pure64.c"
 	"util.c")
 
-target_link_libraries("pure64" "pure64lib" "pure64-lang")
+target_link_libraries("pure64" "pure64-core" "pure64-lang")

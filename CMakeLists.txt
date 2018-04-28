@@ -9,8 +9,8 @@ option (PURE64_WITH_BOOTLOADER "Build the Pure64 boot loader." OFF)
 
 include_directories("include")
 
-add_subdirectory("src/lib")
-add_subdirectory("src/lib/lang")
+add_subdirectory("src/core")
+add_subdirectory("src/lang")
 
 if (PURE64_WITH_BOOTLOADER)
 	message(WARNING "CMake cannot currently build the bootloader.")

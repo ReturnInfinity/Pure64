@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.6)
 
-add_library("pure64lib"
+add_library("pure64-core"
 	"dap.c"
 	"dir.c"
 	"error.c"
@@ -14,5 +14,3 @@ add_library("pure64lib"
 	"stream.c"
 	"string.c"
 	"uuid.c")
-
-set_target_properties("pure64lib" PROPERTIES OUTPUT_NAME "pure64")

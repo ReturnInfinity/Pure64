@@ -13,6 +13,7 @@ extern "C" {
 
 /** Enumerates a series of possible
  * token types in a config file.
+ * @ingroup lang-api
  * */
 
 enum pure64_token_type {
@@ -41,6 +42,7 @@ enum pure64_token_type {
 
 /** Describes a token in a config
  * file source.
+ * @ingroup lang-api
  * */
 
 struct pure64_token {
@@ -65,6 +67,7 @@ struct pure64_token {
  * to reasonable default values. This should
  * be called before a token is parsed.
  * @param token The token to initialize.
+ * @ingroup lang-api
  * */
 
 void pure64_token_init(struct pure64_token *token);
@@ -73,6 +76,7 @@ void pure64_token_init(struct pure64_token *token);
  * @param token An initialized token structure.
  * @param source A null-terminated source text.
  * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
  * */
 
 int pure64_token_parse(struct pure64_token *token, const char *source);
@@ -80,12 +84,14 @@ int pure64_token_parse(struct pure64_token *token, const char *source);
 /** This is the end-of-file token. It is sometimes
  * returned by a function, instead of a null pointer,
  * when an index is out of bounds.
+ * @ingroup lang-api
  * */
 
 extern const struct pure64_token pure64_eof_token;
 
 /** This is a token buffer, used for parsing
  * a series of tokens.
+ * @ingroup lang-api
  * */
 
 struct pure64_tokenbuf {
@@ -108,12 +114,14 @@ struct pure64_tokenbuf {
 
 /** Initializes a token buffer.
  * @param tokenbuf The token buffer to initialize.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_init(struct pure64_tokenbuf *tokenbuf);
 
 /** Frees memory of a token buffer.
  * @param tokenbuf An initialized token buffer.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_done(struct pure64_tokenbuf *tokenbuf);
@@ -121,6 +129,7 @@ void pure64_tokenbuf_done(struct pure64_tokenbuf *tokenbuf);
 /** This function will allow comments to be added to the
  * buffer when source is being parsed.
  * @param tokenbuf An initialized token buffer.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_accept_comments(struct pure64_tokenbuf *tokenbuf);
@@ -128,6 +137,7 @@ void pure64_tokenbuf_accept_comments(struct pure64_tokenbuf *tokenbuf);
 /** This function will allow whitespace to be added
  * to the buffer when source is being parsed.
  * @param tokenbuf An initialized token buffer.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_accept_whitespace(struct pure64_tokenbuf *tokenbuf);
@@ -135,6 +145,7 @@ void pure64_tokenbuf_accept_whitespace(struct pure64_tokenbuf *tokenbuf);
 /** This function will disallow comments from being
  * added to the buffer when source is being parsed.
  * @param tokenbuf An initialized token buffer.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_reject_comments(struct pure64_tokenbuf *tokenbuf);
@@ -142,6 +153,7 @@ void pure64_tokenbuf_reject_comments(struct pure64_tokenbuf *tokenbuf);
 /** This function will disallow whitespace from being
  * added to the buffer when source is being parsed.
  * @param tokenbuf An initialized token buffer.
+ * @ingroup lang-api
  * */
 
 void pure64_tokenbuf_reject_whitespace(struct pure64_tokenbuf *tokenbuf);
@@ -150,6 +162,7 @@ void pure64_tokenbuf_reject_whitespace(struct pure64_tokenbuf *tokenbuf);
  * @param tokenbuf An initialized token buffer.
  * @param source The source to parse tokens for.
  * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
  * */
 
 int pure64_tokenbuf_parse(struct pure64_tokenbuf *tokenbuf, const char *source);
@@ -160,6 +173,7 @@ int pure64_tokenbuf_parse(struct pure64_tokenbuf *tokenbuf, const char *source);
  * the buffer. This should not be an end-of-file
  * token, or an unknown or 'none' token.
  * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
  * */
 
 int pure64_tokenbuf_push(struct pure64_tokenbuf *tokenbuf, const struct pure64_token *token);

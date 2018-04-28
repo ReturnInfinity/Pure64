@@ -9,6 +9,7 @@ extern "C" {
 
 /** Describes which bootsector
  * that is contained by a Pure64 image.
+ * @ingroup lang-api
  * */
 
 enum pure64_bootsector {
@@ -34,12 +35,14 @@ enum pure64_bootsector {
 /** Gets the size of a specified bootsector.
  * @param bootsector The bootsector to get the size of.
  * @returns The size, in bytes, of the specified bootsector.
+ * @ingroup lang-api
  * */
 
 unsigned long int pure64_bootsector_size(enum pure64_bootsector bootsector);
 
 /** Describes a partitioning
  * scheme supported by Pure64.
+ * @ingroup lang-api
  * */
 
 enum pure64_partition_scheme {
@@ -53,6 +56,7 @@ enum pure64_partition_scheme {
 
 /** Indicates what happens after the
  * second stage in the boot process.
+ * @ingroup lang-api
  * */
 
 enum pure64_stage_three {
@@ -68,8 +72,8 @@ enum pure64_stage_three {
 };
 
 /** This is a structure that describes
- * a syntax error that occured in a config
- * file.
+ * a syntax error that occured in a config file.
+ * @ingroup lang-api
  * */
 
 struct pure64_config_error {
@@ -85,6 +89,7 @@ struct pure64_config_error {
  * The configuration is used for detecting
  * invalid settings and determining offsets
  * of various code segments and data.
+ * @ingroup lang-api
  * */
 
 struct pure64_config {
@@ -112,12 +117,14 @@ struct pure64_config {
 
 /** Initializes a configuration file with default values.
  * @param config The configuration structure to initialize.
+ * @ingroup lang-api
  * */
 
 void pure64_config_init(struct pure64_config *config);
 
 /** Releases memory allocated by a configuration.
  * @param config An initialized config structure.
+ * @ingroup lang-api
  * */
 
 void pure64_config_done(struct pure64_config *config);
@@ -125,6 +132,7 @@ void pure64_config_done(struct pure64_config *config);
 /** Parses a configuration file.
  * @param config An initialized configuration structure.
  * @param source A null-terminated configuration file.
+ * @ingroup lang-api
  * */
 
 int pure64_config_parse(struct pure64_config *config,
@@ -135,6 +143,7 @@ int pure64_config_parse(struct pure64_config *config,
  * @param config An initialized config structure.
  * @param filename The path of the configuration file.
  * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
  * */
 
 int pure64_config_load(struct pure64_config *config,
