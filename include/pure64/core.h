@@ -7,6 +7,11 @@
 #ifndef PURE64_CORE_H
 #define PURE64_CORE_H
 
+/** @defgroup core-api Core API
+ * The library common to both the
+ * bootloader and utility program.
+ * */
+
 #include <pure64/core/arch.h>
 #include <pure64/core/dap.h>
 #include <pure64/core/dir.h>
