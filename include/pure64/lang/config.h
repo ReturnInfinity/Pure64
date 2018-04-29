@@ -1,7 +1,7 @@
 #ifndef PURE64_CONFIG_H
 #define PURE64_CONFIG_H
 
-#include <pure64/arch.h>
+#include <pure64/core/arch.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,6 +132,9 @@ void pure64_config_done(struct pure64_config *config);
 /** Parses a configuration file.
  * @param config An initialized configuration structure.
  * @param source A null-terminated configuration file.
+ * @param error An error structure that will describe
+ * a syntax error if one occurs.
+ * @returns Zero on success, an error code on failure.
  * @ingroup lang-api
  * */
 
@@ -142,6 +145,8 @@ int pure64_config_parse(struct pure64_config *config,
 /** Loads a configuration from a file.
  * @param config An initialized config structure.
  * @param filename The path of the configuration file.
+ * @param error A pointer to an error structure that
+ * will be describe an error if one occurs.
  * @returns Zero on success, an error code on failure.
  * @ingroup lang-api
  * */
