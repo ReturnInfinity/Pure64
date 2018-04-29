@@ -7,13 +7,14 @@
 #ifndef PURE64_LANG_VAR_H
 #define PURE64_LANG_VAR_H
 
-#include <pure64/types.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
+struct pure64_scanner;
+struct pure64_syntax_error;
 struct pure64_token;
 struct pure64_var;
 struct pure64_value;
@@ -136,53 +137,165 @@ int pure64_object_copy(struct pure64_object *dst,
 int pure64_object_push(struct pure64_object *object,
                        struct pure64_var *var);
 
+/** Represents a variable value.
+ * @ingroup lang-api
+ * */
+
 struct pure64_value {
+	/** The type of variable value. */
 	enum pure64_type type;
+	/** The line that the value begins at. */
 	unsigned int line;
+	/** The column that the value begins at. */
 	unsigned int column;
+	/** The type-specific value data. */
 	union {
+		/** Object data, if the value is an object. */
 		struct pure64_object object;
+		/** List data, if the value is a list. */
 		struct pure64_list list;
+		/** String data, if the value is a string. */
 		char *string;
+		/** The number value, if the value is a number. */
 		pure64_uint64 number;
+		/** The boolean value, if the value is boolean. */
 		pure64_bool _bool;
 	} u;
 };
 
+/** Initializes the value structure.
+ * @param value The value structure to initialize.
+ * @ingroup lang-api
+ * */
+
 void pure64_value_init(struct pure64_value *value);
 
+/** Releases memory allocated by the value structure.
+ * @param value An initialized value structure.
+ * @ingroup lang-api
+ * */
+
 void pure64_value_done(struct pure64_value *value);
+
+/** Copies a variable value.
+ * @param dst The destination value.
+ * This is where the copied data will go to.
+ * @param src The source value.
+ * This is where the data is copied from.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
 
 int pure64_value_copy(struct pure64_value *dst,
                       const struct pure64_value *src);
 
+/** This is a variable key, used to
+ * distinguish variables.
+ * @ingroup lang-api
+ * */
+
 struct pure64_key {
-	char *id;
+	/** The ID of the variable. */
+	const char *id;
+	/** The number of characters in the ID. */
 	pure64_size id_size;
+	/** The line that the key started on. */
 	unsigned int line;
+	/** The column that the key started on. */
 	unsigned int column;
 };
 
+/** Initializes a variable key for use.
+ * @param key An uninitialized variable key.
+ * @ingroup lang-api
+ * */
+
 void pure64_key_init(struct pure64_key *key);
 
+/** Releases memory allocated by a variable key.
+ * @param key An initialized variable key.
+ * @ingroup lang-api
+ * */
+
 void pure64_key_done(struct pure64_key *key);
+
+/** Compares the ID of the key to
+ * another ID in a null-terminated string.
+ * @param key An initialized key structure.
+ * @param id The string ID to compare with
+ * the key ID.
+ * @returns One if the key ID is greater than
+ * the string ID, negative one if the key ID
+ * is less than the string ID, zero if they're equal.
+ * @ingroup lang-api
+ * */
+
+int pure64_key_cmp_id(struct pure64_key *key,
+                      const char *id);
+
+/** Parses a variable key.
+ * @param key An initialized key structure.
+ * @param scanner An initialized scanner structure.
+ * @param error An error structure, in case there
+ * is a syntax error.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_key_parse(struct pure64_key *key,
+                     struct pure64_scanner *scanner,
+                     struct pure64_syntax_error *error);
+
+/** Parses a variable key, from a null-terminated string.
+ * @param key An initialized key structure.
+ * @param source A null-terminated source containing the key.
+ * @param error An error structure in case there is a syntax error.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_key_parse_s(struct pure64_key *key,
+                       const char *source,
+                       struct pure64_syntax_error *error);
 
 /** Used to contain a variable found
  * in a configuration file.
  * @ingroup lang-api
  * */
 
-struct pure64_var
-{
+struct pure64_var {
 	/** The name of the variable. */
 	struct pure64_key key;
 	/** The value of the variable. */
 	struct pure64_value value;
 };
 
+/** Initializes a variable structure.
+ * @param var The variable structure to initialize.
+ * @ingroup lang-api
+ * */
+
 void pure64_var_init(struct pure64_var *var);
 
+/** Releases memory allocated by a variable.
+ * @param var An initialized variable structure.
+ * @ingroup lang-api
+ * */
+
 void pure64_var_done(struct pure64_var *var);
+
+/** Parses a variable.
+ * @param var An initialized variable structure.
+ * @param scanner An initialized scanner structure.
+ * @param error An error structure used to relay information
+ * on where a syntax error has occured. May be @ref pure64_null.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_var_parse(struct pure64_var *var,
+                     struct pure64_scanner *scanner,
+                     struct pure64_syntax_error *error);
 
 #ifdef __cplusplus
 } /* extern "C" */
