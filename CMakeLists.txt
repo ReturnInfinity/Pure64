@@ -7,6 +7,10 @@ include("version.cmake")
 option (PURE64_WITH_UTIL "Build the Pure64 utility program." ON)
 option (PURE64_WITH_BOOTLOADER "Build the Pure64 boot loader." OFF)
 
+if (CMAKE_COMPILER_IS_GNUCC)
+	set (CMAKE_C_FLAGS "-Wall -Wextra -Werror -Wfatal-errors -std=gnu11")
+endif (CMAKE_COMPILER_IS_GNUCC)
+
 include_directories("include")
 
 add_subdirectory("src/core")
