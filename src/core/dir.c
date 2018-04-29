@@ -18,9 +18,9 @@ void pure64_dir_init(struct pure64_dir *dir) {
 	dir->name_size = 0;
 	dir->subdir_count = 0;
 	dir->file_count = 0;
-	dir->name = NULL;
-	dir->subdirs = NULL;
-	dir->files = NULL;
+	dir->name = pure64_null;
+	dir->subdirs = pure64_null;
+	dir->files = pure64_null;
 }
 
 void pure64_dir_free(struct pure64_dir *dir) {
@@ -36,9 +36,9 @@ void pure64_dir_free(struct pure64_dir *dir) {
 	pure64_free(dir->subdirs);
 	pure64_free(dir->files);
 
-	dir->name = NULL;
-	dir->subdirs = NULL;
-	dir->files = NULL;
+	dir->name = pure64_null;
+	dir->subdirs = pure64_null;
+	dir->files = pure64_null;
 }
 
 int pure64_dir_add_file(struct pure64_dir *dir, const char *name) {
@@ -56,7 +56,7 @@ int pure64_dir_add_file(struct pure64_dir *dir, const char *name) {
 	files = dir->files;
 
 	files = pure64_realloc(files, files_size);
-	if (files == NULL) {
+	if (files == pure64_null) {
 		return PURE64_ENOMEM;
 	}
 
@@ -89,7 +89,7 @@ int pure64_dir_add_subdir(struct pure64_dir *dir, const char *name) {
 	subdirs = dir->subdirs;
 
 	subdirs = pure64_realloc(subdirs, subdirs_size);
-	if (subdirs == NULL) {
+	if (subdirs == pure64_null) {
 		return PURE64_ENOMEM;
 	}
 
@@ -161,9 +161,9 @@ int pure64_dir_import(struct pure64_dir *dir, struct pure64_stream *in) {
 	dir->name = pure64_malloc(dir->name_size + 1);
 	dir->subdirs = pure64_malloc(dir->subdir_count * sizeof(dir->subdirs[0]));
 	dir->files = pure64_malloc(dir->file_count * sizeof(dir->files[0]));
-	if ((dir->name == NULL)
-	 || (dir->subdirs == NULL)
-	 || (dir->files == NULL)) {
+	if ((dir->name == pure64_null)
+	 || (dir->subdirs == pure64_null)
+	 || (dir->files == pure64_null)) {
 		pure64_free(dir->name);
 		pure64_free(dir->subdirs);
 		pure64_free(dir->files);
@@ -222,7 +222,7 @@ int pure64_dir_set_name(struct pure64_dir *dir, const char *name) {
 	name_size = pure64_strlen(name);
 
 	tmp_name = pure64_malloc(name_size + 1);
-	if (tmp_name == NULL)
+	if (tmp_name == pure64_null)
 		return PURE64_ENOMEM;
 
 	pure64_memcpy(tmp_name, name, name_size);

@@ -15,15 +15,15 @@
 void pure64_file_init(struct pure64_file *file) {
 	file->name_size = 0;
 	file->data_size = 0;
-	file->name = NULL;
-	file->data = NULL;
+	file->name = pure64_null;
+	file->data = pure64_null;
 }
 
 void pure64_file_free(struct pure64_file *file) {
 	pure64_free(file->name);
 	pure64_free(file->data);
-	file->name = NULL;
-	file->data = NULL;
+	file->name = pure64_null;
+	file->data = pure64_null;
 }
 
 int pure64_file_export(struct pure64_file *file, struct pure64_stream *out) {
@@ -63,7 +63,7 @@ int pure64_file_import(struct pure64_file *file, struct pure64_stream *in) {
 
 	file->name = pure64_malloc(file->name_size + 1);
 	file->data = pure64_malloc(file->data_size);
-	if ((file->name == NULL) || (file->data == NULL)) {
+	if ((file->name == pure64_null) || (file->data == pure64_null)) {
 		pure64_free(file->name);
 		pure64_free(file->data);
 		return PURE64_ENOMEM;
@@ -90,7 +90,7 @@ int pure64_file_set_name(struct pure64_file *file, const char *name) {
 	name_size = pure64_strlen(name);
 
 	tmp_name = pure64_malloc(name_size + 1);
-	if (tmp_name == NULL) {
+	if (tmp_name == pure64_null) {
 		return PURE64_ENOMEM;
 	}
 

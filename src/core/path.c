@@ -17,7 +17,7 @@ static int is_separator(char c) {
 }
 
 void pure64_path_init(struct pure64_path *path) {
-	path->name_array = NULL;
+	path->name_array = pure64_null;
 	path->name_count = 0;
 }
 
@@ -30,7 +30,7 @@ void pure64_path_free(struct pure64_path *path) {
 
 	pure64_free(path->name_array);
 
-	path->name_array = NULL;
+	path->name_array = pure64_null;
 	path->name_count = 0;
 }
 
@@ -38,7 +38,7 @@ const char * pure64_path_get_name(const struct pure64_path *path,
                                   pure64_uint64 index) {
 
 	if (index >= path->name_count)
-		return NULL;
+		return pure64_null;
 
 	return path->name_array[index].data;
 }
@@ -57,7 +57,7 @@ int pure64_path_normalize(struct pure64_path *path) {
 
 	while (i < path->name_count) {
 
-		if (path->name_array[i].data == NULL) {
+		if (path->name_array[i].data == pure64_null) {
 
 			return PURE64_EFAULT;
 
@@ -108,7 +108,7 @@ int pure64_path_parse(struct pure64_path *path,
 	pure64_uint64 tmp_size;
 	pure64_uint64 tmp_res;
 
-	tmp = NULL;
+	tmp = pure64_null;
 	tmp_size = 0;
 	tmp_res = 0;
 
@@ -131,7 +131,7 @@ int pure64_path_parse(struct pure64_path *path,
 			if ((tmp_size + 1) >= tmp_res) {
 				tmp_res += 64;
 				tmp2 = pure64_realloc(tmp, tmp_res);
-				if (tmp2 == NULL) {
+				if (tmp2 == pure64_null) {
 					pure64_free(tmp);
 					return PURE64_ENOMEM;
 				}
@@ -170,7 +170,7 @@ int pure64_path_push_child(struct pure64_path *path,
 	name_array_size *= sizeof(path->name_array[0]);
 
 	name_array = pure64_realloc(name_array, name_array_size);
-	if (name_array == NULL)
+	if (name_array == pure64_null)
 		return PURE64_ENOMEM;
 
 	path->name_array = name_array;
@@ -178,7 +178,7 @@ int pure64_path_push_child(struct pure64_path *path,
 	name_size = pure64_strlen(name);
 
 	tmp_name = pure64_malloc(name_size + 1);
-	if (tmp_name == NULL)
+	if (tmp_name == pure64_null)
 		return PURE64_ENOMEM;
 
 	pure64_memcpy(tmp_name, name, name_size);
