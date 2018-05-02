@@ -25,19 +25,19 @@ struct pure64_value;
  * @ingroup lang-api
  * */
 
-enum pure64_type {
+enum pure64_value_type {
 	/** Indicates that there is no type. */
-	PURE64_TYPE_null,
-	/** Indicates that the value is a string. */
-	PURE64_TYPE_string,
-	/** Indicates that the value is a number. */
-	PURE64_TYPE_number,
+	PURE64_VALUE_null,
 	/** Indicates that the value is boolean. */
-	PURE64_TYPE_boolean,
+	PURE64_VALUE_boolean,
+	/** Indicates that the value is a string. */
+	PURE64_VALUE_string,
+	/** Indicates that the value is a number. */
+	PURE64_VALUE_number,
 	/** Indicates that the value is a list. */
-	PURE64_TYPE_list,
+	PURE64_VALUE_list,
 	/** Indicates that the value is an object. */
-	PURE64_TYPE_object
+	PURE64_VALUE_object
 };
 
 /** A list of values, contained by a variable.
@@ -77,6 +77,18 @@ void pure64_list_done(struct pure64_list *list);
 int pure64_list_copy(struct pure64_list *dst,
                      const struct pure64_list *src);
 
+/** Parses a list
+ * @param list An initialized list structure.
+ * @param scanner An initialized scanner structure.
+ * @param error A structure to relay syntax error information.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_list_parse(struct pure64_list *list,
+                      struct pure64_scanner *scanner,
+                      struct pure64_syntax_error *error);
+
 /** Pushes a value to the end of the list.
  * @param list An initialized list structure.
  * @param value The value to push to the list.
@@ -85,7 +97,7 @@ int pure64_list_copy(struct pure64_list *dst,
  * */
 
 int pure64_list_push(struct pure64_list *list,
-                     const struct pure64_value *value);
+                     struct pure64_value *value);
 
 /** Represents an object structure contained
  * within a configuration file. It contains a
@@ -127,6 +139,18 @@ void pure64_object_done(struct pure64_object *object);
 int pure64_object_copy(struct pure64_object *dst,
                        const struct pure64_object *src);
 
+/** Parses an object structure.
+ * @param object An initialized object structure.
+ * @param scanner An initialized scanner structure.
+ * @param error A structure to relay syntax error information.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_object_parse(struct pure64_object *object,
+                        struct pure64_scanner *scanner,
+                        struct pure64_syntax_error *error);
+
 /** Pushes a variable to the end of the object structure.
  * @param object An initialized object structure.
  * @param var The variable to push to the end of the object.
@@ -143,7 +167,7 @@ int pure64_object_push(struct pure64_object *object,
 
 struct pure64_value {
 	/** The type of variable value. */
-	enum pure64_type type;
+	enum pure64_value_type type;
 	/** The line that the value begins at. */
 	unsigned int line;
 	/** The column that the value begins at. */
@@ -155,7 +179,13 @@ struct pure64_value {
 		/** List data, if the value is a list. */
 		struct pure64_list list;
 		/** String data, if the value is a string. */
-		char *string;
+		struct {
+			/** The characters in the string.
+			 * There is no null terminator. */
+			const char *data;
+			/** The number of characters in the string. */
+			pure64_size size;
+		} string;
 		/** The number value, if the value is a number. */
 		pure64_uint64 number;
 		/** The boolean value, if the value is boolean. */
@@ -188,6 +218,19 @@ void pure64_value_done(struct pure64_value *value);
 
 int pure64_value_copy(struct pure64_value *dst,
                       const struct pure64_value *src);
+
+/** Parses a value.
+ * @param value An initialized value structure.
+ * @param scanner An initialized scanner structure.
+ * @param error A structure to relay information
+ * about a syntax error.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup lang-api
+ * */
+
+int pure64_value_parse(struct pure64_value *value,
+                       struct pure64_scanner *scanner,
+                       struct pure64_syntax_error *error);
 
 /** This is a variable key, used to
  * distinguish variables.

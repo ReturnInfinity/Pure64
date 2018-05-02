@@ -43,14 +43,26 @@ const struct pure64_var *pure64_parser_next(struct pure64_parser *parser) {
 	if (pure64_parser_eof(parser))
 		return pure64_null;
 	else
-		return &parser->var_array[parser->var_index];
+		return &parser->var_array[parser->var_index++];
 }
 
 static int push_var(struct pure64_parser *parser,
                     struct pure64_var *var) {
-	(void) parser;
-	(void) var;
-	return PURE64_ENOSYS;
+
+	pure64_size var_count = parser->var_count + 1;
+
+	struct pure64_var *var_array = parser->var_array;
+
+	var_array = realloc(var_array, sizeof(var_array[0]) * var_count);
+	if (var_array == NULL)
+		return PURE64_ENOMEM;
+
+	parser->var_array = var_array;
+	parser->var_count = var_count;
+
+	var_array[var_count - 1] = *var;
+
+	return 0;
 }
 
 int pure64_parser_parse(struct pure64_parser *parser,
