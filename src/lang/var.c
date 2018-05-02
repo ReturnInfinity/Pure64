@@ -20,6 +20,15 @@ void pure64_object_init(struct pure64_object *object) {
 	object->var_count = 0;
 }
 
+void pure64_object_done(struct pure64_object *object) {
+	for (pure64_size i = 0; i < object->var_count; i++) {
+		pure64_var_done(&object->var_array[i]);
+	}
+	free(object->var_array);
+	object->var_array = NULL;
+	object->var_count = 0;
+}
+
 int pure64_object_parse(struct pure64_object *object,
                         struct pure64_scanner *scanner,
                         struct pure64_syntax_error *error) {
@@ -92,6 +101,15 @@ int pure64_object_push(struct pure64_object *object,
 
 void pure64_list_init(struct pure64_list *list) {
 	list->value_array = pure64_null;
+	list->value_count = 0;
+}
+
+void pure64_list_done(struct pure64_list *list) {
+	for (pure64_size i = 0; i < list->value_count; i++) {
+		pure64_value_done(&list->value_array[i]);
+	}
+	free(list->value_array);
+	list->value_array = NULL;
 	list->value_count = 0;
 }
 
@@ -173,6 +191,20 @@ void pure64_value_init(struct pure64_value *value) {
 
 void pure64_value_done(struct pure64_value *value) {
 	/* TODO */
+	switch (value->type) {
+	case PURE64_VALUE_null:
+	case PURE64_VALUE_boolean:
+	case PURE64_VALUE_number:
+	case PURE64_VALUE_string:
+		break;
+	case PURE64_VALUE_list:
+		pure64_list_done(&value->u.list);
+		break;
+	case PURE64_VALUE_object:
+		pure64_object_done(&value->u.object);
+		break;
+	}
+	value->type = PURE64_VALUE_null;
 	value->column = 1;
 	value->line = 1;
 }
