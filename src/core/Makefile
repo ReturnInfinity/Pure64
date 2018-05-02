@@ -3,7 +3,7 @@ TOP ?= ../..
 include $(TOP)/make/patterns.mk
 include $(TOP)/make/config.mk
 
-VPATH += $(TOP)/include/pure64
+VPATH += $(TOP)/include/pure64/core
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
 CFLAGS += -std=gnu99
@@ -26,14 +26,14 @@ libfiles += stream.o
 libfiles += string.o
 libfiles += uuid.o
 
-targets += libpure64.a
+targets += libpure64-core.a
 
 install_dir ?= $(DESTDIR)$(PREFIX)/lib
 
 .PHONY: all
 all: $(targets)
 
-libpure64.a: $(libfiles)
+libpure64-core.a: $(libfiles)
 
 dap.o: dap.c dap.h misc.h stream.h
 

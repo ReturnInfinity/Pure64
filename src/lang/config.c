@@ -1,5 +1,6 @@
 #include <pure64/lang/config.h>
 
+#include <pure64/lang/syntax-error.h>
 #include <pure64/lang/token.h>
 #include <pure64/core/error.h>
 
@@ -61,7 +62,7 @@ static void pure64_var_init(struct pure64_var *var) {
 
 static int pure64_var_parse(struct pure64_var *var,
                             struct token_iterator *it,
-                            struct pure64_config_error *error) {
+                            struct pure64_syntax_error *error) {
 
 	const struct pure64_token *var_key = token_iterator_deref(it);
 	if ((var_key->type != PURE64_TOKEN_IDENTIFIER)
@@ -240,7 +241,7 @@ static int parse_size(const struct pure64_var *var,
 
 static int handle_var(struct pure64_config *config,
                       const struct pure64_var *var,
-                      struct pure64_config_error *error) {
+                      struct pure64_syntax_error *error) {
 
 	if (pure64_var_cmp_key(var, "bootsector")) {
 		if (pure64_var_cmp_value(var, "mbr")) {
@@ -346,7 +347,7 @@ static int handle_var(struct pure64_config *config,
 }
 
 static int validate_vars(struct pure64_config *config,
-                         struct pure64_config_error *error) {
+                         struct pure64_syntax_error *error) {
 
 	if (config->arch == PURE64_ARCH_none) {
 		error->desc = "Architecture not specified";
@@ -410,7 +411,7 @@ void pure64_config_done(struct pure64_config *config) {
 
 int pure64_config_parse(struct pure64_config *config,
                         const char *source,
-                        struct pure64_config_error *error) {
+                        struct pure64_syntax_error *error) {
 
 	error->line = 0;
 	error->column = 0;
@@ -467,7 +468,7 @@ int pure64_config_parse(struct pure64_config *config,
 
 int pure64_config_load(struct pure64_config *config,
                        const char *filename,
-                       struct pure64_config_error *error) {
+                       struct pure64_syntax_error *error) {
 
 	FILE *file = fopen(filename, "rb");
 	if (file == NULL) {

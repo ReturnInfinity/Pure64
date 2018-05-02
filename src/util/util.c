@@ -12,6 +12,7 @@
 #include <pure64/core/gpt.h>
 #include <pure64/core/mbr.h>
 #include <pure64/core/partition.h>
+#include <pure64/lang/syntax-error.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -699,7 +700,7 @@ int pure64_util_create_disk(struct pure64_util *util,
 int pure64_util_open_config(struct pure64_util *util,
                             const char *path) {
 
-	struct pure64_config_error error;
+	struct pure64_syntax_error error;
 
 	int err = pure64_config_load(&util->config, path, &error);
 	if (err != 0) {

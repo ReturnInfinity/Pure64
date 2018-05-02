@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+struct pure64_syntax_error;
+
 /** Describes which bootsector
  * that is contained by a Pure64 image.
  * @ingroup lang-api
@@ -71,20 +73,6 @@ enum pure64_stage_three {
 	PURE64_STAGE_THREE_LOADER
 };
 
-/** This is a structure that describes
- * a syntax error that occured in a config file.
- * @ingroup lang-api
- * */
-
-struct pure64_config_error {
-	/** The description of the error. */
-	const char *desc;
-	/** The line that the error occured on. */
-	unsigned long int line;
-	/** The column that the error occured on. */
-	unsigned long int column;
-};
-
 /** Represents a disk configuration file.
  * The configuration is used for detecting
  * invalid settings and determining offsets
@@ -140,7 +128,7 @@ void pure64_config_done(struct pure64_config *config);
 
 int pure64_config_parse(struct pure64_config *config,
                         const char *source,
-                        struct pure64_config_error *error);
+                        struct pure64_syntax_error *error);
 
 /** Loads a configuration from a file.
  * @param config An initialized config structure.
@@ -153,7 +141,7 @@ int pure64_config_parse(struct pure64_config *config,
 
 int pure64_config_load(struct pure64_config *config,
                        const char *filename,
-                       struct pure64_config_error *error);
+                       struct pure64_syntax_error *error);
 
 #ifdef __cplusplus
 } /* extern "C" { */
