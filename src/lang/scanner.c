@@ -50,6 +50,8 @@ pure64_bool pure64_scanner_eof(const struct pure64_scanner *scanner) {
 
 	if (scanner->index >= scanner->tokenbuf->token_count)
 		return pure64_true;
+	else if (scanner->tokenbuf->token_array[scanner->index].type == PURE64_TOKEN_END)
+		return pure64_true;
 	else
 		return pure64_false;
 }
@@ -73,7 +75,7 @@ const struct pure64_token *pure64_scanner_next(struct pure64_scanner *scanner) {
 		return pure64_null;
 
 	if (pure64_scanner_eof(scanner))
-		return pure64_null;
+		return &pure64_eof_token;
 	else
-		return &scanner->tokenbuf->token_array[scanner->index];
+		return &scanner->tokenbuf->token_array[scanner->index++];
 }
