@@ -273,7 +273,7 @@ void pure64_key_done(struct pure64_key *key);
  * @ingroup lang-api
  * */
 
-int pure64_key_cmp_id(struct pure64_key *key,
+int pure64_key_cmp_id(const struct pure64_key *key,
                       const char *id);
 
 /** Parses a variable key.
@@ -326,6 +326,18 @@ void pure64_var_init(struct pure64_var *var);
  * */
 
 void pure64_var_done(struct pure64_var *var);
+
+/** Used to find a variable of a specified name.
+ * @param var An initialized variable structure.
+ * @param id A null-terminated variable name.
+ * @returns One if the variable name is greater
+ * than the name give, negative one if it is less
+ * than the name given, and zero if they're equal.
+ * @ingroup lang-api
+ * */
+
+int pure64_var_cmp_id(const struct pure64_var *var,
+                      const char *id);
 
 /** Parses a variable.
  * @param var An initialized variable structure.

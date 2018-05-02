@@ -299,7 +299,7 @@ void pure64_key_done(struct pure64_key *key) {
 	key->line = 1;
 }
 
-int pure64_key_cmp_id(struct pure64_key *key,
+int pure64_key_cmp_id(const struct pure64_key *key,
                       const char *id) {
 
 	if (key->id == pure64_null) {
@@ -404,6 +404,12 @@ void pure64_var_init(struct pure64_var *var) {
 void pure64_var_done(struct pure64_var *var) {
 	pure64_key_done(&var->key);
 	pure64_value_done(&var->value);
+}
+
+int pure64_var_cmp_id(const struct pure64_var *var,
+                      const char *id) {
+
+	return pure64_key_cmp_id(&var->key, id);
 }
 
 int pure64_var_parse(struct pure64_var *var,
