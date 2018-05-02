@@ -1,4 +1,11 @@
+/* =============================================================================
+ * Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
+ * Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
+ * =============================================================================
+ */
+
 #include <pure64/lang/config.h>
+#include <pure64/lang/syntax-error.h>
 
 #include <assert.h>
 #include <stdio.h>
@@ -14,7 +21,7 @@ static void test_parse(void) {
 
 	struct pure64_config config;
 
-	struct pure64_config_error error;
+	struct pure64_syntax_error error;
 
 	pure64_config_init(&config);
 
