@@ -7,11 +7,12 @@ pure64-config.txt
 *.a
 *.img
 *.tar.gz
+*.zip
 *.lst
-pure64-0.7.1/
+pure64-0.10.0/
 /src/util/pure64
-/src/util/config-test
-/src/util/token-test
+/src/lang/config-test
+/src/lang/token-test
 /docs/html
 /docs/latex
 /testing/kernel
