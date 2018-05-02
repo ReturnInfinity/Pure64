@@ -9,8 +9,8 @@
 #include "alloc.h"
 #include "e820.h"
 
-#include <pure64/error.h>
-#include <pure64/string.h>
+#include <pure64/core/error.h>
+#include <pure64/core/string.h>
 
 #ifndef NULL
 #define NULL ((void *) 0x00)

@@ -8,8 +8,8 @@
 
 #include "map.h"
 
-#include <pure64/memory.h>
-#include <pure64/types.h>
+#include <pure64/core/memory.h>
+#include <pure64/core/types.h>
 
 struct pure64_map *hooks_map = pure64_null;
 

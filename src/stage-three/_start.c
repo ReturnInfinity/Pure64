@@ -4,15 +4,14 @@
  * =============================================================================
  */
 
-#include <pure64/dir.h>
-#include <pure64/error.h>
-#include <pure64/file.h>
-#include <pure64/fs.h>
-#include <pure64/gpt.h>
-#include <pure64/partition.h>
-#include <pure64/string.h>
-
-#include <pure64/path.h>
+#include <pure64/core/dir.h>
+#include <pure64/core/error.h>
+#include <pure64/core/file.h>
+#include <pure64/core/fs.h>
+#include <pure64/core/gpt.h>
+#include <pure64/core/partition.h>
+#include <pure64/core/string.h>
+#include <pure64/core/path.h>
 
 #include "ahci.h"
 #include "debug.h"

@@ -8,9 +8,9 @@
 
 #include "pci.h"
 
-#include <pure64/error.h>
-#include <pure64/string.h>
-#include <pure64/memory.h>
+#include <pure64/core/error.h>
+#include <pure64/core/string.h>
+#include <pure64/core/memory.h>
 
 #include "debug.h"
 

@@ -3,8 +3,8 @@ TOP ?= ../..
 include $(TOP)/make/patterns.mk
 include $(TOP)/make/config.mk
 
-VPATH += $(TOP)/include/pure64
-VPATH += $(TOP)/src/lib
+VPATH += $(TOP)/include/pure64/core
+VPATH += $(TOP)/src/core
 
 CFLAGS += -Os -g
 CFLAGS += -ffreestanding
@@ -18,10 +18,10 @@ CFLAGS += -DPURE64_ARCH_riscv64
 endif
 
 LDFLAGS += -T loader-$(ARCH).ld
-LDFLAGS += -L $(TOP)/src/lib
+LDFLAGS += -L $(TOP)/src/core
 LDFLAGS += -nostdlib
 
-LDLIBS += -lpure64
+LDLIBS += -lpure64-core
 LDLIBS += -lgcc
 
 stage_three_files += _start.o
@@ -48,7 +48,7 @@ all: stage-three.sys
 
 stage-three.sys: stage-three
 
-stage-three: $(stage_three_files) -lpure64 loader-$(ARCH).ld
+stage-three: $(stage_three_files) -lpure64-core loader-$(ARCH).ld
 	@echo "LD      $@"
 	$(LD) $(LDFLAGS) $(stage_three_files) -o $@ $(LDLIBS)
 
