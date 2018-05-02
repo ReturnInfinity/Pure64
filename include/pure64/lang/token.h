@@ -39,7 +39,11 @@ enum pure64_token_type {
 	/** Token is an identifier. */
 	PURE64_TOKEN_IDENTIFIER,
 	/** Token is a number .*/
-	PURE64_TOKEN_NUMERICAL
+	PURE64_TOKEN_NUMERICAL,
+	/** Token is a bracket. */
+	PURE64_TOKEN_BRACKET,
+	/** Token is a comma */
+	PURE64_TOKEN_COMMA
 };
 
 /** Describes a token in a config

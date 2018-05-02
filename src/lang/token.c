@@ -138,6 +138,34 @@ static int parse_double_quote(struct pure64_token *token, const char *source) {
 	return PURE64_EINVAL;
 }
 
+static int parse_bracket(struct pure64_token *token, const char *source) {
+	if ((source[0] == '{')
+	 || (source[0] == '}')
+	 || (source[0] == '[')
+	 || (source[0] == ']')) {
+		token->type = PURE64_TOKEN_BRACKET;
+		token->data = source;
+		token->size = 1;
+		token->width = 1;
+		return 0;
+	}
+
+	return PURE64_EINVAL;
+}
+
+static int parse_comma(struct pure64_token *token, const char *source) {
+
+	if (source[0] == ',') {
+		token->type = PURE64_TOKEN_COMMA;
+		token->data = source;
+		token->size = 1;
+		token->width = 1;
+		return 0;
+	}
+
+	return PURE64_EINVAL;
+}
+
 static int parse_colon(struct pure64_token *token, const char *source) {
 
 	if (source[0] == ':') {
@@ -248,7 +276,9 @@ int pure64_token_parse(struct pure64_token *token, const char *source) {
 	 || (parse_comment(token, source) == 0)
 	 || (parse_single_quote(token, source) == 0)
 	 || (parse_double_quote(token, source) == 0)
+	 || (parse_bracket(token, source) == 0)
 	 || (parse_colon(token, source) == 0)
+	 || (parse_comma(token, source) == 0)
 	 || (parse_identifier(token, source) == 0)
 	 || (parse_numerical(token, source) == 0)) {
 		return 0;
