@@ -42,6 +42,6 @@ test:
 .PHONY: install
 install: all
 	mkdir -p $(install_dir)
-	cp libpure64-core.a $(install_dir)
+	cp libpure64-lang.a $(install_dir)
 
 $(V).SILENT:
