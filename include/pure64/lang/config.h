@@ -63,6 +63,31 @@ enum pure64_partition_scheme {
 	PURE64_PARTITION_SCHEME_GPT
 };
 
+/** Contains information about a partition
+ * that the user is requesting to create.
+ * @ingroup lang-api
+ * */
+
+struct pure64_config_partition {
+	/** The name of the partition.
+	 * This field is optional. */
+	char *name;
+	/** The file containing the partition data.
+	 * This field is optional. */
+	char *file;
+	/** The size of the partition on disk. */
+	pure64_size size;
+	/** Indicates whether or not the size was specified. */
+	pure64_bool size_specified;
+	/** The offset of the partition on disk.
+	 * This field is required if the disk has
+	 * not partition format. */
+	pure64_size offset;
+	/** Indicates whether or not the offset was
+	 * specified. */
+	pure64_bool offset_specified;
+};
+
 /** Represents a disk configuration file.
  * The configuration is used for detecting
  * invalid settings and determining offsets
@@ -91,6 +116,10 @@ struct pure64_config {
 	/** The root path to Pure64's bootsectors,
 	 * initialization code, and more. */
 	char *resource_path;
+	/** A array of partitions that the user wants to make. */
+	struct pure64_config_partition *partitions;
+	/** The number of partitions in the partition array. */
+	pure64_size partition_count;
 };
 
 /** Initializes a configuration file with default values.

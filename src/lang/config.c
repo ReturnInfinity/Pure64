@@ -125,6 +125,26 @@ static int parse_size(const struct pure64_value *value,
 	return 0;
 }
 
+static int push_partition(struct pure64_config *config,
+                          struct pure64_config_partition *partition) {
+
+	struct pure64_config_partition *partitions = config->partitions;
+
+	pure64_size partition_count = config->partition_count + 1;
+
+	partitions = realloc(partitions, partition_count * sizeof(partitions[0]));
+	if (partitions == NULL) {
+		return PURE64_ENOMEM;
+	}
+
+	partitions[partition_count - 1] = *partition;
+
+	config->partitions = partitions;
+	config->partition_count = partition_count;
+
+	return 0;
+}
+
 static int handle_bootsector(struct pure64_config *config,
                              const struct pure64_value *value,
                              struct pure64_syntax_error *error) {
@@ -407,6 +427,89 @@ static int handle_fs_size(struct pure64_config *config,
 	return 0;
 }
 
+static int handle_partition_name(struct pure64_config_partition *partition,
+                                 const struct pure64_value *value,
+                                 struct pure64_syntax_error *error) {
+	(void) partition;
+	(void) value;
+	(void) error;
+	return 0;
+}
+
+static int handle_partition(struct pure64_config *config,
+                            const struct pure64_object *object,
+                            struct pure64_syntax_error *error) {
+
+	struct pure64_config_partition partition;
+
+	partition.name = pure64_null;
+	partition.file = pure64_null;
+	partition.size = 0;
+	partition.size_specified = pure64_false;
+	partition.offset = 0;
+	partition.offset_specified = pure64_false;
+
+	for (pure64_size i = 0; i < object->var_count; i++) {
+		const struct pure64_var *var = &object->var_array[i];
+		if (pure64_key_cmp_id(&var->key, "name") == 0) {
+			int err = handle_partition_name(&partition, &var->value, error);
+			if (err != 0)
+				return err;
+		} else if (pure64_key_cmp_id(&var->key, "file") == 0) {
+		} else if (pure64_key_cmp_id(&var->key, "size") == 0) {
+		} else if (pure64_key_cmp_id(&var->key, "offset") == 0) {
+		} else {
+			if (error != pure64_null) {
+				error->desc = "Invalid partition field";
+				error->line = var->key.line;
+				error->column = var->key.column;
+			}
+			return PURE64_EINVAL;
+		}
+	}
+
+	int err = push_partition(config, &partition);
+	if (err != 0)
+		return err;
+
+	return 0;
+}
+
+static int handle_partitions(struct pure64_config *config,
+                             const struct pure64_value *value,
+                             struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_list) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Partitions variable should be a list";
+		}
+		return PURE64_EINVAL;
+	}
+
+	const struct pure64_list *list = &value->u.list;
+
+	for (pure64_size i = 0; i < list->value_count; i++) {
+
+		const struct pure64_value *value = &list->value_array[i];
+		if (value->type != PURE64_VALUE_object) {
+			if (error != pure64_null) {
+				error->desc = "Partition field should be an object";
+				error->line = value->line;
+				error->column = value->column;
+			}
+			return PURE64_EINVAL;
+		}
+
+		int err = handle_partition(config, &value->u.object, error);
+		if (err != 0)
+			return err;
+	}
+
+	return 0;
+}
+
 static int handle_var(struct pure64_config *config,
                       const struct pure64_var *var,
                       struct pure64_syntax_error *error) {
@@ -427,6 +530,8 @@ static int handle_var(struct pure64_config *config,
 		return handle_arch(config, &var->value, error);
 	} else if (pure64_var_cmp_id(var, "fs_size") == 0) {
 		return handle_fs_size(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "partitions") == 0) {
+		return handle_partitions(config, &var->value, error);
 	} else {
 		if (error != pure64_null) {
 			error->desc = "Unknown variable";
