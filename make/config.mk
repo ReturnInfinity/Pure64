@@ -11,5 +11,5 @@ AR = $(CROSS_COMPILE)ar
 LD = $(CROSS_COMPILE)gcc
 OBJCOPY = $(CROSS_COMPILE)objcopy
 NASM = nasm
-CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
+CFLAGS += -Wall -Wextra -Werror -Wfatal-errors -std=gnu99
 CFLAGS += -I $(TOP)/include
