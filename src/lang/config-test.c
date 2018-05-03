@@ -13,11 +13,15 @@
 
 static void test_parse(void) {
 
-	const char source[] = "arch: x86_64\n"
-	                      "partition_scheme: gpt\n"
-	                      "bootsector: mbr\n"
-	                      "disk_size: 2M\n"
-	                      "fs_loader: true\n";
+	const char source[] = "arch: x86_64               \n"
+	                      "partition_scheme: gpt      \n"
+	                      "bootsector: mbr            \n"
+	                      "disk_size: 2M              \n"
+	                      "fs_loader: true            \n"
+	                      "partitions: [              \n"
+	                      "  { name: p1, size: 2K },  \n"
+	                      "  { name: p2, size: 1M }   \n"
+	                      "]                          \n";
 
 	struct pure64_config config;
 
