@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 static void test_parse(void) {
 
@@ -41,6 +42,20 @@ static void test_parse(void) {
 	assert(config.partition_scheme == PURE64_PARTITION_SCHEME_GPT);
 	assert(config.fs_loader);
 	assert(config.disk_size == (2 * 1024 * 1024));
+
+	assert(config.partition_count == 2);
+
+	assert(config.partitions[0].name_size == 2);
+	assert(memcmp(config.partitions[0].name, "p1", 2) == 0);
+	assert(config.partitions[0].size == 2048);
+	assert(config.partitions[0].size_specified);
+	assert(!config.partitions[0].offset_specified);
+
+	assert(config.partitions[1].name_size == 2);
+	assert(memcmp(config.partitions[1].name, "p2", 2) == 0);
+	assert(config.partitions[1].size == (1 * 1024 * 1024));
+	assert(config.partitions[0].size_specified);
+	assert(!config.partitions[0].offset_specified);
 }
 
 int main(void) {
