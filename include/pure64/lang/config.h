@@ -71,10 +71,14 @@ enum pure64_partition_scheme {
 struct pure64_config_partition {
 	/** The name of the partition.
 	 * This field is optional. */
-	char *name;
+	const char *name;
+	/** The number of characters in the partition name. */
+	pure64_size name_size;
 	/** The file containing the partition data.
 	 * This field is optional. */
-	char *file;
+	const char *file;
+	/** The number of characters in the file path. */
+	pure64_size file_size;
 	/** The size of the partition on disk. */
 	pure64_size size;
 	/** Indicates whether or not the size was specified. */
