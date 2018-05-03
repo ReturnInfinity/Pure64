@@ -1,7 +1,14 @@
+/* =============================================================================
+ * Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
+ * Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
+ * =============================================================================
+ */
+
 #ifndef PURE64_CONFIG_H
 #define PURE64_CONFIG_H
 
 #include <pure64/core/arch.h>
+#include <pure64/core/types.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,23 +63,6 @@ enum pure64_partition_scheme {
 	PURE64_PARTITION_SCHEME_GPT
 };
 
-/** Indicates what happens after the
- * second stage in the boot process.
- * @ingroup lang-api
- * */
-
-enum pure64_stage_three {
-	/** This means that stage three has
-	 * not been specified. */
-	PURE64_STAGE_THREE_NONE,
-	/** This means that a kernel is loaded
-	 * directory after stage two. */
-	PURE64_STAGE_THREE_KERNEL,
-	/** This means that the file system loader
-	 * is started after stage two. */
-	PURE64_STAGE_THREE_LOADER
-};
-
 /** Represents a disk configuration file.
  * The configuration is used for detecting
  * invalid settings and determining offsets
@@ -87,17 +77,17 @@ struct pure64_config {
 	enum pure64_bootsector bootsector;
 	/** The partitioning scheme used by the disk image. */
 	enum pure64_partition_scheme partition_scheme;
-	/** Indicates what happens after the second stage
-	 * boot loader. */
-	enum pure64_stage_three stage_three;
+	/** Indicates whether or not the file system loader
+	 * is put on the disk. */
+	pure64_bool fs_loader;
 	/** The size, in bytes, of the disk. */
-	unsigned long int disk_size;
+	pure64_size disk_size;
 	/** The size, in bytes, to reserve for the file system. */
-	unsigned long int fs_size;
+	pure64_size fs_size;
 	/** The path of the kernel to load. This option
 	 * is only valid if the stage three loader is
 	 * specified to load a kernel. */
-	char *kernel;
+	char *kernel_path;
 	/** The root path to Pure64's bootsectors,
 	 * initialization code, and more. */
 	char *resource_path;

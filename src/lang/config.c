@@ -1,142 +1,19 @@
+/* =============================================================================
+ * Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
+ * Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
+ * =============================================================================
+ */
+
 #include <pure64/lang/config.h>
 
 #include <pure64/lang/syntax-error.h>
-#include <pure64/lang/token.h>
+#include <pure64/lang/parser.h>
+#include <pure64/lang/var.h>
 #include <pure64/core/error.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/** Used for iterating a token
- * buffer.
- * */
-
-struct token_iterator {
-	/** The token buffer. */
-	struct pure64_tokenbuf *tokenbuf;
-	/** The token index within the token buffer. */
-	unsigned long int index;
-};
-
-static unsigned char token_iterator_end(const struct token_iterator *it) {
-	if (it->index >= it->tokenbuf->token_count)
-		return 1;
-	else if (it->tokenbuf->token_array[it->index].type == PURE64_TOKEN_END)
-		return 1;
-	else
-		return 0;
-}
-
-static void token_iterator_next(struct token_iterator *it) {
-	if (!token_iterator_end(it))
-		it->index++;
-}
-
-static const struct pure64_token *token_iterator_deref(const struct token_iterator *it) {
-	if (!token_iterator_end(it))
-		return &it->tokenbuf->token_array[it->index];
-	else
-		return &pure64_eof_token;
-}
-
-struct pure64_var {
-	unsigned long int line;
-	const char *key;
-	unsigned long int key_size;
-	unsigned long int key_column;
-	const char *value;
-	unsigned long int value_size;
-	unsigned long int value_column;
-};
-
-static void pure64_var_init(struct pure64_var *var) {
-	var->line = 1;
-	var->key = NULL;
-	var->key_size = 0;
-	var->key_column = 1;
-	var->value = NULL;
-	var->value_size = 0;
-	var->value_column = 1;
-}
-
-static int pure64_var_parse(struct pure64_var *var,
-                            struct token_iterator *it,
-                            struct pure64_syntax_error *error) {
-
-	const struct pure64_token *var_key = token_iterator_deref(it);
-	if ((var_key->type != PURE64_TOKEN_IDENTIFIER)
-	 && (var_key->type != PURE64_TOKEN_SINGLE_QUOTE)
-	 && (var_key->type != PURE64_TOKEN_DOUBLE_QUOTE)) {
-		error->desc = "Expected an identifier";
-		error->line = var_key->line;
-		error->column = var_key->column;
-		return PURE64_EINVAL;
-	}
-
-	var->line = var_key->line;
-
-	var->key = var_key->data;
-	var->key_size = var_key->size;
-	var->key_column = var_key->column;
-
-	token_iterator_next(it);
-
-	const struct pure64_token *colon = token_iterator_deref(it);
-	if (colon->type != PURE64_TOKEN_COLON) {
-		error->desc = "Expected a ':'";
-		error->line = colon->line;
-		error->column = colon->column;
-		return PURE64_EINVAL;
-	}
-
-	token_iterator_next(it);
-
-	const struct pure64_token *var_value = token_iterator_deref(it);
-	if ((var_value->type != PURE64_TOKEN_IDENTIFIER)
-	 && (var_value->type != PURE64_TOKEN_SINGLE_QUOTE)
-	 && (var_value->type != PURE64_TOKEN_DOUBLE_QUOTE)
-	 && (var_value->type != PURE64_TOKEN_NUMERICAL)) {
-		error->desc = "Expected a string or a numerical";
-		error->line = var_value->line;
-		error->column = var_value->column;
-		return PURE64_EINVAL;
-	}
-
-	var->value = var_value->data;
-	var->value_size = var_value->size;
-	var->value_column = var_value->column;
-
-	token_iterator_next(it);
-
-	return 0;
-}
-
-static unsigned char pure64_var_cmp_key(const struct pure64_var *var,
-                                        const char *key) {
-
-	unsigned long int key_size = strlen(key);
-
-	if (key_size != var->key_size)
-		return 0;
-	else if (memcmp(var->key, key, key_size) != 0)
-		return 0;
-	else
-		return 1;
-}
-
-static unsigned char pure64_var_cmp_value(const struct pure64_var *var,
-                                          const char *value) {
-
-	unsigned long int value_size = strlen(value);
-
-	if (value_size != var->value_size)
-		return 0;
-	else if (memcmp(var->value, value, value_size) != 0)
-		return 0;
-	else
-		return 1;
-}
 
 static unsigned char file_exists(const char *path) {
 
@@ -150,8 +27,12 @@ static unsigned char file_exists(const char *path) {
 	return 1;
 }
 
-static int parse_size(const struct pure64_var *var,
-                      unsigned long int *size_ptr) {
+static int parse_size(const struct pure64_value *value,
+                      pure64_size *size_ptr) {
+
+	if (value->type != PURE64_VALUE_string) {
+		return PURE64_EINVAL;
+	}
 
 	const unsigned long int TiB = 1024UL * 1024UL * 1024UL * 1024UL;
 	const unsigned long int GiB = 1024UL * 1024UL * 1024UL;
@@ -163,9 +44,9 @@ static int parse_size(const struct pure64_var *var,
 	const unsigned long int MB = 1000UL * 1000UL;
 	const unsigned long int KB = 1000UL;
 
-	const char *str = var->value;
+	const char *str = value->u.string.data;
 
-	unsigned long int str_size = var->value_size;
+	pure64_size str_size = value->u.string.size;
 
 	if (str_size == 0)
 		return PURE64_EINVAL;
@@ -179,7 +60,7 @@ static int parse_size(const struct pure64_var *var,
 
 	tmp[str_size] = 0;
 
-	unsigned long int multiplier = 1;
+	pure64_uint64 multiplier = 1;
 
 	const char *suffix = &tmp[str_size - 1];
 	if (strcmp(suffix, "T") == 0) {
@@ -227,14 +108,301 @@ static int parse_size(const struct pure64_var *var,
 
 	tmp[str_size] = 0;
 
-	if (sscanf(tmp, "%lu", size_ptr) != 1) {
+	unsigned long int size = 0;
+
+	if (sscanf(tmp, "%lu", &size) != 1) {
 		free(tmp);
 		return PURE64_EINVAL;
 	}
 
-	*size_ptr *= multiplier;
+	size *= multiplier;
+
+	if (size_ptr != pure64_null)
+		*size_ptr = size;
 
 	free(tmp);
+
+	return 0;
+}
+
+static int handle_bootsector(struct pure64_config *config,
+                             const struct pure64_value *value,
+                             struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Bootsector value should be a string";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	const char *bootsector = value->u.string.data;
+
+	pure64_size bootsector_size = value->u.string.size;
+
+	if ((bootsector_size == 3)
+	 && (bootsector[0] == 'm')
+	 && (bootsector[1] == 'b')
+	 && (bootsector[2] == 'r')) {
+		config->bootsector = PURE64_BOOTSECTOR_MBR;
+	} else if ((bootsector_size == 3)
+	        && (bootsector[0] == 'p')
+	        && (bootsector[1] == 'x')
+	        && (bootsector[2] == 'e')) {
+		config->bootsector = PURE64_BOOTSECTOR_PXE;
+	} else if ((bootsector_size == 9)
+	        && (memcmp(bootsector, "multiboot", 9) == 0)) {
+		config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT;
+	} else if ((bootsector_size == 10)
+	        && (memcmp(bootsector, "multiboot2", 10) == 0)) {
+		config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT2;
+	} else {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Unknown bootsector type";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	return 0;
+}
+
+static int handle_resource_path(struct pure64_config *config,
+                                const struct pure64_value *value,
+                                struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Resource path should be a string.";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	char *resource_path = malloc(value->u.string.size + 1);
+	if (resource_path == NULL) {
+		return PURE64_ENOMEM;
+	}
+
+	memcpy(resource_path, value->u.string.data, value->u.string.size);
+	resource_path[value->u.string.size] = 0;
+
+	free(config->resource_path);
+	config->resource_path = resource_path;
+
+	return 0;
+}
+
+static int handle_kernel_path(struct pure64_config *config,
+                              const struct pure64_value *value,
+                              struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Kernel path should be a string.";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	char *kernel_path = malloc(value->u.string.size + 1);
+	if (kernel_path == NULL) {
+		return PURE64_ENOMEM;
+	}
+
+	memcpy(kernel_path, value->u.string.data, value->u.string.size);
+	kernel_path[value->u.string.size] = 0;
+
+	if (!file_exists(kernel_path)) {
+		if (error != pure64_null) {
+			error->source = pure64_null;
+			error->desc = "Kernel does not exist";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	free(config->kernel_path);
+	config->kernel_path = kernel_path;
+
+	return 0;
+}
+
+static int handle_fs_loader(struct pure64_config *config,
+                            const struct pure64_value *value,
+                            struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_boolean) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "FS Loader switch should be a boolean value.";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	config->fs_loader = value->u._bool;
+
+	return 0;
+}
+
+static int handle_partition_scheme(struct pure64_config *config,
+                                   const struct pure64_value *value,
+                                   struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Partition scheme must be a string";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	const char *str_data = value->u.string.data;
+
+	pure64_size str_size = value->u.string.size;
+
+	if ((str_size == 4)
+	 && (str_data[0] == 'n')
+	 && (str_data[1] == 'o')
+	 && (str_data[2] == 'n')
+	 && (str_data[3] == 'e')) {
+		config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
+	} else if ((str_size == 3)
+	        && (str_data[0] == 'g')
+	        && (str_data[1] == 'p')
+	        && (str_data[2] == 't')) {
+		config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
+	} else {
+		if (error != pure64_null) {
+			error->line = value->line;
+			error->column = value->column;
+			error->desc = "Unknown partition type.";
+			error->source = pure64_null;
+		}
+		return PURE64_EINVAL;
+	}
+
+	return 0;
+}
+
+static int handle_disk_size(struct pure64_config *config,
+                            const struct pure64_value *value,
+                            struct pure64_syntax_error *error) {
+
+	if (value->type == PURE64_VALUE_number) {
+		config->disk_size = value->u.number;
+		return 0;
+	} else if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Disk size must be a number or a string.";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (value->u.string.size == 0) {
+		if (error != pure64_null) {
+			error->desc = "Disk size not specified";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (parse_size(value, &config->disk_size) != 0) {
+		if (error != pure64_null) {
+			error->desc = "Invalid disk size";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	return 0;
+}
+
+static int handle_arch(struct pure64_config *config,
+                       const struct pure64_value *value,
+                       struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Architecture value must be a string";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if ((value->u.string.size == 6)
+	 && (value->u.string.data[0] == 'x')
+	 && (value->u.string.data[1] == '8')
+	 && (value->u.string.data[2] == '6')
+	 && (value->u.string.data[3] == '_')
+	 && (value->u.string.data[4] == '6')
+	 && (value->u.string.data[5] == '4')) {
+		config->arch = PURE64_ARCH_x86_64;
+		return 0;
+	} else {
+		if (error != pure64_null) {
+			error->desc = "Unsupported architecture";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	return 0;
+}
+
+static int handle_fs_size(struct pure64_config *config,
+                          const struct pure64_value *value,
+                          struct pure64_syntax_error *error) {
+
+	if (value->type == PURE64_VALUE_number) {
+		config->fs_size = value->u.number;
+		return 0;
+	} else if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "File system size must be a string or number";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (value->u.string.size == 0) {
+		if (error != pure64_null) {
+			error->desc = "File system size not specified";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (parse_size(value, &config->fs_size) != 0) {
+		if (error != pure64_null) {
+			error->desc = "Invalid file system size";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
 
 	return 0;
 }
@@ -243,103 +411,28 @@ static int handle_var(struct pure64_config *config,
                       const struct pure64_var *var,
                       struct pure64_syntax_error *error) {
 
-	if (pure64_var_cmp_key(var, "bootsector")) {
-		if (pure64_var_cmp_value(var, "mbr")) {
-			config->bootsector = PURE64_BOOTSECTOR_MBR;
-		} else if (pure64_var_cmp_value(var, "pxe")) {
-			config->bootsector = PURE64_BOOTSECTOR_PXE;
-		} else if (pure64_var_cmp_value(var, "multiboot")) {
-			config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT;
-		} else if (pure64_var_cmp_value(var, "multiboot2")) {
-			config->bootsector = PURE64_BOOTSECTOR_MULTIBOOT2;
-		} else {
-			error->desc = "Unknown bootsector type";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
-	} else if (pure64_var_cmp_key(var, "resource_path")) {
-		free(config->resource_path);
-		config->resource_path = malloc(var->value_size + 1);
-		memcpy(config->resource_path, var->value, var->value_size);
-		config->resource_path[var->value_size] = 0;
-	} else if (pure64_var_cmp_key(var, "kernel_path")) {
-		free(config->kernel);
-		config->kernel = malloc(var->value_size + 1);
-		if (config->kernel == NULL) {
-			error->desc = "Failed to allocate memory for kernel path";
-			error->line = 0;
-			return PURE64_ENOMEM;
-		}
-		memcpy(config->kernel, var->value, var->value_size);
-		config->kernel[var->value_size] = 0;
-		if (!file_exists(config->kernel)) {
-			error->desc = "Kernel does not exist";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_ENOENT;
-		}
-	} else if (pure64_var_cmp_key(var, "stage_three")) {
-		if (pure64_var_cmp_value(var, "kernel")) {
-			config->stage_three = PURE64_STAGE_THREE_KERNEL;
-		} else if (pure64_var_cmp_value(var, "loader")) {
-			config->stage_three = PURE64_STAGE_THREE_LOADER;
-		} else {
-			error->desc = "Unknown stage three type";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
-	} else if (pure64_var_cmp_key(var, "partition_scheme")) {
-		if (pure64_var_cmp_value(var, "none")) {
-			config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
-		} else if (pure64_var_cmp_value(var, "gpt")) {
-			config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
-		} else {
-			error->desc = "Unknown partition scheme";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
-	} else if (pure64_var_cmp_key(var, "disk_size")) {
-		if (var->value_size == 0) {
-			error->desc = "Disk size not specified";
-			error->line = var->line;
-			error->column = var->key_column;
-			return PURE64_EINVAL;
-		}
-		if (parse_size(var, &config->disk_size) != 0) {
-			error->desc = "Invalid disk size";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
-	} else if (pure64_var_cmp_key(var, "arch")) {
-		if (pure64_var_cmp_value(var, "x86_64")) {
-			config->arch = PURE64_ARCH_x86_64;
-		} else {
-			error->desc = "Unsupported architecture";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
-	} else if (pure64_var_cmp_key(var, "fs_size")) {
-		if (var->value_size == 0) {
-			error->desc = "File system size not specified";
-			error->line = var->line;
-			error->column = var->key_column;
-			return PURE64_EINVAL;
-		}
-		if (parse_size(var, &config->fs_size) != 0) {
-			error->desc = "Invalid file system size";
-			error->line = var->line;
-			error->column = var->value_column;
-			return PURE64_EINVAL;
-		}
+	if (pure64_var_cmp_id(var, "bootsector") == 0) {
+		return handle_bootsector(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "resource_path") == 0) {
+		return handle_resource_path(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "kernel_path") == 0) {
+		return handle_kernel_path(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "fs_loader") == 0) {
+		return handle_fs_loader(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "partition_scheme") == 0) {
+		return handle_partition_scheme(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "disk_size") == 0) {
+		return handle_disk_size(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "arch") == 0) {
+		return handle_arch(config, &var->value, error);
+	} else if (pure64_var_cmp_id(var, "fs_size") == 0) {
+		return handle_fs_size(config, &var->value, error);
 	} else {
-		error->desc = "Unknown variable key";
-		error->line = var->line;
-		error->column = var->key_column;
+		if (error != pure64_null) {
+			error->desc = "Unknown variable";
+			error->line = var->key.line;
+			error->column = var->key.column;
+		}
 		return PURE64_EINVAL;
 	}
 
@@ -354,11 +447,6 @@ static int validate_vars(struct pure64_config *config,
 		return PURE64_EINVAL;
 	}
 
-	if (config->stage_three == PURE64_STAGE_THREE_NONE) {
-		/* Allow default value of 'loader' */
-		config->stage_three = PURE64_STAGE_THREE_LOADER;
-	}
-
 	if (config->bootsector == PURE64_BOOTSECTOR_NONE) {
 		/* Allow the 'mbr' bootsector to be the default one. */
 		config->bootsector = PURE64_BOOTSECTOR_MBR;
@@ -369,14 +457,12 @@ static int validate_vars(struct pure64_config *config,
 		config->partition_scheme = PURE64_PARTITION_SCHEME_GPT;
 	}
 
-	if ((config->stage_three == PURE64_STAGE_THREE_LOADER)
-	 && (config->bootsector != PURE64_BOOTSECTOR_MBR)) {
+	if ((config->fs_loader) && (config->bootsector != PURE64_BOOTSECTOR_MBR)) {
 		error->desc = "File system loader only valid with MBR bootsector";
 		return PURE64_EINVAL;
 	}
 
-	if ((config->stage_three == PURE64_STAGE_THREE_KERNEL)
-	 && (config->kernel == NULL)) {
+	if ((!config->fs_loader) && (config->kernel_path == NULL)) {
 		error->desc = "Kernel not specifed";
 		return PURE64_EINVAL;
 	}
@@ -397,69 +483,61 @@ void pure64_config_init(struct pure64_config *config) {
 	config->arch = PURE64_ARCH_none;
 	config->bootsector = PURE64_BOOTSECTOR_NONE;
 	config->partition_scheme = PURE64_PARTITION_SCHEME_NONE;
-	config->stage_three = PURE64_STAGE_THREE_NONE;
+	config->fs_loader = pure64_false;
 	config->disk_size = 1 * 1024 * 1024;
 	config->fs_size = 512 * 1024;
-	config->kernel = NULL;
+	config->kernel_path = NULL;
 	config->resource_path = NULL;
 }
 
 void pure64_config_done(struct pure64_config *config) {
-	free(config->kernel);
-	config->kernel = NULL;
+	free(config->kernel_path);
+	free(config->resource_path);
+	config->kernel_path = NULL;
+	config->resource_path = NULL;
 }
 
 int pure64_config_parse(struct pure64_config *config,
                         const char *source,
                         struct pure64_syntax_error *error) {
 
-	error->line = 0;
-	error->column = 0;
-	error->desc = "";
-
-	struct pure64_tokenbuf tokenbuf;
-
-	pure64_tokenbuf_init(&tokenbuf);
-	pure64_tokenbuf_reject_comments(&tokenbuf);
-	pure64_tokenbuf_reject_whitespace(&tokenbuf);
-
-	int err = pure64_tokenbuf_parse(&tokenbuf, source);
-	if (err != 0) {
-		error->desc = "Failed to scan source";
+	if (error != pure64_null) {
+		error->source = pure64_null;
+		error->desc = pure64_null;
 		error->line = 0;
-		pure64_tokenbuf_done(&tokenbuf);
+		error->column = 0;
+	}
+
+	struct pure64_parser parser;
+
+	pure64_parser_init(&parser);
+
+	int err = pure64_parser_parse(&parser, source, error);
+	if (err != 0) {
+		if ((err != PURE64_EINVAL) && (error != pure64_null)) {
+			error->desc = "Failed to scan source";
+		}
+		pure64_parser_done(&parser);
 		return err;
 	}
 
-	struct token_iterator it;
-	it.index = 0;
-	it.tokenbuf = &tokenbuf;
+	while (!pure64_parser_eof(&parser)) {
 
-	while (!token_iterator_end(&it)) {
+		const struct pure64_var *var = pure64_parser_next(&parser);
+		if (var == pure64_null)
+			break;
 
-		struct pure64_var var;
-
-		pure64_var_init(&var);
-
-		err = pure64_var_parse(&var, &it, error);
+		err = handle_var(config, var, error);
 		if (err != 0) {
-			pure64_tokenbuf_done(&tokenbuf);
-			return err;
-		}
-		
-		err = handle_var(config, &var, error);
-		if (err != 0) {
-			pure64_tokenbuf_done(&tokenbuf);
+			pure64_parser_done(&parser);
 			return err;
 		}
 	}
 
-	pure64_tokenbuf_done(&tokenbuf);
+	pure64_parser_done(&parser);
 
 	err = validate_vars(config, error);
 	if (err != 0) {
-		error->line = 0;
-		error->column = 0;
 		return err;
 	}
 
@@ -470,40 +548,52 @@ int pure64_config_load(struct pure64_config *config,
                        const char *filename,
                        struct pure64_syntax_error *error) {
 
+	if (error != pure64_null) {
+		error->source = pure64_null;
+		error->desc = pure64_null;
+		error->line = 0;
+		error->column = 0;
+	}
+
 	FILE *file = fopen(filename, "rb");
 	if (file == NULL) {
-		error->desc = "Failed to open file";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to open file";
+		}
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_END) != 0) {
 		fclose(file);
-		error->desc = "Failed to seek to end of file";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to seek to end of file";
+		}
 		return PURE64_EINVAL;
 	}
 
 	long int file_size = ftell(file);
 	if (file_size == -1L) {
 		fclose(file);
-		error->desc = "Failed to tell file position";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to tell file position";
+		}
 		return PURE64_EINVAL;
 	}
 
 	if (fseek(file, 0UL, SEEK_SET) != 0) {
 		fclose(file);
-		error->desc = "Failed to seek to start of file";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to seek to start of file";
+		}
 		return PURE64_EINVAL;
 	}
 
 	char *source = malloc(file_size + 1);
 	if (source == NULL) {
 		fclose(file);
-		error->desc = "Failed to allocate file memory";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to allocate file memory";
+		}
 		return PURE64_ENOMEM;
 	}
 
@@ -512,8 +602,9 @@ int pure64_config_load(struct pure64_config *config,
 	if (fread(source, 1, file_size, file) != ((size_t) file_size)) {
 		free(source);
 		fclose(file);
-		error->desc = "Failed to read file";
-		error->line = 0;
+		if (error != pure64_null) {
+			error->desc = "Failed to read file";
+		}
 		return PURE64_EIO;
 	}
 

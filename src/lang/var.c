@@ -356,6 +356,8 @@ int pure64_key_parse(struct pure64_key *key,
 	 || (token->type == PURE64_TOKEN_DOUBLE_QUOTE)) {
 		key->id = token->data;
 		key->id_size = token->size;
+		key->line = token->line;
+		key->column = token->column;
 	} else {
 		if (error != pure64_null) {
 			error->source = pure64_null;

@@ -17,7 +17,7 @@ static void test_parse(void) {
 	                      "partition_scheme: gpt\n"
 	                      "bootsector: mbr\n"
 	                      "disk_size: 2M\n"
-	                      "stage_three: loader\n";
+	                      "fs_loader: true\n";
 
 	struct pure64_config config;
 
@@ -35,7 +35,7 @@ static void test_parse(void) {
 	assert(config.arch == PURE64_ARCH_x86_64);
 	assert(config.bootsector == PURE64_BOOTSECTOR_MBR);
 	assert(config.partition_scheme == PURE64_PARTITION_SCHEME_GPT);
-	assert(config.stage_three == PURE64_STAGE_THREE_LOADER);
+	assert(config.fs_loader);
 	assert(config.disk_size == (2 * 1024 * 1024));
 }
 
