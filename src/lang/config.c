@@ -446,6 +446,25 @@ static int handle_partition_name(struct pure64_config_partition *partition,
 	return 0;
 }
 
+static int handle_partition_file(struct pure64_config_partition *partition,
+                                 const struct pure64_value *value,
+                                 struct pure64_syntax_error *error) {
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Partition file path should be a string";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	partition->file = value->u.string.data;
+	partition->file_size = value->u.string.size;
+
+	return 0;
+}
+
 static int handle_partition_size(struct pure64_config_partition *partition,
                                  const struct pure64_value *value,
                                  struct pure64_syntax_error *error) {
@@ -477,6 +496,37 @@ static int handle_partition_size(struct pure64_config_partition *partition,
 	return 0;
 }
 
+static int handle_partition_offset(struct pure64_config_partition *partition,
+                                   const struct pure64_value *value,
+                                   struct pure64_syntax_error *error) {
+
+	if (value->type == PURE64_VALUE_number) {
+		partition->offset_specified = pure64_true;
+		partition->offset = value->u.number;
+		return 0;
+	} else if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Partition offset should be a string or number.";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (parse_size(value, &partition->offset) != 0) {
+		if (error != pure64_null) {
+			error->desc = "Invalid partition size";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	partition->offset_specified = pure64_true;
+
+	return 0;
+}
+
 static int handle_partition(struct pure64_config *config,
                             const struct pure64_object *object,
                             struct pure64_syntax_error *error) {
@@ -499,11 +549,17 @@ static int handle_partition(struct pure64_config *config,
 			if (err != 0)
 				return err;
 		} else if (pure64_key_cmp_id(&var->key, "file") == 0) {
+			int err = handle_partition_file(&partition, &var->value, error);
+			if (err != 0)
+				return err;
 		} else if (pure64_key_cmp_id(&var->key, "size") == 0) {
 			int err = handle_partition_size(&partition, &var->value, error);
 			if (err != 0)
 				return err;
 		} else if (pure64_key_cmp_id(&var->key, "offset") == 0) {
+			int err = handle_partition_offset(&partition, &var->value, error);
+			if (err != 0)
+				return err;
 		} else {
 			if (error != pure64_null) {
 				error->desc = "Invalid partition field";
