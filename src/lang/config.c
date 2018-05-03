@@ -430,9 +430,50 @@ static int handle_fs_size(struct pure64_config *config,
 static int handle_partition_name(struct pure64_config_partition *partition,
                                  const struct pure64_value *value,
                                  struct pure64_syntax_error *error) {
-	(void) partition;
-	(void) value;
-	(void) error;
+
+	if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Partition name should be a string";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	partition->name = value->u.string.data;
+	partition->name_size = value->u.string.size;
+
+	return 0;
+}
+
+static int handle_partition_size(struct pure64_config_partition *partition,
+                                 const struct pure64_value *value,
+                                 struct pure64_syntax_error *error) {
+
+	if (value->type == PURE64_VALUE_number) {
+		partition->size_specified = pure64_true;
+		partition->size = value->u.number;
+		return 0;
+	} else if (value->type != PURE64_VALUE_string) {
+		if (error != pure64_null) {
+			error->desc = "Partition name should be a string";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	if (parse_size(value, &partition->size) != 0) {
+		if (error != pure64_null) {
+			error->desc = "Invalid partition size";
+			error->line = value->line;
+			error->column = value->column;
+		}
+		return PURE64_EINVAL;
+	}
+
+	partition->size_specified = pure64_true;
+
 	return 0;
 }
 
@@ -443,7 +484,9 @@ static int handle_partition(struct pure64_config *config,
 	struct pure64_config_partition partition;
 
 	partition.name = pure64_null;
+	partition.name_size = 0;
 	partition.file = pure64_null;
+	partition.file_size = 0;
 	partition.size = 0;
 	partition.size_specified = pure64_false;
 	partition.offset = 0;
@@ -457,6 +500,9 @@ static int handle_partition(struct pure64_config *config,
 				return err;
 		} else if (pure64_key_cmp_id(&var->key, "file") == 0) {
 		} else if (pure64_key_cmp_id(&var->key, "size") == 0) {
+			int err = handle_partition_size(&partition, &var->value, error);
+			if (err != 0)
+				return err;
 		} else if (pure64_key_cmp_id(&var->key, "offset") == 0) {
 		} else {
 			if (error != pure64_null) {
