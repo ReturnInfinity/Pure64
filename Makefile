@@ -47,39 +47,39 @@ all-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors all
 	$(MAKE) -C src/arch/x86_64 all
 	$(MAKE) -C src/core all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
-	$(MAKE) -C src/stage-three all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/fs-loader all CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
 
 .PHONY: clean-pure64-x86_64
 clean-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors clean
 	$(MAKE) -C src/arch/x86_64 clean
 	$(MAKE) -C src/core clean ARCH=x86_64
-	$(MAKE) -C src/stage-three clean ARCH=x86_64
+	$(MAKE) -C src/fs-loader clean ARCH=x86_64
 
 .PHONY: install-pure64-x86_64
 install-pure64-x86_64:
 	$(MAKE) -C src/arch/x86_64/bootsectors install
 	$(MAKE) -C src/arch/x86_64 install
 	$(MAKE) -C src/core install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
-	$(MAKE) -C src/stage-three install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
+	$(MAKE) -C src/fs-loader install CROSS_COMPILE=x86_64-none-elf- ARCH=x86_64
 
 .PHONY: all-pure64-riscv64
 all-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 all
 	$(MAKE) -C src/core all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
-	$(MAKE) -C src/stage-three all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/fs-loader all CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 
 .PHONY: clean-pure64-riscv64
 clean-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 clean
 	$(MAKE) -C src/core clean ARCH=riscv64
-	$(MAKE) -C src/stage-three clean ARCH=riscv64
+	$(MAKE) -C src/fs-loader clean ARCH=riscv64
 
 .PHONY: install-pure64-riscv64
 install-pure64-riscv64:
 	$(MAKE) -C src/arch/riscv64 install
 	$(MAKE) -C src/core install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
-	$(MAKE) -C src/stage-three install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
+	$(MAKE) -C src/fs-loader install CROSS_COMPILE=riscv64-none-elf- ARCH=riscv64
 
 pure64-$(PURE64_VERSION).zip:
 	$(MAKE) all-pure64 CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe
