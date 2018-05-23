@@ -27,8 +27,7 @@ STAGE3 equ 0x60000			; Stage three bootloader is at this address.
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
-	nop
-	nop
+	db 0x36, 0x34
 
 ; =============================================================================
 ; Code for AP startup

@@ -121,8 +121,8 @@ check_A20:
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
 	jne halt
 
-	mov eax, [0x8000]
-	cmp eax, 0x00017EE9		; Match against the Pure64 binary
+	mov ax, [0x8006]
+	cmp ax, 0x3436			; Match against the Pure64 binary
 	jne magic_fail
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.

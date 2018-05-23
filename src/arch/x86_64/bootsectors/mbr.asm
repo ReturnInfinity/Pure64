@@ -141,8 +141,8 @@ check_A20:
 	jc read_fail
 
 	; Verify that the 2nd stage boot loader was read.
-	mov eax, [0x8000]
-	cmp eax, 0x00017EE9		; Match against the Pure64 binary
+	mov ax, [0x8006]
+	cmp ax, 0x3436			; Match against the Pure64 binary
 	jne magic_fail
 
 	; Read the 3rd stage boot loader into memory.
