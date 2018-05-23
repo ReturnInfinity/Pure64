@@ -10,21 +10,17 @@
 ; check is made to make sure Pure64 was loaded by comparing a signiture.
 ; =============================================================================
 
-; Default locations of the second
-; stage boot loader. This loads
-; 4 KiB from sector 16 into memory
-; at 0x8000
-%define ST2_SECTORS 8
-%define ST2_STARTSECTOR 1
+; Default location of the second stage boot loader. This loads
+; 32 KiB from sector 16 into memory at 0x8000
+%define ST2_SECTORS 64
+%define ST2_STARTSECTOR 16
 %define ST2_ADDRESS 0x8000
 %define ST2_SEGMENT 0x0000
 
-; Default locations of the third
-; stage boot loader. This loads
-; 32 KiB from sector 32 into memory
-; at 0x60000
+; Default location of the third stage boot loader. This loads
+; 32 KiB from sector 32 into memory at 0x60000
 %define ST3_SECTORS 64
-%define ST3_STARTSECTOR 9
+%define ST3_STARTSECTOR 32
 %define ST3_ADDRESS 0x0000
 %define ST3_SEGMENT 0x6000
 
