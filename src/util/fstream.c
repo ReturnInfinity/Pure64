@@ -6,7 +6,7 @@
 
 #include "fstream.h"
 
-#include <pure64/error.h>
+#include <pure64/core/error.h>
 
 #include <limits.h>
 #include <stdlib.h>

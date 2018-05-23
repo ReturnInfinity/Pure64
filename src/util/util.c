@@ -6,12 +6,13 @@
 
 #include "util.h"
 
-#include "config.h"
+#include <pure64/lang/config.h>
 
-#include <pure64/error.h>
-#include <pure64/gpt.h>
-#include <pure64/mbr.h>
-#include <pure64/partition.h>
+#include <pure64/core/error.h>
+#include <pure64/core/gpt.h>
+#include <pure64/core/mbr.h>
+#include <pure64/core/partition.h>
+#include <pure64/lang/syntax-error.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -228,7 +229,7 @@ static int write_bootsector(struct pure64_util *util) {
 
 static int write_kernel_bin(struct pure64_util *util) {
 
-	const char *path = util->config.kernel;
+	const char *path = util->config.kernel_path;
 	if (path == NULL)
 		path = "kernel";
 
@@ -293,7 +294,7 @@ static int write_flat_partition(struct pure64_util *util) {
 	if (err != 0)
 		return err;
 
-	if (util->config.stage_three == PURE64_STAGE_THREE_KERNEL) {
+	if (!util->config.fs_loader) {
 		err = write_kernel_bin(util);
 		if (err != 0)
 			return err;
@@ -308,7 +309,7 @@ static int write_flat_partition(struct pure64_util *util) {
 static int write_fs_gpt(struct pure64_util *util,
                         struct pure64_gpt *gpt) {
 
-	if (util->config.stage_three != PURE64_STAGE_THREE_LOADER)
+	if (!util->config.fs_loader)
 		return 0;
 
 	int err = pure64_gpt_set_entry_type(gpt, 2, PURE64_UUID_FILE_SYSTEM);
@@ -357,7 +358,7 @@ static int write_kernel_gpt(struct pure64_util *util,
 
 	struct file_buf kernel;
 
-	err = file_open(&kernel, util->config.kernel);
+	err = file_open(&kernel, util->config.kernel_path);
 	if (err != 0) {
 		return err;
 	}
@@ -428,12 +429,10 @@ static int write_loader_gpt(struct pure64_util *util,
 static int write_stage_three_gpt(struct pure64_util *util,
                                  struct pure64_gpt *gpt) {
 
-	if (util->config.stage_three == PURE64_STAGE_THREE_LOADER)
+	if (util->config.fs_loader)
 		return write_loader_gpt(util, gpt);
-	else if (util->config.stage_three == PURE64_STAGE_THREE_KERNEL)
-		return write_kernel_gpt(util, gpt);
 	else
-		return PURE64_EINVAL;
+		return write_kernel_gpt(util, gpt);
 }
 
 static int write_stage_two_gpt(struct pure64_util *util,
@@ -510,6 +509,35 @@ static int update_mbr_gpt(struct pure64_util *util,
 	return 0;
 }
 
+static int write_gpt_config_partition(struct pure64_util *util,
+                                      struct pure64_gpt *gpt,
+                                      const struct pure64_config_partition *partition) {
+
+	pure64_uint32 entry_index = 0;
+
+	int err = pure64_gpt_find_unused_entry(gpt, &entry_index);
+	if (err != 0)
+		return err;
+
+	const char *dummy_uuid = "6e65efa4-cfde-44cb-82a3-13d4c396e04c";
+
+	err = pure64_gpt_set_entry_type(gpt, entry_index, dummy_uuid);
+	if (err != 0)
+		return err;
+
+	err = pure64_gpt_set_entry_name_utf8(gpt, entry_index, partition->name);
+	if (err != 0)
+		return err;
+
+	(void) util;
+
+	/* TODO : give new partition a size. */
+	/* TODO : allocate partition size. */
+	/* TODO : write/update partition data. */
+
+	return 0;
+}
+
 static int write_gpt_partitions(struct pure64_util *util) {
 
 	struct pure64_gpt gpt;
@@ -540,6 +568,12 @@ static int write_gpt_partitions(struct pure64_util *util) {
 		return err;
 	}
 
+	for (pure64_size i = 0; i < util->config.partition_count; i++) {
+		err = write_gpt_config_partition(util, &gpt, &util->config.partitions[i]);
+		if (err != 0)
+			return err;
+	}
+
 	err = update_mbr_gpt(util, &gpt);
 	if (err != 0) {
 		pure64_gpt_done(&gpt);
@@ -559,19 +593,30 @@ static int write_gpt_partitions(struct pure64_util *util) {
 
 static int write_partitions(struct pure64_util *util) {
 
-	if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_NONE) {
-		return write_flat_partition(util);
-	} else if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_GPT) {
-		return write_gpt_partitions(util);
+	enum pure64_partition_scheme partition_scheme = util->config.partition_scheme;
+
+	int err = 0;
+
+	switch (partition_scheme) {
+	case PURE64_PARTITION_SCHEME_NONE:
+		err = write_flat_partition(util);
+		if (err != 0)
+			return err;
+		break;
+	case PURE64_PARTITION_SCHEME_GPT:
+		err = write_gpt_partitions(util);
+		if (err != 0)
+			return err;
+		break;
 	}
 
-	return PURE64_EINVAL;
+	return 0;
 }
 
 static int import_fs_gpt(struct pure64_util *util,
                          struct pure64_gpt *gpt) {
 
-	if (util->config.stage_three != PURE64_STAGE_THREE_LOADER)
+	if (!util->config.fs_loader)
 		return 0;
 
 	struct pure64_partition partition;
@@ -699,7 +744,7 @@ int pure64_util_create_disk(struct pure64_util *util,
 int pure64_util_open_config(struct pure64_util *util,
                             const char *path) {
 
-	struct pure64_config_error error;
+	struct pure64_syntax_error error;
 
 	int err = pure64_config_load(&util->config, path, &error);
 	if (err != 0) {
@@ -733,7 +778,7 @@ int pure64_util_open_disk(struct pure64_util *util,
 
 int pure64_util_save_disk(struct pure64_util *util) {
 
-	if (util->config.stage_three != PURE64_STAGE_THREE_LOADER)
+	if (!util->config.fs_loader)
 		return 0;
 
 	if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_GPT)

@@ -7,7 +7,7 @@
 #ifndef PURE64_FSTREAM_H
 #define PURE64_FSTREAM_H
 
-#include <pure64/stream.h>
+#include <pure64/core/stream.h>
 
 #include <stdio.h>
 

@@ -7,17 +7,24 @@ include("version.cmake")
 option (PURE64_WITH_UTIL "Build the Pure64 utility program." ON)
 option (PURE64_WITH_BOOTLOADER "Build the Pure64 boot loader." OFF)
 
+if (CMAKE_COMPILER_IS_GNUCC)
+	set (CMAKE_C_FLAGS "-Wall -Wextra -Werror -Wfatal-errors -std=gnu11")
+endif (CMAKE_COMPILER_IS_GNUCC)
+
 include_directories("include")
 
-add_subdirectory("src/lib")
+add_subdirectory("src/core")
+add_subdirectory("src/lang")
 
 if (PURE64_WITH_BOOTLOADER)
 	message(WARNING "CMake cannot currently build the bootloader.")
 	add_subdirectory("src/arch/${PURE64_ARCH}")
-	add_subdirectory("src/stage-three")
+	add_subdirectory("src/fs-loader")
 elseif (PURE64_WITH_UTIL)
 	add_subdirectory("src/util")
 endif (PURE64_WITH_BOOTLOADER)
+
+enable_testing()
 
 set (CPACK_PACKAGE_NAME "Pure64")
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "A bootloader for 64-bit systems.")
