@@ -9,10 +9,21 @@ CFLAGS="$CFLAGS -std=gnu11"
 # Pass flags required for use in kernel environment
 # Pass the include directory
 CFLAGS="$CFLAGS -I ../../include"
+# Let the NASM binary be found via the PATH environment variable.
+NASM=nasm
+# No flags currently defined for NASM
+NASMFLAGS=
+
+function assemble_binary {
+	src=${srcdir}$1
+	out=${objdir}`basename -s .asm $1`.sys
+	echo " NASM    $PWD/$out"
+	$NASM $NASMFLAGS $src -o $out
+}
 
 function compile_file {
 	src=${srcdir}$1
-	obj=${objdir}`basename $1`.o
+	obj=${objdir}`basename -s .c $1`.o
 	echo " CC      $PWD/$obj"
 	$CC $CFLAGS -c $src -o $obj
 }
