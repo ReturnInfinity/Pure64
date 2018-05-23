@@ -756,6 +756,29 @@ int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
 	return 0;
 }
 
+int pure64_gpt_set_entry_name_utf8(struct pure64_gpt *gpt,
+                                   pure64_uint32 entry_index,
+                                   const char *name) {
+
+	if ((entry_index > gpt->primary_header.partition_entry_count)
+	 || (entry_index > gpt->backup_header.partition_entry_count))
+		return PURE64_EINVAL;
+
+	pure64_uint64 i = 0;
+
+	while ((name[i] != 0) && (i < 35)) {
+		/* TODO : properly convert to UTF-16 */
+		gpt->primary_entries[entry_index].name[i] = name[i];
+		gpt->backup_entries[entry_index].name[i] = name[i];
+		i++;
+	}
+
+	gpt->primary_entries[entry_index].name[i] = 0;
+	gpt->backup_entries[entry_index].name[i] = 0;
+
+	return 0;
+}
+
 int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
                               pure64_uint32 entry_index,
                               const char *type_uuid_str) {

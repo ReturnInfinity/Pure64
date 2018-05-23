@@ -411,7 +411,7 @@ int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
 
 int pure64_gpt_set_entry_name_utf8(struct pure64_gpt *gpt,
                                    pure64_uint32 entry_index,
-                                   const pure64_utf8 *name);
+                                   const char *name);
 
 /** Sets the size of a certain partition entry.
  * This function will find the appropriate space

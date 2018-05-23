@@ -509,6 +509,35 @@ static int update_mbr_gpt(struct pure64_util *util,
 	return 0;
 }
 
+static int write_gpt_config_partition(struct pure64_util *util,
+                                      struct pure64_gpt *gpt,
+                                      const struct pure64_config_partition *partition) {
+
+	pure64_uint32 entry_index = 0;
+
+	int err = pure64_gpt_find_unused_entry(gpt, &entry_index);
+	if (err != 0)
+		return err;
+
+	const char *dummy_uuid = "6e65efa4-cfde-44cb-82a3-13d4c396e04c";
+
+	err = pure64_gpt_set_entry_type(gpt, entry_index, dummy_uuid);
+	if (err != 0)
+		return err;
+
+	err = pure64_gpt_set_entry_name_utf8(gpt, entry_index, partition->name);
+	if (err != 0)
+		return err;
+
+	(void) util;
+
+	/* TODO : give new partition a size. */
+	/* TODO : allocate partition size. */
+	/* TODO : write/update partition data. */
+
+	return 0;
+}
+
 static int write_gpt_partitions(struct pure64_util *util) {
 
 	struct pure64_gpt gpt;
@@ -539,6 +568,12 @@ static int write_gpt_partitions(struct pure64_util *util) {
 		return err;
 	}
 
+	for (pure64_size i = 0; i < util->config.partition_count; i++) {
+		err = write_gpt_config_partition(util, &gpt, &util->config.partitions[i]);
+		if (err != 0)
+			return err;
+	}
+
 	err = update_mbr_gpt(util, &gpt);
 	if (err != 0) {
 		pure64_gpt_done(&gpt);
@@ -558,13 +593,24 @@ static int write_gpt_partitions(struct pure64_util *util) {
 
 static int write_partitions(struct pure64_util *util) {
 
-	if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_NONE) {
-		return write_flat_partition(util);
-	} else if (util->config.partition_scheme == PURE64_PARTITION_SCHEME_GPT) {
-		return write_gpt_partitions(util);
+	enum pure64_partition_scheme partition_scheme = util->config.partition_scheme;
+
+	int err = 0;
+
+	switch (partition_scheme) {
+	case PURE64_PARTITION_SCHEME_NONE:
+		err = write_flat_partition(util);
+		if (err != 0)
+			return err;
+		break;
+	case PURE64_PARTITION_SCHEME_GPT:
+		err = write_gpt_partitions(util);
+		if (err != 0)
+			return err;
+		break;
 	}
 
-	return PURE64_EINVAL;
+	return 0;
 }
 
 static int import_fs_gpt(struct pure64_util *util,
