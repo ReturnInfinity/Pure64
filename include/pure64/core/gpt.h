@@ -17,6 +17,7 @@
  * or uninitialized LBA value. It is
  * set to a value that cannot possibly
  * occur on a 64, 32, or 16-bit system.
+ * @ingroup core-api
  * */
 
 #define PURE64_GPT_INVALID_LBA 0
@@ -33,6 +34,7 @@
  * a GPT formatted disk, just the number
  * of partition entries that Pure64 gives
  * by default.
+ * @ingroup core-api
  * */
 
 #define PURE64_GPT_ENTRY_COUNT 128
@@ -46,6 +48,7 @@
  * Therefore, a disk must be at least
  * this size if it should contain a GPT
  * formatted partition table.
+ * @ingroup core-api
  * */
 
 #define PURE64_GPT_MINIMUM_SIZE ((512 + (128 * PURE64_GPT_ENTRY_COUNT)) * 2)
@@ -59,6 +62,7 @@ extern "C" {
 struct pure64_stream;
 
 /** A GUID partition table header.
+ * @ingroup core-api
  * */
 
 struct pure64_gpt_header {
@@ -103,6 +107,7 @@ struct pure64_gpt_header {
  * the header to.
  * @returns Zero on success, an error
  * code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_header_export(const struct pure64_gpt_header *header, struct pure64_stream *stream);
@@ -111,6 +116,7 @@ int pure64_gpt_header_export(const struct pure64_gpt_header *header, struct pure
  * @param header A GPT header
  * @param stream The stream to import the header from.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_header_import(struct pure64_gpt_header *header, struct pure64_stream *stream);
@@ -118,6 +124,7 @@ int pure64_gpt_header_import(struct pure64_gpt_header *header, struct pure64_str
 /** This structure represents a
  * partition entry in a GPT formatted
  * medium.
+ * @ingroup core-api
  * */
 
 struct pure64_gpt_entry {
@@ -145,6 +152,7 @@ struct pure64_gpt_entry {
  * This function should only be used
  * internally.
  * @param entry The entry to initialize.
+ * @ingroup core-api
  * */
 
 void pure64_gpt_entry_init(struct pure64_gpt_entry *entry);
@@ -156,6 +164,7 @@ void pure64_gpt_entry_init(struct pure64_gpt_entry *entry);
  * @param entry An initialized GPT entry.
  * @returns One if the entry is used, zero
  * of it is not.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_entry_is_used(const struct pure64_gpt_entry *entry);
@@ -165,6 +174,7 @@ int pure64_gpt_entry_is_used(const struct pure64_gpt_entry *entry);
  * @param type_uuid The UUID of the type to check for.
  * @returns Zero if the entry is not the specified type, one
  * if it is.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_entry_is_type(const struct pure64_gpt_entry *entry,
@@ -174,6 +184,7 @@ int pure64_gpt_entry_is_type(const struct pure64_gpt_entry *entry,
  * start of the partition.
  * @param entry The entry to get the offset of.
  * @returns The offset of the partition data on disk.
+ * @ingroup core-api
  * */
 
 pure64_uint64 pure64_gpt_entry_get_offset(const struct pure64_gpt_entry *entry);
@@ -181,6 +192,7 @@ pure64_uint64 pure64_gpt_entry_get_offset(const struct pure64_gpt_entry *entry);
 /** Get the size of the partition, in terms of bytes.
  * @param entry The entry to get the size of.
  * @returns The size of the partition, in terms of bytes.
+ * @ingroup core-api
  * */
 
 pure64_uint64 pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
@@ -193,6 +205,7 @@ pure64_uint64 pure64_gpt_entry_get_size(const struct pure64_gpt_entry *entry);
  * the entry to.
  * @returns Zero on success, an error
  * code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_entry_export(const struct pure64_gpt_entry *entry, struct pure64_stream *stream);
@@ -201,12 +214,14 @@ int pure64_gpt_entry_export(const struct pure64_gpt_entry *entry, struct pure64_
  * @param entry An initialized GPT entry structure.
  * @param stream The stream to import the entry from.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_entry_import(struct pure64_gpt_entry *entry, struct pure64_stream *stream);
 
 /** This structure represents a
  * GUID partition table.
+ * @ingroup core-api
  * */
 
 struct pure64_gpt {
@@ -224,6 +239,7 @@ struct pure64_gpt {
  * @param gpt The GPT structure to initialize.
  * @returns Zero on success, an error code
  * on failure.
+ * @ingroup core-api
  * */
 
 void pure64_gpt_init(struct pure64_gpt *gpt);
@@ -232,6 +248,7 @@ void pure64_gpt_init(struct pure64_gpt *gpt);
  * GPT gpt structure.
  * @param gpt The GPT to release the
  * resources for.
+ * @ingroup core-api
  * */
 
 void pure64_gpt_done(struct pure64_gpt *gpt);
@@ -240,6 +257,7 @@ void pure64_gpt_done(struct pure64_gpt *gpt);
  * @param gpt An initialized GPT structure.
  * @param uuid The disk UUID to use for the
  * GPT structure.
+ * @ingroup core-api
  * */
 
 void pure64_gpt_set_disk_uuid(struct pure64_gpt *gpt,
@@ -252,6 +270,7 @@ void pure64_gpt_set_disk_uuid(struct pure64_gpt *gpt,
  * the partition should be able to fit.
  * @returns Zero on success, an error code
  * on failure.
+ * @ingroup core-api
  * */
 
 pure64_uint32 pure64_gpt_alloc(struct pure64_gpt *gpt,
@@ -266,6 +285,7 @@ pure64_uint32 pure64_gpt_alloc(struct pure64_gpt *gpt,
  * exported to.
  * @returns Zero on success, an error code on
  * failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_format(struct pure64_gpt *gpt,
@@ -280,6 +300,7 @@ int pure64_gpt_format(struct pure64_gpt *gpt,
  * @returns Zero if an unused entry is found. An
  * error code is returned if the function was unable
  * to find an unused entry.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_find_unused_entry(const struct pure64_gpt *gpt,
@@ -292,6 +313,7 @@ int pure64_gpt_find_unused_entry(const struct pure64_gpt *gpt,
  * @param offset A pointer to the variable that will receive
  * the partition offset.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_get_partition_offset(const struct pure64_gpt *gpt,
@@ -305,6 +327,7 @@ int pure64_gpt_get_partition_offset(const struct pure64_gpt *gpt,
  * @param size A pointer to the variable that will receive
  * the partition size.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_get_partition_size(const struct pure64_gpt *gpt,
@@ -316,6 +339,7 @@ int pure64_gpt_get_partition_size(const struct pure64_gpt *gpt,
  * @param stream The stream to read the GPT data from.
  * @returns Zero on success, an error
  * code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_import(struct pure64_gpt *gpt,
@@ -328,6 +352,7 @@ int pure64_gpt_import(struct pure64_gpt *gpt,
  * GPT data to.
  * @returns Zero on success, a negative error
  * code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_export(const struct pure64_gpt *gpt,
@@ -340,6 +365,7 @@ int pure64_gpt_export(const struct pure64_gpt *gpt,
  * @returns A pointer to the entry is returned
  * on success. A null pointer is returned on
  * failure.
+ * @ingroup core-api
  * */
 
 const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt,
@@ -355,6 +381,7 @@ const struct pure64_gpt_entry *pure64_gpt_get_entry(const struct pure64_gpt *gpt
  * @see PURE64_UUID_STAGE_TWO
  * @see PURE64_UUID_STAGE_THREE
  * @see PURE64_UUID_FILE_SYSTEM
+ * @ingroup core-api
  * */
 
 int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
@@ -366,11 +393,25 @@ int pure64_gpt_set_entry_type(struct pure64_gpt *gpt,
  * @param entry_index The index of the entry to set the name of.
  * @param name The name, as UTF-16, to assign to the entry.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
                               pure64_uint32 entry_index,
                               const pure64_uint16 *name);
+
+/** Sets the name of a GPT entry,
+ * using UTF-8 encoding.
+ * @param gpt An initialized GPT structure.
+ * @param entry_index The index of the entry to set the name of.
+ * @param name The name, as UTF-8, to assign the entry.
+ * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
+ * */
+
+int pure64_gpt_set_entry_name_utf8(struct pure64_gpt *gpt,
+                                   pure64_uint32 entry_index,
+                                   const pure64_utf8 *name);
 
 /** Sets the size of a certain partition entry.
  * This function will find the appropriate space
@@ -380,6 +421,7 @@ int pure64_gpt_set_entry_name(struct pure64_gpt *gpt,
  * @param size The size, in bytes, that the partition
  * should be able to fit.
  * @returns Zero on success, an error code on failure.
+ * @ingroup core-api
  * */
 
 int pure64_gpt_set_entry_size(struct pure64_gpt *gpt,
