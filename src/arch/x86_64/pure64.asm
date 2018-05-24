@@ -27,7 +27,7 @@ STAGE3 equ 0x60000			; Stage three bootloader is at this address.
 start:
 	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
-	db 0x36, 0x34
+	db 0x36, 0x34			; '64' marker
 
 ; =============================================================================
 ; Code for AP startup
@@ -283,7 +283,7 @@ clearcs64:
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
-	stosb				; Write 5 bytes in total to overwrite the 'far jump'
+	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
 ; Create the high PD entries
 	mov rax, 0x000000000000008F	; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
