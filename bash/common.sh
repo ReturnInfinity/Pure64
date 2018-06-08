@@ -6,7 +6,8 @@ CC=${CROSS_COMPILE}gcc
 CFLAGS="$CFLAGS -Wall -Wextra -Werror -Wfatal-errors"
 # Enable C11 standard with GNU extensions
 CFLAGS="$CFLAGS -std=gnu11"
-# Pass flags required for use in kernel environment
+# Generate debugging information
+CFLAGS="$CFLAGS -g"
 # Pass the include directory
 CFLAGS="$CFLAGS -I ../../include"
 # Let the NASM binary be found via the PATH environment variable.
@@ -48,4 +49,14 @@ LDLIBS=
 function link_executable {
 	echo " LD      $PWD/$1"
 	$LD $LDFLAGS ${@:2} -o $1 $LDLIBS
+}
+
+# Use binutils' objcopy to generate flat binary
+OBJCOPY=${CROSS_COMPILE}objcopy
+
+function convert_to_binary {
+	src="$1"
+	out=`basename "$src"`.sys
+	echo " OBJCOPY $PWD/$out"
+	$OBJCOPY -O binary "$src" "$out"
 }
