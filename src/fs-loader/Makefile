@@ -24,33 +24,33 @@ LDFLAGS += -nostdlib
 LDLIBS += -lpure64-core
 LDLIBS += -lgcc
 
-stage_three_files += _start.o
-stage_three_files += debug.o
-stage_three_files += hooks.o
-stage_three_files += map.o
+fs_loader_files += _start.o
+fs_loader_files += debug.o
+fs_loader_files += hooks.o
+fs_loader_files += map.o
 
 ifdef ARCH_x86_64
-stage_three_files += ahci.o
-stage_three_files += e820.o
-stage_three_files += pci.o
+fs_loader_files += ahci.o
+fs_loader_files += e820.o
+fs_loader_files += pci.o
 endif
 
 ifdef ARCH_riscv64
-stage_three_files += uart.o
-stage_three_files += e820-riscv64.o
-stage_three_files += ahci-riscv64.o
+fs_loader_files += uart.o
+fs_loader_files += e820-riscv64.o
+fs_loader_files += ahci-riscv64.o
 endif
 
 install_dir = $(DESTDIR)$(PREFIX)/share/pure64/resources/$(ARCH)
 
 .PHONY: all
-all: stage-three.sys
+all: fs-loader.sys
 
-stage-three.sys: stage-three
+fs-loader.sys: fs-loader
 
-stage-three: $(stage_three_files) -lpure64-core loader-$(ARCH).ld
+fs-loader: $(fs_loader_files) -lpure64-core loader-$(ARCH).ld
 	@echo "LD      $@"
-	$(LD) $(LDFLAGS) $(stage_three_files) -o $@ $(LDLIBS)
+	$(LD) $(LDFLAGS) $(fs_loader_files) -o $@ $(LDLIBS)
 
 _start.o: _start.c ahci.h debug.h
 
@@ -74,9 +74,9 @@ uart.o: uart.c uart.h
 
 .PHONY: clean
 clean:
-	$(RM) $(stage_three_files)
-	$(RM) stage-three
-	$(RM) stage-three.sys
+	$(RM) $(fs_loader_files)
+	$(RM) fs-loader
+	$(RM) fs-loader.sys
 
 .PHONY: test
 test:
@@ -84,6 +84,6 @@ test:
 .PHONY: install
 install: all
 	mkdir -p $(install_dir)
-	cp stage-three.sys $(install_dir)
+	cp fs-loader.sys $(install_dir)
 
 $(V).SILENT:

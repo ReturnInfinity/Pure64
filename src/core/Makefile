@@ -6,6 +6,8 @@ include $(TOP)/make/config.mk
 VPATH += $(TOP)/include/pure64/core
 
 CFLAGS += -Wall -Wextra -Werror -Wfatal-errors
+CFLAGS += -fomit-frame-pointer -fno-stack-protector
+CFLAGS += -mno-red-zone
 CFLAGS += -std=gnu99
 CFLAGS += -I $(TOP)/include
 CFLAGS += -g
