@@ -52,9 +52,8 @@ the `gpt` partitioning scheme.
     partition_scheme: gpt
     partition_scheme: none
 
-The `stage_three` option specifies what code should be run once the CPU is
-fully initialized. Either the kernel can be started after this stage, by
-specifying `kernel`, or the file system loader can be started by specifying `loader`.
-
-If `stage_three` is set to `kernel`, then the `kernel_path` variable should also
-be set. The `kernel_path` variable tells Pure64 where to find the kernel file.
+The `fs_loader` option specifies whether or not to include the file system loader.
+If it is set to true, the bootloader expects to find a kernel executable at the
+`/boot/kernel` path in the Pure64 file system. If this variable is set to false,
+then the `kernel_path` variable should be set to the path of the kernel on the host
+file system.
