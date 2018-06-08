@@ -13,6 +13,8 @@ pure64-0.10.0/
 /src/util/pure64
 /src/lang/config-test
 /src/lang/token-test
+/src/fs-loader/fs-loader
+/src/fs-loader/fs-loader.bin
 /docs/html
 /docs/latex
 /testing/kernel
