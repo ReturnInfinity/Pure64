@@ -12,12 +12,11 @@ arch: x86_64
 
 bootsector: mbr
 
-# Stage three is the code that is
-# started after the CPU enters a full
-# 64-bit state. It can either be a kernel
-# or a file system loader, called 'loader'.
+# The file system loader is used when the
+# kernel is put into the Pure64 file system.
+# The kernel is searched at '/boot/kernel'.
 
-stage_three: kernel
+fs_loader: true
 
 # This specifies where to find the kernel,
 # so that it can be copied into the disk.

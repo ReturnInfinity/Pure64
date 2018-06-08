@@ -22,7 +22,7 @@ partition_scheme: gpt
 # 64-bit state. It can either be a kernel
 # or a file system loader, called 'loader'.
 
-stage_three: loader
+fs_loader: true
 
 # This option indicates how much space to
 # reserve for the file system partition.
