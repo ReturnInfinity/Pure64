@@ -12,25 +12,13 @@ all clean test install:
 	$(MAKE) -C src/fs-loader $@
 	$(MAKE) -C src/util $@
 
-pure64-$(PURE64_VERSION).zip:
-	$(MAKE) all-pure64 CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe
-	$(MAKE) install-pure64 CROSS_COMPILE=x86_64-w64-mingw32- EXE=.exe PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
-	$(MAKE) clean-pure64 EXE=.exe
-	$(MAKE) all-pure64-x86_64
-	$(MAKE) install-pure64-x86_64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
-	$(MAKE) clean-pure64-x86_64
+pure64-$(PURE64_VERSION).zip: all
+	$(MAKE) install PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
 	zip -9 -y -r -q pure64-$(PURE64_VERSION).zip pure64-$(PURE64_VERSION)
-	$(MAKE) clean-pure64
 
 pure64-$(PURE64_VERSION).tar.gz:
-	$(MAKE) all-pure64
-	$(MAKE) install-pure64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
-	$(MAKE) clean-pure64
-	$(MAKE) all-pure64-x86_64
-	$(MAKE) install-pure64-x86_64 PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
-	$(MAKE) clean-pure64-x86_64
+	$(MAKE) install PREFIX=$(CURDIR)/pure64-$(PURE64_VERSION)
 	tar --create --file pure64-$(PURE64_VERSION).tar pure64-$(PURE64_VERSION)
 	gzip pure64-$(PURE64_VERSION).tar
-	$(MAKE) clean-pure64
 
 $(V).SILENT:
