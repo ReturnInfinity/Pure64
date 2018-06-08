@@ -39,7 +39,7 @@ install_bootloader="yes"
 install_headers="yes"
 install_libraries="yes"
 install_utility="yes"
-prefix="/usr/local"
+prefix="/opt/return-infinity"
 
 while true; do
 	case "$1" in
@@ -56,7 +56,9 @@ while true; do
 done
 
 if [ "$install_bootloader" == "yes" ]; then
-	install_dir "src/arch/${arch}" "${prefix}/share/pure64/arch/${arch}"
+	mkdir -p "${prefix}/share/pure64/resources/${arch}"
+	install_dir "src/arch/${arch}" "${prefix}/share/pure64/resources/${arch}"
+	cp "src/fs-loader/fs-loader.sys" "${prefix}/share/pure64/resources/${arch}"
 fi
 
 if [ "$install_headers" == "yes" ]; then
