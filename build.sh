@@ -25,7 +25,7 @@ function print_help {
 }
 
 function set_cross_compiler {
-	CROSS_COMPILE="$2"
+	export CROSS_COMPILE="$1-"
 	export CC="${CROSS_COMPILE}${CC}"
 	export AR="${CROSS_COMPILE}${AR}"
 	export AS="${CROSS_COMPILE}${AS}"
@@ -40,7 +40,7 @@ function build_dir {
 	cd "${original_dir}"
 }
 
-ARCH="x86_64"
+arch="x86_64"
 build_bootloader="yes"
 build_libraries="yes"
 build_utility="yes"
@@ -48,7 +48,7 @@ build_utility="yes"
 while true; do
 	case "$1" in
 		-h | --help ) print_help; exit 0;;
-		-a | --architecture ) ARCH="$2"; shift 2;;
+		-a | --architecture ) arch="$2"; shift 2;;
 		-b | --build-bootloader ) build_bootloader="$2"; shift 2;;
 		-l | --build-libraries ) build_libraries="$2"; shift 2;;
 		-u | --build-utility ) build_utility="$2"; shift 2;;
@@ -58,13 +58,16 @@ while true; do
 	esac
 done
 
-if [ "$build_bootloader" == "yes" ]; then
-	build_dir "src/arch/${ARCH}"
-fi
+export arch
 
 if [ "$build_libraries" == "yes" ]; then
 	build_dir "src/core"
 	build_dir "src/lang"
+fi
+
+if [ "$build_bootloader" == "yes" ]; then
+	build_dir "src/arch/${arch}"
+	build_dir "src/fs-loader"
 fi
 
 if [ "$build_utility" == "yes" ]; then
