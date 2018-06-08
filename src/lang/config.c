@@ -693,15 +693,17 @@ void pure64_config_init(struct pure64_config *config) {
 	config->fs_loader = pure64_false;
 	config->disk_size = 1 * 1024 * 1024;
 	config->fs_size = 512 * 1024;
-	config->kernel_path = NULL;
-	config->resource_path = NULL;
+	config->kernel_path = pure64_null;
+	config->resource_path = pure64_null;
+	config->partitions = pure64_null;
+	config->partition_count = 0;
 }
 
 void pure64_config_done(struct pure64_config *config) {
 	free(config->kernel_path);
 	free(config->resource_path);
-	config->kernel_path = NULL;
-	config->resource_path = NULL;
+	config->kernel_path = pure64_null;
+	config->resource_path = pure64_null;
 }
 
 int pure64_config_parse(struct pure64_config *config,
