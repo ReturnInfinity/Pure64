@@ -1,38 +1,37 @@
-#!/bin/sh
+#!/bin/bash
+
+source "../../bash/common.sh"
+
+if [ "$arch" == "" ]; then
+	arch="x86-64"
+fi
 
 # Exit on error
 set -e
-# Enable all compiler warnings, treat warnings as errors
-CFLAGS="$CFLAGS-Wall -Wextra -Werror -Wfatal-errors"
-# Enable C11 standard with GNU extensions
-CFLAGS="$CFLAGS -std=gnu11"
-# Pass flags required for use in kernel environment
-CFLAGS="$CFLAGS -ffreestanding"
-# Pass the include directory
-CFLAGS="$CFLAGS -I ../../include"
-# Set the cross compiler prefix
-CROSS_COMPILE=x86_64-none-elf-
-# Set the compiler name
-CC=${CROSS_COMPILE}gcc
+
+# Tell GCC not to use the red zone
+CFLAGS="${CFLAGS} -mno-red-zone"
+# No frame pointer
+CFLAGS="${CFLAGS} -fomit-frame-pointer"
+# No stack protector, libssp not available
+CFLAGS="${CFLAGS} -fno-stack-protector"
+
 # Build the object files
-$CC $CFLAGS -c _start.c
-$CC $CFLAGS -c ahci.c
-$CC $CFLAGS -c debug.c
-$CC $CFLAGS -c e820.c
-$CC $CFLAGS -c hooks.c
-$CC $CFLAGS -c map.c
-$CC $CFLAGS -c pci.c
-# Set the linker name
+compile_file _start.c
+compile_file ahci.c
+compile_file debug.c
+compile_file e820.c
+compile_file hooks.c
+compile_file map.c
+compile_file pci.c
+# Use 'ld' instead of GCC for linker
 LD=${CROSS_COMPILE}ld
 # Pass linker script
-LDFLAGS="$LDFLAGS -T stage-three.ld -nostdlib"
-# Pass library search directroy
-LDFLAGS="$LDFLAGS -L ../targetlib"
+LDFLAGS="${LDFLAGS} -T loader-${arch}.ld"
+LDFLAGS="${LDFLAGS} -L ../core"
 # Pass Pure64 library
-LDLIBS="$LDLIBS -lpure64"
-# Create the stage-three loader
-$LD $LDFLAGS *.o -o stage-three $LDLIBS
-# Set the objcopy name
-OBJCOPY=${CROSS_COMPILE}objcopy
-# Convert the loader into a flat binary
-$OBJCOPY -O binary stage-three stage-three.sys
+LDLIBS="${LDLIBS} -lpure64-core"
+# Create the file system loader
+link_executable "fs-loader" *.o
+# Convert it to a flat binary, fs-loader.bin
+convert_to_binary "fs-loader"
