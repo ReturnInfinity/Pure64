@@ -12,6 +12,7 @@
 #include <pure64/core/gpt.h>
 #include <pure64/core/mbr.h>
 #include <pure64/core/partition.h>
+#include <pure64/core/types.h>
 #include <pure64/lang/syntax-error.h>
 
 #include <stdlib.h>
@@ -189,7 +190,7 @@ static int bootsector_open(const struct pure64_config *config,
 	case PURE64_BOOTSECTOR_MBR:
 		return resource_open(config, file_buf, "x86_64/bootsectors/mbr.sys");
 	case PURE64_BOOTSECTOR_PXE:
-		return resource_open(config, file_buf, "x86_64/bootsectors/pxe.sys");
+		return resource_open(config, file_buf, "x86_64/bootsectors/pxestart.sys");
 	case PURE64_BOOTSECTOR_MULTIBOOT:
 		return resource_open(config, file_buf, "x86_64/bootsectors/mulitboot.sys");
 	case PURE64_BOOTSECTOR_MULTIBOOT2:
@@ -237,6 +238,7 @@ static int write_kernel_bin(struct pure64_util *util) {
 
 	int err = file_open(&file_buf, path);
 	if (err != 0) {
+		fprintf(util->errlog, "Failed to open '%s'.\n", path);
 		file_done(&file_buf);
 		return err;
 	}
@@ -265,6 +267,7 @@ static int write_kernel_bin(struct pure64_util *util) {
 static int write_stage_two_bin(struct pure64_util *util) {
 
 	unsigned long int stage_two_offset = 0;
+
 	stage_two_offset += pure64_bootsector_size(util->config.bootsector);
 
 	int err = pure64_stream_set_pos(&util->disk_file.base, stage_two_offset);
@@ -274,8 +277,10 @@ static int write_stage_two_bin(struct pure64_util *util) {
 	struct file_buf file_buf;
 
 	err = resource_open(&util->config, &file_buf, "x86_64/pure64.sys");
-	if (err != 0)
+	if (err != 0) {
+		fprintf(util->errlog, "Failed to open 2nd stage bootloader file.");
 		return err;
+	}
 
 	err = pure64_stream_write(&util->disk_file.base, file_buf.data, file_buf.size);
 	if (err != 0) {
@@ -352,14 +357,19 @@ static int write_kernel_gpt(struct pure64_util *util,
 	if (err != 0)
 		return err;
 
-	err = pure64_gpt_set_entry_name(gpt, 1, u"Pure64 Stage Three");
+	err = pure64_gpt_set_entry_name(gpt, 1, u"Pure64 Kernel");
 	if (err != 0)
 		return err;
 
+	const char *kernel_path = util->config.kernel_path;
+	if (kernel_path == pure64_null)
+		kernel_path = "kernel";
+
 	struct file_buf kernel;
 
-	err = file_open(&kernel, util->config.kernel_path);
+	err = file_open(&kernel, kernel_path);
 	if (err != 0) {
+		fprintf(util->errlog, "Failed to open '%s'.\n", kernel_path);
 		return err;
 	}
 
@@ -393,15 +403,17 @@ static int write_loader_gpt(struct pure64_util *util,
 	if (err != 0)
 		return err;
 
-	err = pure64_gpt_set_entry_name(gpt, 1, u"Pure64 Stage Three");
+	err = pure64_gpt_set_entry_name(gpt, 1, u"Pure64 FS Loader");
 	if (err != 0)
 		return err;
 
 	struct file_buf file_buf;
 
-	err = resource_open(&util->config, &file_buf, "x86_64/stage-three.sys");
-	if (err != 0)
+	err = resource_open(&util->config, &file_buf, "x86_64/fs-loader.sys");
+	if (err != 0) {
+		fprintf(util->errlog, "Failed to open file system loader.\n");
 		return err;
+	}
 
 	err = pure64_gpt_set_entry_size(gpt, 1, file_buf.size);
 	if (err != 0) {
@@ -449,8 +461,10 @@ static int write_stage_two_gpt(struct pure64_util *util,
 	struct file_buf file_buf;
 
 	err = resource_open(&util->config, &file_buf, "x86_64/pure64.sys");
-	if (err != 0)
+	if (err != 0) {
+		fprintf(util->errlog, "Failed to open 2nd stage bootloader file.");
 		return err;
+	}
 
 	err = pure64_gpt_set_entry_size(gpt, 0, pure64_data_size);
 	if (err != 0) {
@@ -483,10 +497,18 @@ static int update_mbr_gpt(struct pure64_util *util,
 	pure64_uint64 stage_three_data_size = 0;
 
 	int err = 0;
-	err |= resource_get_size(&util->config, &pure64_data_size, "x86_64/pure64.sys");
-	err |= resource_get_size(&util->config, &stage_three_data_size, "x86_64/stage-three.sys");
-	if (err != 0)
+
+	err = resource_get_size(&util->config, &pure64_data_size, "x86_64/pure64.sys");
+	if (err != 0) {
+		fprintf(util->errlog, "Failed to get stage two bootloader size.\n");
 		return err;
+	}
+
+	err = resource_get_size(&util->config, &stage_three_data_size, "x86_64/fs-loader.sys");
+	if (err != 0) {
+		fprintf(util->errlog, "Failed to get file system loader size.\n");
+		return err;
+	}
 
 	struct pure64_mbr mbr;
 
