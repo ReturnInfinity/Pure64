@@ -10,7 +10,7 @@
 
 #include <stdarg.h>
 
-#if defined PURE64_ARCH_x86_64
+#if defined __x86_64__
 
 static void outb(unsigned short int port, unsigned char value) {
 	asm volatile ("outb %0, %1" : : "a"(value), "Nd"(port));
@@ -33,7 +33,7 @@ void serial_putc(char c) {
 	outb(COM1, c);
 }
 
-#elif defined PURE64_ARCH_riscv64
+#elif defined __riscv64
 
 #include "uart.h"
 
