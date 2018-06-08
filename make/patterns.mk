@@ -22,6 +22,6 @@
 	@echo "CC      $@"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.sys: %.asm
+%.sys %.lst: %.asm
 	@echo "NASM    $@"
-	$(NASM) $(NASMFLAGS) $< -o $@
+	$(NASM) $(NASMFLAGS) $< -o $@ -l $(basename $@).lst

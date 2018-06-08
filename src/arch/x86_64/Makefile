@@ -30,6 +30,7 @@ pure64.sys: pure64.asm $(pure64_deps)
 .PHONY: clean
 clean:
 	$(RM) pure64.sys $(bootsectors)
+	$(RM) pure64.lst bootsectors/*.lst
 
 .PHONY: test
 test: all
