@@ -1,6 +1,12 @@
 #!/bin/bash
 
-source ../../bash/common.sh
+source "../../bash/common.sh"
+
+CFLAGS="${CFLAGS} -mno-red-zone"
+CFLAGS="${CFLAGS} -fno-stack-protector"
+CFLAGS="${CFLAGS} -fomit-frame-pointer"
+
+set -e
 
 compile_file dap.c
 compile_file dir.c
