@@ -1,3 +1,5 @@
+# This project has been archived and marked as read-only. Pure64 is now hosted on [GitLab](https://gitlab.com/ReturnInfinity/Pure64).
+
 # Pure64 -- an OS/software loader for x86-64 systems
 
 [![Build Status](https://travis-ci.org/ReturnInfinity/Pure64.svg?branch=master)](https://travis-ci.org/ReturnInfinity/Pure64)
