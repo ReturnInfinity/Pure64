@@ -1,10 +1,6 @@
-# This project has been archived and marked as read-only. Pure64 is now hosted on [GitLab](https://gitlab.com/ReturnInfinity/Pure64).
-
 # Pure64 -- an OS/software loader for x86-64 systems
 
-[![Build Status](https://travis-ci.org/ReturnInfinity/Pure64.svg?branch=master)](https://travis-ci.org/ReturnInfinity/Pure64)
-
-Copyright (C) 2008-2018 Return Infinity -- see LICENSE.TXT
+Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
 
 Pure64 is a software loader that was initially created for BareMetal OS.
 The loader sets the computer into a full 64-bit state with no legacy compatibility layers and also enables all available CPU Cores in the computer.
@@ -19,7 +15,7 @@ Ian Seyler (ian.seyler@returninfinity.com)
 
 The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler) and GCC.
 In Linux you can download it from your distributions repository(`apt-get install nasm gcc`).
-If you are using Windows or macOS you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.12.02/) in the `macosx` and `win32` directories, respectively.
+If you are using Windows or macOS you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.14.02/) in the `macosx` and `win32` directories, respectively.
 For GCC, you can use MinGW [here](https://sourceforge.net/projects/mingw/files/).
 
 Build scripts are included for macOS/Linux and Windows systems.

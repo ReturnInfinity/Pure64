@@ -1,11 +1,3 @@
-#!/bin/bash
+#!/bin/sh
 
-function clean_dir {
-	cd "$1"
-	./clean.sh
-	cd "../.."
-}
-
-clean_dir "src/core"
-clean_dir "src/lang"
-clean_dir "src/util"
+rm -f bin/*.sys
