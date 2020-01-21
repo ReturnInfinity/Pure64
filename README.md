@@ -11,6 +11,7 @@ See LICENSE.TXT for redistribution/modification rights, and CREDITS.TXT for a li
 
 Ian Seyler (ian.seyler@returninfinity.com)
 
+
 ## Building
 
 The only requirement for building Pure64 is [NASM](http://www.nasm.us/) (The Netwide Assembler) and GCC.
@@ -18,11 +19,10 @@ In Linux you can download it from your distributions repository(`apt-get install
 If you are using Windows or macOS you can grab pre-compiled binaries [here](http://www.nasm.us/pub/nasm/releasebuilds/2.14.02/) in the `macosx` and `win32` directories, respectively.
 For GCC, you can use MinGW [here](https://sourceforge.net/projects/mingw/files/).
 
-Build scripts are included for macOS/Linux and Windows systems.
+Build scripts are included for macOS/Linux.
 
 macOS/Linux: `./build.sh`
 
-Windows: `build.bat`
 
 ## Notes
 
