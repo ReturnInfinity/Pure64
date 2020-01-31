@@ -100,6 +100,23 @@ ld -T kernel.ld -o kernel.bin kernel.o
 The flags added to the first command are there to help GCC produce could that will run in kernel space.
 The second command simply takes kernel.o and orders it as the linker script tells it to.
 
+## Contributors note
+
+After a bit of testing I found out that the entry symbol (defaults to \_start) must always be in front of anything - even includes. This is probably due to Pure64 loading pure binaries which don't store the entry points address. 
+The best solutions I could come up with is to create a seperate file (e.g `start.c`) that calls the `main` function.
+```
+extern int main(void);
+
+void _start(void)
+{
+    main();
+}
+```
+This file would **always** have to be linked in front of everything else. For the above example that would mean the linker command would have to become:
+```
+ld -T kernel.ld -o kernel.bin start.o kernel.o
+```
+
 ## Creating a bootable image
 
 After creating a kernel this is a possible routine to create a bootable image.
