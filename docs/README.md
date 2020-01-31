@@ -64,14 +64,58 @@ void _start(void) {
 }
 ```
 
+The kernel needs a linker script to be loaded to 1 MiB, replacing NASMs `ORG` instruction.
+The file can be called `kernel.ld`.
+
+```
+OUTPUT_FORMAT("binary")
+OUTPUT_ARCH("i386:x86-64")
+
+SECTIONS
+{
+	. = 0x100000;
+	.text : {
+        *(.text)
+    }
+    .data : {
+        *(.data)
+    }
+    .rodata : {
+        *(.rodata)
+    }
+    .bss : {
+        *(.bss)
+    }
+}
+
+```
+
 Compile is like this:
 
 ```
-gcc kernel.c -o kernel -mno-red-zone -fno-stack-protector -fomit-frame-pointer
+gcc -c kernel.c -o kernel.o -mno-red-zone -fno-stack-protector -fomit-frame-pointer
+ld -T kernel.ld -o kernel.bin kernel.o
 ```
 
-The flags added to the command are there to help GCC produce could that will run in kernel space.
+The flags added to the first command are there to help GCC produce could that will run in kernel space.
+The second command simply takes kernel.o and orders it as the linker script tells it to.
 
+## Creating a bootable image
+
+After creating a kernel this is a possible routine to create a bootable image.
+The commands require Pure64 to be build and `pure64.sys` and `mbr.sys` to be in the same directory 
+as your kernel with the name `kernel.bin`
+
+```
+dd if=/dev/zero of=disk.img count=128 bs=1048576
+cat pure64.sys kernel.bin > software.sys
+
+dd if=mbr.sys of=disk.img conv=notrunc
+dd if=software.sys of=disk.img bs=512 seek=16 conv=notrunc
+```
+
+After creating a bootable image it can be tested using qemu:
+`qemu-system-x86_64 -drive format=raw,file=disk.img`
 
 ## Memory Map
 
