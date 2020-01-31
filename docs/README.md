@@ -73,8 +73,8 @@ OUTPUT_ARCH("i386:x86-64")
 
 SECTIONS
 {
-	. = 0x100000;
-	.text : {
+    . = 0x100000;
+    .text : {
         *(.text)
     }
     .data : {
