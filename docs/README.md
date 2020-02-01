@@ -102,8 +102,7 @@ The second command simply takes kernel.o and orders it as the linker script tell
 
 ## Contributors note
 
-After a bit of testing I found out that the entry symbol (defaults to \_start) must always be in front of anything - even includes. This is probably due to Pure64 loading pure binaries which don't store the entry points address. 
-The best solutions I could come up with is to create a seperate file (e.g `start.c`) that calls the `main` function.
+The `_start` symbol must always appear first within flat binaries as Pure64 will call the start of the file so it must contain executable code. Function definitions (such as inline ones) in header files could interfere with the placement of the `_start` symbol. The best solution is to put the entry point in a separate file that calls the main function. Such a file could be called `start.c`.
 ```
 extern int main(void);
 
@@ -112,7 +111,7 @@ void _start(void)
     main();
 }
 ```
-This file would **always** have to be linked in front of everything else. For the above example that would mean the linker command would have to become:
+This file would **always** have to be linked in front of everything else. For the above example that would mean the linker command above would have to become:
 ```
 ld -T kernel.ld -o kernel.bin start.o kernel.o
 ```
