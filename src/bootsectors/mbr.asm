@@ -138,7 +138,7 @@ check_A20:
 	; Verify that the 2nd stage boot loader was read.
 	mov ax, [0x8006]
 	cmp ax, 0x3436			; Match against the Pure64 binary
-	jne magic_fail
+	jne sig_fail
 
 	mov si, msg_OK
 	call print_string_16
@@ -155,8 +155,8 @@ read_fail:
 	mov si, msg_ReadFail
 	call print_string_16
 	jmp halt
-magic_fail:
-	mov si, msg_MagicFail
+sig_fail:
+	mov si, msg_SigFail
 	call print_string_16
 halt:
 	hlt
@@ -196,7 +196,7 @@ gdt32_end:
 
 msg_Load db 10, "MBR ", 0
 msg_OK db "OK", 0
-msg_MagicFail db "- Bad Magic!", 0
+msg_SigFail db "- Bad Sig!", 0
 msg_ReadFail db "Failed to read drive!", 0
 
 times 446-$+$$ db 0

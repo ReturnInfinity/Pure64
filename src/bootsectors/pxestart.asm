@@ -18,7 +18,7 @@
 ; =============================================================================
 
 
-USE16
+BITS 16
 org 0x7C00
 
 start:
@@ -30,6 +30,11 @@ start:
 	mov ds, ax
 	mov sp, 0x7C00
 	sti				; Enable interrupts
+
+	mov ah, 0
+	mov al, 11100011b		; 9600bps, no parity, 1 stop bit, 8 data bits
+	mov dx, 0			; Serial port 0
+	int 0x14			; Configure serial port
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -123,7 +128,10 @@ check_A20:
 
 	mov ax, [0x8006]
 	cmp ax, 0x3436			; Match against the Pure64 binary
-	jne magic_fail
+	jne sig_fail
+
+	mov si, msg_OK
+	call print_string_16
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
@@ -133,8 +141,8 @@ check_A20:
 	mov cr0, eax
 	jmp 8:0x8000			; Jump to 32-bit protected mode
 
-magic_fail:
-	mov si, msg_MagicFail
+sig_fail:
+	mov si, msg_SigFail
 	call print_string_16
 halt:
 	hlt
@@ -143,16 +151,17 @@ halt:
 
 
 ;------------------------------------------------------------------------------
-; 16-bit Function to print a string to the screen
-; input: SI - Address of start of string
+; 16-bit function to output a string to the serial port
+; IN:	SI - Address of start of string
 print_string_16:			; Output string in SI to screen
 	pusha
-	mov ah, 0x0E			; int 0x10 teletype function
+	mov dx, 0			; Port 0
 .repeat:
+	mov ah, 0x01			; Serial - Write character to port
 	lodsb				; Get char from string
-	test al, al
-	jz .done			; If char is zero, end of string
-	int 0x10			; Otherwise, print it
+	cmp al, 0
+	je .done			; If char is zero, end of string
+	int 0x14			; Output the character
 	jmp short .repeat
 .done:
 	popa
@@ -172,8 +181,9 @@ dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-msg_Load db "Pure64 PXE v1.0", 0
-msg_MagicFail db " - Error!", 0
+msg_Load db "PXE ", 0
+msg_OK db "OK", 0
+msg_SigFail db "- Bad Sig!", 0
 
 times 510-$+$$ db 0			; Pad out for a normal boot sector
 
