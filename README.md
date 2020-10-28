@@ -5,8 +5,6 @@ The loader sets the computer into a full 64-bit state with no legacy compatibili
 Pure64 keeps an information table in memory that stores important details about the computer (Amount of RAM and memory layout, number of CPU cores and their APIC IDs, etc).
 The Pure64 loader has been released separately so others can use it in their own software projects.
 
-[Discord](https://discord.gg/dT8MgXn) - [Website](https://returninfinity.com)
-
 
 ## Prerequisites
 
