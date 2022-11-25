@@ -1,13 +1,13 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
 ;
 ; In this code we are expecting a BMFS-formatted drive. With BMFS the Pure64
 ; binary is required to start at sector 16 (8192 bytes from the start). A small
-; check is made to make sure Pure64 was loaded by comparing a signiture.
+; check is made to make sure Pure64 was loaded by comparing a signature.
 ; =============================================================================
 
 ; Default location of the second stage boot loader. This loads
@@ -118,7 +118,7 @@ VBESearch:
 	mov bx, cx			; Mode is saved to BX for the set command later
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
-	jne VBESearch ; Try next mode
+	jne VBESearch			; Try next mode
 	cmp byte [VBEModeInfoBlock.BitsPerPixel], 32 ; Desired bit depth
 	jne VBESearch			; If not equal, try next mode
 	cmp word [VBEModeInfoBlock.XResolution], 800 ; Desired XRes here
@@ -193,7 +193,7 @@ dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
+dw 0x0000, 0x0000, 0x0000, 0x0000	; Null descriptor
 dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:

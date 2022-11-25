@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 Multiboot -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; http://stackoverflow.com/questions/33488194/creating-a-simple-multiboot-kernel-loaded-with-grub2
 ; https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#OS-image-format
@@ -102,7 +102,7 @@ memmap_end:
 
 	jmp 0x00008000
 
-times 512-$+$$ db 0			; Padding
+times 512-$+$$ db 0		; Padding
 
 multiboot_end:
 

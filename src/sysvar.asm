@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; System Variables
 ; =============================================================================
@@ -46,7 +46,7 @@ GDTR32:					; Global Descriptors Table Register
 
 align 16
 gdt32:
-	dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
+	dw 0x0000, 0x0000, 0x0000, 0x0000	; Null descriptor
 	dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 	dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:

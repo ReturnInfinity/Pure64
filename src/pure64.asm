@@ -1,11 +1,11 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
 ; 0x00008000. Setup a minimal 64-bit environment, copy the 64-bit kernel from
-; the end of the Pure64 binary to the 1MiB memory mark and jump to it!
+; the end of the Pure64 binary to the 1MiB memory mark and jump to it.
 ;
 ; Pure64 requires a payload for execution! The stand-alone pure64.sys file
 ; is not sufficient. You must append your kernel or software to the end of
@@ -16,10 +16,9 @@
 ; Max size of the resulting pure64.sys is 32768 bytes (32KiB)
 ; =============================================================================
 
+
 BITS 32
-
-ORG 0x8000
-
+ORG 0x00008000
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
@@ -355,16 +354,16 @@ pd_high_done:
 make_exception_gates: 			; make gates for exception handlers
 	mov rax, exception_gate
 	push rax			; save the exception gate to the stack for later use
-	stosw				; store the low word (15..0) of the address
+	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8E00
 	stosw				; store exception gate marker
 	pop rax				; get the exception gate back
 	shr rax, 16
-	stosw				; store the high word (31..16) of the address
+	stosw				; store the high word (31:16) of the address
 	shr rax, 16
-	stosd				; store the extra high dword (63..32) of the address.
+	stosd				; store the extra high dword (63:32) of the address.
 	xor rax, rax
 	stosd				; reserved
 	dec rcx
@@ -374,16 +373,16 @@ make_exception_gates: 			; make gates for exception handlers
 make_interrupt_gates: 			; make gates for the other interrupts
 	mov rax, interrupt_gate
 	push rax			; save the interrupt gate to the stack for later use
-	stosw				; store the low word (15..0) of the address
+	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8F00
 	stosw				; store interrupt gate marker
 	pop rax				; get the interrupt gate back
 	shr rax, 16
-	stosw				; store the high word (31..16) of the address
+	stosw				; store the high word (31:16) of the address
 	shr rax, 16
-	stosd				; store the extra high dword (63..32) of the address.
+	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
 	stosd				; reserved
 	dec rcx

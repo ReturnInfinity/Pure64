@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ACPI
 ; =============================================================================
@@ -44,8 +44,8 @@ foundACPIv1:
 	xor eax, eax
 	lodsd				; Grab the 32 bit physical address of the RSDT (Offset 16).
 	mov rsi, rax			; RSI now points to the RSDT
-	lodsd				; Grab the Signiture
-	cmp eax, 'RSDT'			; Make sure the signiture is valid
+	lodsd				; Grab the Signature
+	cmp eax, 'RSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
 	mov [os_ACPITableAddress], rsi	; Save the RSDT Table Address
@@ -70,8 +70,8 @@ foundACPIv2:
 	lodsd				; Length
 	lodsq				; Grab the 64 bit physical address of the XSDT (Offset 24).
 	mov rsi, rax			; RSI now points to the XSDT
-	lodsd				; Grab the Signiture
-	cmp eax, 'XSDT'			; Make sure the signiture is valid
+	lodsd				; Grab the Signature
+	cmp eax, 'XSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
 	mov [os_ACPITableAddress], rsi	; Save the XSDT Table Address
@@ -99,7 +99,7 @@ nextACPITable:
 	mov ebx, 'APIC'			; Signature for the Multiple APIC Description Table
 	cmp eax, ebx
 	je foundAPICTable
-	mov ebx, 'HPET'			; Signiture for the HPET Description Table
+	mov ebx, 'HPET'			; Signature for the HPET Description Table
 	cmp eax, ebx
 	je foundHPETTable
 	cmp ecx, edx

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2020 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2022 Return Infinity -- see LICENSE.TXT
 ;
 ; Interrupts
 ; =============================================================================
@@ -67,7 +67,7 @@ rtc:
 	push rdi
 	push rax
 
-	add qword [os_Counter_RTC], 1	; 64-bit counter started at bootup
+	add qword [os_Counter_RTC], 1	; 64-bit counter started at boot up
 
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
@@ -189,12 +189,12 @@ create_gate:
 	push rax
 
 	shl rdi, 4			; quickly multiply rdi by 16
-	stosw				; store the low word (15..0)
+	stosw				; store the low word (15:0)
 	shr rax, 16
 	add rdi, 4			; skip the gate marker
-	stosw				; store the high word (31..16)
+	stosw				; store the high word (31:16)
 	shr rax, 16
-	stosd				; store the high dword (63..32)
+	stosd				; store the high dword (63:32)
 
 	pop rax
 	pop rdi
