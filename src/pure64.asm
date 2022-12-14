@@ -267,6 +267,9 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
+	mov al, [BootMode]
+	cmp al, 'U'
+	je uefi_memmap
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
 ; Build a map at 0x400000
 	xor ecx, ecx
@@ -308,6 +311,16 @@ end820:
 	shl ebx, 1
 	mov dword [mem_amount], ebx
 	shr ebx, 1
+	jmp memmap_end
+
+uefi_memmap:				; TODO fix this as it is a terrible hack
+	mov rdi, 0x400000
+	mov al, 1
+	mov rcx, 32
+	rep stosb
+	mov ebx, 64
+	mov dword [mem_amount], ebx
+memmap_end:
 
 ; Create the high memory map
 	mov rcx, rbx

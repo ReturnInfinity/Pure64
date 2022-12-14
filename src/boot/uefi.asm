@@ -234,7 +234,7 @@ get_memmap:
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
 	mov rdi, 0x8000
-	mov rcx, 16384						; Copy 16KB
+	mov rcx, 61440						; Copy 60KB
 	rep movsb
 	mov ax, [0x8006]
 	cmp ax, 0x3436						; Match against the Pure64 binary
@@ -243,6 +243,19 @@ get_memmap:
 	; Signal to Pure64 that it was booted via UEFI
 	mov al, 'U'
 	mov [0x8005], al
+
+	; Save video values to the area of memory where Pure64 expects them
+	mov rdi, 0x00005C00 + 40				; VBEModeInfoBlock.PhysBasePtr
+	mov rax, [FB]
+	stosd
+	mov rdi, 0x00005C00 + 18				; VBEModeInfoBlock.XResolution & .YResolution
+	mov rax, [HR]
+	stosw
+	mov rax, [VR]
+	stosw
+	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
+	mov rax, 32
+	stosb
 
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
