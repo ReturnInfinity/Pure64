@@ -257,6 +257,10 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
+; Save the Boot Mode (it will be 'U' if started via UEFI)
+	mov al, [0x8005]
+	mov [BootMode], al		; Save the byte as a Boot Mode flag
+
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code

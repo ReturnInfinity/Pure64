@@ -240,6 +240,10 @@ get_memmap:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
+	; Signal to Pure64 that it was booted via UEFI
+	mov al, 'U'
+	mov [0x8005], al
+
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
 	mov rdx, [memmapkey]					; IN UINTN MapKey

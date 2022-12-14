@@ -37,6 +37,7 @@ cpu_detected:		equ SystemVariables + 260
 
 ; DB - Starting at offset 384, increments by 1
 os_IOAPICCount:		equ SystemVariables + 384
+BootMode:		equ SystemVariables + 385
 
 
 align 16
