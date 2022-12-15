@@ -7,6 +7,9 @@
 
 
 init_acpi:
+	mov al, [BootMode]
+	cmp al, 'U'
+	je foundACPIfromUEFI
 	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
 	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
 searchingforACPI:
@@ -16,6 +19,13 @@ searchingforACPI:
 	cmp esi, 0x000FFFFF		; Keep looking until we get here
 	jge noACPI			; ACPI tables couldn't be found, Fail.
 	jmp searchingforACPI
+
+foundACPIfromUEFI:
+	mov rsi, [0x400830]		; TODO This should be passed properly
+	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
+	lodsq
+	cmp rax, rbx
+	jne noACPI
 
 foundACPI:				; Found a Pointer Structure, verify the checksum
 	push rsi

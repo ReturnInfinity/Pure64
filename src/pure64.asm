@@ -257,12 +257,19 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
+; Save the Boot Mode (it will be 'U' if started via UEFI)
+	mov al, [0x8005]
+	mov [BootMode], al		; Save the byte as a Boot Mode flag
+
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
+	mov al, [BootMode]
+	cmp al, 'U'
+	je uefi_memmap
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
 ; Build a map at 0x400000
 	xor ecx, ecx
@@ -304,6 +311,16 @@ end820:
 	shl ebx, 1
 	mov dword [mem_amount], ebx
 	shr ebx, 1
+	jmp memmap_end
+
+uefi_memmap:				; TODO fix this as it is a terrible hack
+	mov rdi, 0x400000
+	mov al, 1
+	mov rcx, 32
+	rep stosb
+	mov ebx, 64
+	mov dword [mem_amount], ebx
+memmap_end:
 
 ; Create the high memory map
 	mov rcx, rbx

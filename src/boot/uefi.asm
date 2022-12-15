@@ -100,7 +100,7 @@ EntryPoint:
 	mov [EFI_IMAGE_HANDLE], rcx
 	mov [EFI_SYSTEM_TABLE], rdx
 	mov [EFI_RETURN], rsp
-	sub rsp, 6*8+8						; Fix stack
+;	sub rsp, 6*8+8						; Fix stack
 
 	; When calling an EFI function the caller must pass the first 4 integer values in registers
 	; via RCX, RDX, R8, and R9
@@ -113,6 +113,29 @@ EntryPoint:
 	mov rax, [EFI_SYSTEM_TABLE]
 	mov rax, [rax + EFI_SYSTEM_TABLE_RUNTIMESERVICES]
 	mov [RTS], rax
+	mov rax, [EFI_SYSTEM_TABLE]
+	mov rcx, [rax + EFI_SYSTEM_TABLE_NUMBEROFENTRIES]
+	shl rcx, 3						; Quick multiply by 4
+	mov rax, [EFI_SYSTEM_TABLE]
+	mov rax, [rax + EFI_SYSTEM_TABLE_CONFIGURATION_TABLE]
+	mov [CONFIG], rax
+
+	; Find the address of the ACPI data from the UEFI configuration table
+	mov rsi, rax
+nextentry:
+	dec rcx
+	cmp rcx, 0
+	je failure						; Bail out as no ACPI data was detected
+	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
+	lodsq
+	cmp rax, rbx						; Compare the table data to the expected GUID data
+	jne nextentry
+	mov rbx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
+	lodsq
+	cmp rax, rbx						; Compare the table data to the expected GUID data
+	jne nextentry
+	lodsq							; Load the address of the ACPI table
+	mov [ACPI], rax						; Save the address
 
 	; Find the interface to output services via its GUID
 	mov rcx, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -212,17 +235,34 @@ get_memmap:
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
 	mov rdi, 0x8000
-	mov rcx, 16384						; Copy 16KB
+	mov rcx, 61440						; Copy 60KB
 	rep movsb
 	mov ax, [0x8006]
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
+	; Signal to Pure64 that it was booted via UEFI
+	mov al, 'U'
+	mov [0x8005], al
+
+	; Save video values to the area of memory where Pure64 expects them
+	mov rdi, 0x00005C00 + 40				; VBEModeInfoBlock.PhysBasePtr
+	mov rax, [FB]
+	stosd
+	mov rdi, 0x00005C00 + 18				; VBEModeInfoBlock.XResolution & .YResolution
+	mov rax, [HR]
+	stosw
+	mov rax, [VR]
+	stosw
+	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
+	mov rax, 32
+	stosb
+
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
 	mov rdx, [memmapkey]					; IN UINTN MapKey
-	mov rbx, [BS]
-	call [rbx + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
+	mov rax, [BS]
+	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
 	cmp rax, EFI_SUCCESS
 	jne failure
 
@@ -325,6 +365,8 @@ EFI_SYSTEM_TABLE:	dq 0	; And this in RDX
 EFI_RETURN:		dq 0	; And this in RSP
 BS:			dq 0	; Boot services
 RTS:			dq 0	; Runtime services
+CONFIG:			dq 0	; Config Table address
+ACPI:			dq 0	; ACPI table address
 OUTPUT:			dq 0	; Output services
 VIDEO:			dq 0	; Video services
 FB:			dq 0	; Frame buffer base address
@@ -336,15 +378,20 @@ memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
 
+ACPI_TABLE_GUID:
+dd 0xeb9d2d30
+dw 0x2d88, 0x11d3
+db 0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d
+
 EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID:
 dd 0x387477c2
 dw 0x69c7,0x11d2
-db 0x8e,0x39,0x00,0xa0,0xc9,0x69,0x72,0x3b
+db 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b
 
 EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID:
 dd 0x9042a9de
 dw 0x23dc, 0x4a38
-db 0x96,0xfb,0x7a,0xde,0xd0,0x80,0x51,0x6a
+db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 hextable: 		db '0123456789ABCDEF'
 msg_start:		dw u('UEFI '), 0
@@ -392,6 +439,8 @@ EFI_NOT_FOUND						equ 14
 
 EFI_SYSTEM_TABLE_RUNTIMESERVICES			equ 88
 EFI_SYSTEM_TABLE_BOOTSERVICES				equ 96
+EFI_SYSTEM_TABLE_NUMBEROFENTRIES			equ 104
+EFI_SYSTEM_TABLE_CONFIGURATION_TABLE			equ 112
 
 EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_RESET			equ 0
 EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING		equ 8
