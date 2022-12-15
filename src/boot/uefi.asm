@@ -114,28 +114,8 @@ EntryPoint:
 	mov rax, [rax + EFI_SYSTEM_TABLE_RUNTIMESERVICES]
 	mov [RTS], rax
 	mov rax, [EFI_SYSTEM_TABLE]
-	mov rcx, [rax + EFI_SYSTEM_TABLE_NUMBEROFENTRIES]
-	shl rcx, 3						; Quick multiply by 4
-	mov rax, [EFI_SYSTEM_TABLE]
 	mov rax, [rax + EFI_SYSTEM_TABLE_CONFIGURATION_TABLE]
 	mov [CONFIG], rax
-
-	; Find the address of the ACPI data from the UEFI configuration table
-	mov rsi, rax
-nextentry:
-	dec rcx
-	cmp rcx, 0
-	je failure						; Bail out as no ACPI data was detected
-	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
-	lodsq
-	cmp rax, rbx						; Compare the table data to the expected GUID data
-	jne nextentry
-	mov rbx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
-	lodsq
-	cmp rax, rbx						; Compare the table data to the expected GUID data
-	jne nextentry
-	lodsq							; Load the address of the ACPI table
-	mov [ACPI], rax						; Save the address
 
 	; Find the interface to output services via its GUID
 	mov rcx, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -161,6 +141,26 @@ nextentry:
 	lea rdx, [msg_start]					; IN CHAR16 *String
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
+	; Find the address of the ACPI data from the UEFI configuration table
+	mov rax, [EFI_SYSTEM_TABLE]
+	mov rcx, [rax + EFI_SYSTEM_TABLE_NUMBEROFENTRIES]
+	shl rcx, 3						; Quick multiply by 4
+	mov rsi, [CONFIG]
+nextentry:
+	dec rcx
+	cmp rcx, 0
+	je failure						; Bail out as no ACPI data was detected
+	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
+	lodsq
+	cmp rax, rbx						; Compare the table data to the expected GUID data
+	jne nextentry
+	mov rbx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
+	lodsq
+	cmp rax, rbx						; Compare the table data to the expected GUID data
+	jne nextentry
+	lodsq							; Load the address of the ACPI table
+	mov [ACPI], rax						; Save the address
+
 	; Get Memory Map
 get_memmap:
 	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
@@ -182,6 +182,11 @@ get_memmap:
 	; 24 UINT64 - NumberOfPages
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank
+
+	; Display dot for debug purposes
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_dot]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Find the interface to GRAPHICS_OUTPUT_PROTOCOL via its GUID
 	mov rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -232,6 +237,11 @@ get_memmap:
 	cmp rax, EFI_SUCCESS
 	jne failure
 
+	; Display dot for debug purposes
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_dot]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
 	mov rdi, 0x8000
@@ -257,6 +267,11 @@ get_memmap:
 	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
 	mov rax, 32
 	stosb
+
+	; Display dot for debug purposes
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_dot]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
@@ -394,10 +409,11 @@ dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 hextable: 		db '0123456789ABCDEF'
-msg_start:		dw u('UEFI '), 0
-msg_failure:		dw u('System failure'), 0
-msg_SigFail:		dw u('- Bad Sig!'), 0
+msg_start:		dw u('UEFI'), 0
+msg_failure:		dw u(' System failure'), 0
+msg_SigFail:		dw u(' - Bad Sig!'), 0
 msg_space:		dw u(' '), 0
+msg_dot:		dw u('.'), 0
 msg_newline:		db 0x0D, 0x00, 0x0A, 0x00, 0x00, 0x00
 tchar:			db 0, 0, 0, 0, 0, 0, 0, 0
 
