@@ -100,7 +100,7 @@ EntryPoint:
 	mov [EFI_IMAGE_HANDLE], rcx
 	mov [EFI_SYSTEM_TABLE], rdx
 	mov [EFI_RETURN], rsp
-	sub rsp, 6*8+8						; Fix stack
+;	sub rsp, 6*8+8						; Fix stack
 
 	; When calling an EFI function the caller must pass the first 4 integer values in registers
 	; via RCX, RDX, R8, and R9
@@ -125,16 +125,17 @@ EntryPoint:
 nextentry:
 	dec rcx
 	cmp rcx, 0
-	je failure
-	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the GUID
+	je failure						; Bail out as no ACPI data was detected
+	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
 	lodsq
-	cmp rax, rbx
+	cmp rax, rbx						; Compare the table data to the expected GUID data
 	jne nextentry
-	mov rbx, [ACPI_TABLE_GUID+8]				; Seconds 64 bits of the GUID
+	mov rbx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
 	lodsq
+	cmp rax, rbx						; Compare the table data to the expected GUID data
 	jne nextentry
 	lodsq							; Load the address of the ACPI table
-	mov [ACPI], rax
+	mov [ACPI], rax						; Save the address
 
 	; Find the interface to output services via its GUID
 	mov rcx, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -260,8 +261,8 @@ get_memmap:
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
 	mov rdx, [memmapkey]					; IN UINTN MapKey
-	mov rbx, [BS]
-	call [rbx + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
+	mov rax, [BS]
+	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
 	cmp rax, EFI_SUCCESS
 	jne failure
 
