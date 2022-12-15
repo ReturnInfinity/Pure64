@@ -183,11 +183,6 @@ get_memmap:
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank
 
-	; Display dot for debug purposes
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_dot]					; IN CHAR16 *String
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
-
 	; Find the interface to GRAPHICS_OUTPUT_PROTOCOL via its GUID
 	mov rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
 	mov rdx, 0						; IN VOID *Registration OPTIONAL
@@ -237,11 +232,6 @@ get_memmap:
 	cmp rax, EFI_SUCCESS
 	jne failure
 
-	; Display dot for debug purposes
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_dot]					; IN CHAR16 *String
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
-
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
 	mov rdi, 0x8000
@@ -267,11 +257,6 @@ get_memmap:
 	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
 	mov rax, 32
 	stosb
-
-	; Display dot for debug purposes
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_dot]					; IN CHAR16 *String
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
@@ -409,12 +394,10 @@ dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 hextable: 		db '0123456789ABCDEF'
-msg_start:		dw u('UEFI'), 0
-msg_failure:		dw u(' System failure'), 0
-msg_SigFail:		dw u(' - Bad Sig!'), 0
-msg_space:		dw u(' '), 0
-msg_dot:		dw u('.'), 0
-msg_newline:		db 0x0D, 0x00, 0x0A, 0x00, 0x00, 0x00
+msg_start:		dw u('UEFI '), 0
+msg_failure:		dw u('System failure'), 0
+msg_SigFail:		dw u('Bad Sig!'), 0
+msg_OK:			dw u('OK'), 0
 tchar:			db 0, 0, 0, 0, 0, 0, 0, 0
 
 align 16
