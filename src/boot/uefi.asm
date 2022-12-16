@@ -125,7 +125,7 @@ EntryPoint:
 	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
 	call rax
 	cmp rax, EFI_SUCCESS
-	jne failure
+	jne error
 
 	; Set screen colour attributes
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
@@ -149,7 +149,7 @@ EntryPoint:
 nextentry:
 	dec rcx
 	cmp rcx, 0
-	je failure						; Bail out as no ACPI data was detected
+	je error						; Bail out as no ACPI data was detected
 	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
 	lodsq
 	cmp rax, rbx						; Compare the table data to the expected GUID data
@@ -177,7 +177,7 @@ get_memmap:
 	cmp al, 5						; EFI_BUFFER_TOO_SMALL
 	je get_memmap						; Attempt again as the memmapsize was updated by EFI
 	cmp rax, EFI_SUCCESS
-	jne failure
+	jne error
 	; Output at 0x6000 is as follows:
 	; 0  UINT32 - Type
 	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
@@ -194,7 +194,7 @@ get_memmap:
 	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
 	call rax
 	cmp rax, EFI_SUCCESS
-	jne failure
+	jne error
 
 	; Parse the graphics information
 	; Mode Structure
@@ -233,7 +233,7 @@ get_memmap:
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_SETWATCHDOGTIMER]
 	cmp rax, EFI_SUCCESS
-	jne failure
+	jne error
 
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
@@ -267,7 +267,7 @@ get_memmap:
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
 	cmp rax, EFI_SUCCESS
-	jne failure
+	jne exitfailure
 
 	; Stop interrupts
 	cli
@@ -289,14 +289,16 @@ BITS 32
 	jmp 8:0x8000						; 32-bit jump to set CS
 
 BITS 64
-failure:
+exitfailure:
 	mov rdi, [FB]
 	mov eax, 0x00FF0000					; Red
 	mov rcx, [FBS]
 	shr rcx, 2						; Quick divide by 4 (32-bit colour)
 	rep stosd
+	jmp halt
+error:
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_failure]					; IN CHAR16 *String
+	lea rdx, [msg_error]					; IN CHAR16 *String
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 	jmp halt
 sig_fail:
@@ -398,7 +400,7 @@ db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 hextable: 		db '0123456789ABCDEF'
 msg_start:		dw u('UEFI '), 0
-msg_failure:		dw u('System failure'), 0
+msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
 msg_OK:			dw u('OK'), 0
 tchar:			db 0, 0, 0, 0, 0, 0, 0, 0
