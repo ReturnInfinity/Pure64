@@ -116,16 +116,19 @@ EntryPoint:
 	mov rax, [EFI_SYSTEM_TABLE]
 	mov rax, [rax + EFI_SYSTEM_TABLE_CONFIGURATION_TABLE]
 	mov [CONFIG], rax
+	mov rax, [EFI_SYSTEM_TABLE]
+	mov rax, [rax + EFI_SYSTEM_TABLE_CONOUT]
+	mov [OUTPUT], rax
 
-	; Find the interface to output services via its GUID
-	mov rcx, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
-	mov rdx, 0						; IN VOID *Registration OPTIONAL
-	mov r8, OUTPUT						; OUT VOID **Interface
-	mov rax, [BS]
-	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
-	call rax
-	cmp rax, EFI_SUCCESS
-	jne error
+;	; Find the interface to output services via its GUID
+;	mov rcx, EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
+;	mov rdx, 0						; IN VOID *Registration OPTIONAL
+;	mov r8, OUTPUT						; OUT VOID **Interface
+;	mov rax, [BS]
+;	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
+;	call rax
+;	cmp rax, EFI_SUCCESS
+;	jne error
 
 	; Set screen colour attributes
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
@@ -200,15 +203,15 @@ nextentry:
 	mov [VR], rax						; Save the Vertical Resolution
 	; TODO - Check EFI_GRAPHICS_PIXEL_FORMAT (RBX+12) to make sure bit 0 is set (32-bit colour mode), otherwise parse EFI_PIXEL_BITMASK  
 
-	; Disable watchdog timer
-	xor ecx, ecx						; IN UINTN Timeout
-	xor edx, edx						; IN UINT64 WatchdogCode
-	xor r8, r8						; IN UINTN DataSize
-	xor r9, r9						; IN CHAR16 *WatchdogData OPTIONAL
-	mov rax, [BS]
-	call [rax + EFI_BOOT_SERVICES_SETWATCHDOGTIMER]
-	cmp rax, EFI_SUCCESS
-	jne error
+;	; Disable watchdog timer
+;	xor ecx, ecx						; IN UINTN Timeout
+;	xor edx, edx						; IN UINT64 WatchdogCode
+;	xor r8, r8						; IN UINTN DataSize
+;	xor r9, r9						; IN CHAR16 *WatchdogData OPTIONAL
+;	mov rax, [BS]
+;	call [rax + EFI_BOOT_SERVICES_SETWATCHDOGTIMER]
+;	cmp rax, EFI_SUCCESS
+;	jne error
 
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
@@ -392,10 +395,10 @@ dd 0xeb9d2d30
 dw 0x2d88, 0x11d3
 db 0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d
 
-EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID:
-dd 0x387477c2
-dw 0x69c7,0x11d2
-db 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b
+;EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID:
+;dd 0x387477c2
+;dw 0x69c7,0x11d2
+;db 0x8e, 0x39, 0x00, 0xa0, 0xc9, 0x69, 0x72, 0x3b
 
 EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID:
 dd 0x9042a9de
@@ -445,6 +448,7 @@ EFI_NO_MEDIA						equ 12
 EFI_MEDIA_CHANGED					equ 13
 EFI_NOT_FOUND						equ 14
 
+EFI_SYSTEM_TABLE_CONOUT                         	equ 64
 EFI_SYSTEM_TABLE_RUNTIMESERVICES			equ 88
 EFI_SYSTEM_TABLE_BOOTSERVICES				equ 96
 EFI_SYSTEM_TABLE_NUMBEROFENTRIES			equ 104
