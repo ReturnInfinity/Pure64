@@ -241,29 +241,29 @@ nextentry:
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Get Memory Map
-	get_memmap:
-		lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
-		lea rdx, 0x6000						; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
-		lea r8, [memmapkey]					; OUT UINTN *MapKey
-		lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
-		lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
-		push r10
-		sub rsp, 32
-		mov rax, [BS]
-		call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
-		add rsp, 32
-		pop r10
-		cmp al, 5						; EFI_BUFFER_TOO_SMALL
-		je get_memmap						; Attempt again as the memmapsize was updated by EFI
-		cmp rax, EFI_SUCCESS
-		jne error
-		; Output at 0x6000 is as follows:
-		; 0  UINT32 - Type
-		; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
-		; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
-		; 24 UINT64 - NumberOfPages
-		; 32 UINT64 - Attribute
-		; 40 UINT64 - Blank
+get_memmap:
+	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
+	lea rdx, 0x6000						; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
+	lea r8, [memmapkey]					; OUT UINTN *MapKey
+	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
+	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
+	push r10
+	sub rsp, 32
+	mov rax, [BS]
+	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
+	add rsp, 32
+	pop r10
+	cmp al, 5						; EFI_BUFFER_TOO_SMALL
+	je get_memmap						; Attempt again as the memmapsize was updated by EFI
+	cmp rax, EFI_SUCCESS
+	jne error
+	; Output at 0x6000 is as follows:
+	; 0  UINT32 - Type
+	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
+	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
+	; 24 UINT64 - NumberOfPages
+	; 32 UINT64 - Attribute
+	; 40 UINT64 - Blank
 
 	; Exit Boot services as EFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
