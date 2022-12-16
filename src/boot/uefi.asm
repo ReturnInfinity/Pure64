@@ -100,7 +100,7 @@ EntryPoint:
 	mov [EFI_IMAGE_HANDLE], rcx
 	mov [EFI_SYSTEM_TABLE], rdx
 	mov [EFI_RETURN], rsp
-;	sub rsp, 6*8+8						; Fix stack
+	sub rsp, 6*8+8						; Fix stack
 
 	; When calling an EFI function the caller must pass the first 4 integer values in registers
 	; via RCX, RDX, R8, and R9
@@ -169,8 +169,11 @@ get_memmap:
 	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
 	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
 	push r10
+	sub rsp, 32
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
+	add rsp, 32
+	pop r10
 	cmp al, 5						; EFI_BUFFER_TOO_SMALL
 	je get_memmap						; Attempt again as the memmapsize was updated by EFI
 	cmp rax, EFI_SUCCESS
@@ -373,7 +376,7 @@ FB:			dq 0	; Frame buffer base address
 FBS:			dq 0	; Frame buffer size
 HR:			dq 0	; Horizontal Resolution
 VR:			dq 0	; Vertical Resolution
-memmapsize:		dq 0
+memmapsize:		dq 8192
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
