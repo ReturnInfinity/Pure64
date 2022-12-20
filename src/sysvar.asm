@@ -9,13 +9,13 @@
 message: db 10, 'Pure64 OK', 10
 
 ;CONFIG
-cfg_smpinit:		db 1	; By default SMP is enabled. Set to 0 to disable.
+cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
 SystemVariables:	equ 0x0000000000005A00
-VBEModeInfoBlock:	equ 0x0000000000005C00	; 256 bytes
+VBEModeInfoBlock:	equ 0x0000000000005C00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
 os_ACPITableAddress:	equ SystemVariables + 0x00
@@ -37,39 +37,41 @@ cpu_detected:		equ SystemVariables + 260
 
 ; DB - Starting at offset 384, increments by 1
 os_IOAPICCount:		equ SystemVariables + 384
-BootMode:		equ SystemVariables + 385
+BootMode:		equ SystemVariables + 385	; 'U' for UEFI, otherwise BIOS
 
 
 align 16
 GDTR32:					; Global Descriptors Table Register
-	dw gdt32_end - gdt32 - 1	; limit of GDT (size minus one)
-	dq gdt32			; linear address of GDT
+dw gdt32_end - gdt32 - 1		; limit of GDT (size minus one)
+dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-	dw 0x0000, 0x0000, 0x0000, 0x0000	; Null descriptor
-	dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
-	dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
+dq 0x0000000000000000			; Null descriptor
+dq 0x00CF9A000000FFFF			; 32-bit code descriptor
+					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+dq 0x00CF92000000FFFF			; 32-bit data descriptor
+					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 gdt32_end:
 
 ; -----------------------------------------------------------------------------
 align 16
 GDTR64:					; Global Descriptors Table Register
-	dw gdt64_end - gdt64 - 1	; limit of GDT (size minus one)
-	dq 0x0000000000001000		; linear address of GDT
+dw gdt64_end - gdt64 - 1		; limit of GDT (size minus one)
+dq 0x0000000000001000			; linear address of GDT
 
 gdt64:					; This structure is copied to 0x0000000000001000
 SYS64_NULL_SEL equ $-gdt64		; Null Segment
-	dq 0x0000000000000000
+dq 0x0000000000000000
 SYS64_CODE_SEL equ $-gdt64		; Code segment, read/execute, nonconforming
-	dq 0x0020980000000000		; 0x00209A0000000000
+dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
 SYS64_DATA_SEL equ $-gdt64		; Data segment, read/write, expand down
-	dq 0x0000900000000000		; 0x0020920000000000
+dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
 gdt64_end:
 
 IDTR64:					; Interrupt Descriptor Table Register
-	dw 256*16-1			; limit of IDT (size minus one) (4096 bytes - 1)
-	dq 0x0000000000000000		; linear address of IDT
+dw 256*16-1				; limit of IDT (size minus one) (4096 bytes - 1)
+dq 0x0000000000000000			; linear address of IDT
 ; -----------------------------------------------------------------------------
 
 ; VESA

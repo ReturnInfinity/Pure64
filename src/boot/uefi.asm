@@ -394,9 +394,11 @@ dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-dw 0x0000, 0x0000, 0x0000, 0x0000	; Null descriptor
-dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
-dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
+dq 0x0000000000000000			; Null descriptor
+dq 0x00CF9A000000FFFF			; 32-bit code descriptor
+					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+dq 0x00CF92000000FFFF			; 32-bit data descriptor
+					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 gdt32_end:
 
 align 4096
