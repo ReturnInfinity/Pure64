@@ -274,23 +274,14 @@ again:
 	lgdt [gdtr]
 
 	; Switch to compatibility mode
-	push SYS32_DATA_SEL
-	push 0x8000
-	pushf
-	push SYS32_CODE_SEL
-	push testcode
-	iretq
-
-	; Switch to compatibility mode
-;	mov rax, SYS32_CODE_SEL					; Compatibility mode
-;	push rax
-;	lea rax, [compatmode]
-;	push rax
-;	retfq
+	mov rax, SYS32_CODE_SEL					; Compatibility mode
+	push rax
+	lea rax, [compatmode]
+	push rax
+	retfq
 
 BITS 32
 compatmode:
-testcode:
 
 	; Switch to 32-bit mode
 	mov eax, SYS32_DATA_SEL					; Clear the segment registers
@@ -298,6 +289,7 @@ testcode:
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
+	mov ss, ax
 
 	; Deactivate IA-32e mode by clearing CR0.PG
 	mov eax, cr0
@@ -311,20 +303,14 @@ testcode:
 	; Disable IA-32e mode by setting IA32_EFER.LME = 0
 	mov ecx, 0xC0000080					; EFER MSR number
 	rdmsr							; Read EFER
-	and eax, 0xFFFFFEFF 					; LME (Bit 8)
+	and eax, 0xFFFFFEFF 					; Clear LME (Bit 8)
 	wrmsr							; Write EFER
 
-	xor eax, eax	
-;	mov eax, cr4
-;	btc eax, 7						; Clear PGE (Bit 7)
-;	btc eax, 5						; Clear PAE (Bit 5)
-;	bts eax, 4						; Set PSE (bit 4) - Enable 4MB pages
+	mov eax, 0x00000010					; Set PSE (Bit 4)
 	mov cr4, eax
 
 	; Enable legacy paged-protected mode by setting CR0.PG
-	mov eax, 0x11
-;	mov eax, cr0
-;	bts eax, 31						; Set PG (Bit 31)
+	mov eax, 0x00000001					; Set PM (Bit 0)
 	mov cr0, eax
 
 	jmp SYS32_CODE_SEL:0x8000				; 32-bit jump to set CS
