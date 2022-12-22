@@ -259,20 +259,60 @@ get_memmap:
 	; Stop interrupts
 	cli
 
+	; Build a 32-bit memory table
+	mov rdi, 0x200000
+	mov rax, 0x00000083
+	mov rcx, 1024
+again:
+	stosd
+	add rax, 0x400000
+	dec rcx
+	cmp rcx, 0
+	jne again	
+
+	; Load the custom GDT
+	lgdt [gdtr]
+
+	; Switch to compatibility mode
+	mov rax, SYS32_CODE_SEL					; Compatibility mode
+	push rax
+	lea rax, [compatmode]
+	push rax
+	retfq
+
+BITS 32
+compatmode:
+
 	; Switch to 32-bit mode
-	lgdt [gdtr]						; Load the custom GDT
-	xor eax, eax						; Clear the segment registers
+	mov eax, SYS32_DATA_SEL					; Clear the segment registers
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
 	mov gs, ax
 	mov ss, ax
-	mov rax, cr0
-	btc rax, 31						; Clear PG (Bit 31)
-	mov cr0, rax
 
-BITS 32
-	; Call Pure64
+	; Deactivate IA-32e mode by clearing CR0.PG
+	mov eax, cr0
+	btc eax, 31						; Clear PG (Bit 31)
+	mov cr0, eax
+
+	; Load CR3
+	mov eax, 0x200000
+	mov cr3, eax
+
+	; Disable IA-32e mode by setting IA32_EFER.LME = 0
+	mov ecx, 0xC0000080					; EFER MSR number
+	rdmsr							; Read EFER
+	and eax, 0xFFFFFEFF 					; Clear LME (Bit 8)
+	wrmsr							; Write EFER
+
+	mov eax, 0x00000010					; Set PSE (Bit 4)
+	mov cr4, eax
+
+	; Enable legacy paged-protected mode by setting CR0.PG
+	mov eax, 0x00000001					; Set PM (Bit 0)
+	mov cr0, eax
+
 	jmp SYS32_CODE_SEL:0x8000				; 32-bit jump to set CS
 
 BITS 64
@@ -396,16 +436,16 @@ align 16
 gdt:
 SYS64_NULL_SEL equ $-gdt		; Null Segment
 dq 0x0000000000000000
+SYS32_CODE_SEL equ $-gdt		; 32-bit code descriptor
+dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+SYS32_DATA_SEL equ $-gdt		; 32-bit data descriptor
+dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 SYS64_CODE_SEL equ $-gdt		; 64-bit code segment, read/execute, nonconforming
 dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
 SYS64_DATA_SEL equ $-gdt		; 64-bit data segment, read/write, expand down
 dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
 SYS64C_CODE_SEL equ $-gdt		; Compatibility mode code segment, read/execute, nonconforming
 dq 0x004F9A000000FFFF			; 54 32-bit size, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS32_CODE_SEL equ $-gdt		; 32-bit code descriptor
-dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS32_DATA_SEL equ $-gdt		; 32-bit data descriptor
-dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 gdt_end:
 
 align 4096
