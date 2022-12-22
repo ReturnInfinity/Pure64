@@ -259,16 +259,16 @@ get_memmap:
 	; Stop interrupts
 	cli
 
-	; Build a 32-bit memory table
+	; Build a 32-bit memory table for 4GiB of identity mapped memory
 	mov rdi, 0x200000
 	mov rax, 0x00000083
 	mov rcx, 1024
-again:
+nextpage:
 	stosd
 	add rax, 0x400000
 	dec rcx
 	cmp rcx, 0
-	jne again	
+	jne nextpage	
 
 	; Load the custom GDT
 	lgdt [gdtr]
@@ -282,9 +282,8 @@ again:
 
 BITS 32
 compatmode:
-
-	; Switch to 32-bit mode
-	mov eax, SYS32_DATA_SEL					; Clear the segment registers
+	; Set the segment registers
+	mov eax, SYS32_DATA_SEL
 	mov ds, ax
 	mov es, ax
 	mov fs, ax
@@ -297,7 +296,7 @@ compatmode:
 	mov cr0, eax
 
 	; Load CR3
-	mov eax, 0x200000
+	mov eax, 0x00200000					; Address of memory map
 	mov cr3, eax
 
 	; Disable IA-32e mode by setting IA32_EFER.LME = 0
@@ -444,8 +443,6 @@ SYS64_CODE_SEL equ $-gdt		; 64-bit code segment, read/execute, nonconforming
 dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
 SYS64_DATA_SEL equ $-gdt		; 64-bit data segment, read/write, expand down
 dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
-SYS64C_CODE_SEL equ $-gdt		; Compatibility mode code segment, read/execute, nonconforming
-dq 0x004F9A000000FFFF			; 54 32-bit size, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
 gdt_end:
 
 align 4096
