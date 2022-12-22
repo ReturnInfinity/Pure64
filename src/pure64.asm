@@ -59,7 +59,7 @@ start32:
 
 	mov edi, 0x5000			; Clear the info map and system variable
 	xor eax, eax
-	mov cx, 768
+	mov ecx, 768
 	rep stosd
 
 	xor eax, eax			; Clear all registers
