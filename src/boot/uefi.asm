@@ -260,7 +260,7 @@ get_memmap:
 	cli
 
 	; Switch to 32-bit mode
-	lgdt [GDTR32]						; Load a 32-bit GDT
+	lgdt [gdtr]						; Load the custom GDT
 	xor eax, eax						; Clear the segment registers
 	mov ds, ax
 	mov es, ax
@@ -273,7 +273,7 @@ get_memmap:
 
 BITS 32
 	; Call Pure64
-	jmp 8:0x8000						; 32-bit jump to set CS
+	jmp SYS32_CODE_SEL:0x8000				; 32-bit jump to set CS
 
 BITS 64
 exitfailure:
@@ -388,18 +388,25 @@ msg_OK:			dw u('OK'), 0
 tchar:			db 0, 0, 0, 0, 0, 0, 0, 0
 
 align 16
-GDTR32:					; Global Descriptors Table Register
-dw gdt32_end - gdt32 - 1		; limit of GDT (size minus one)
-dq gdt32				; linear address of GDT
+gdtr:					; Global Descriptors Table Register
+dw gdt_end - gdt - 1			; limit of GDT (size minus one)
+dq gdt					; linear address of GDT
 
 align 16
-gdt32:
-dq 0x0000000000000000			; Null descriptor
-dq 0x00CF9A000000FFFF			; 32-bit code descriptor
-					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-dq 0x00CF92000000FFFF			; 32-bit data descriptor
-					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
-gdt32_end:
+gdt:
+SYS64_NULL_SEL equ $-gdt		; Null Segment
+dq 0x0000000000000000
+SYS64_CODE_SEL equ $-gdt		; 64-bit code segment, read/execute, nonconforming
+dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+SYS64_DATA_SEL equ $-gdt		; 64-bit data segment, read/write, expand down
+dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
+SYS64C_CODE_SEL equ $-gdt		; Compatibility mode code segment, read/execute, nonconforming
+dq 0x004F9A000000FFFF			; 54 32-bit size, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+SYS32_CODE_SEL equ $-gdt		; 32-bit code descriptor
+dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+SYS32_DATA_SEL equ $-gdt		; 32-bit data descriptor
+dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
+gdt_end:
 
 align 4096
 PAYLOAD:
