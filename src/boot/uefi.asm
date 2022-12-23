@@ -12,8 +12,8 @@
 ; =============================================================================
 
 ; Set the desired screen resolution values below
-Horizontal_Resolution                         	equ 640
-Vertical_Resolution				equ 480
+Horizontal_Resolution		equ 640
+Vertical_Resolution		equ 480
 
 BITS 64
 ORG 0x00400000
@@ -132,11 +132,6 @@ EntryPoint:
 	; Clear screen
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_CLEAR_SCREEN]
-
-	; Display starting message
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_start]					; IN CHAR16 *String
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Find the address of the ACPI data from the UEFI configuration table
 	mov rax, [EFI_SYSTEM_TABLE]
@@ -420,11 +415,9 @@ dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 hextable: 		db '0123456789ABCDEF'
-msg_start:		dw u('UEFI '), 0
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
 msg_OK:			dw u('OK'), 0
-tchar:			db 0, 0, 0, 0, 0, 0, 0, 0
 
 align 16
 gdtr:					; Global Descriptors Table Register
