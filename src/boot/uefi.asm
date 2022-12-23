@@ -121,9 +121,9 @@ EntryPoint:
 	mov [OUTPUT], rax
 
 	; Set screen colour attributes
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
+;	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+;	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
+;	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
 	; Clear screen
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
@@ -175,6 +175,49 @@ nextentry:
 	mov rbx, [VIDEO]
 	add rbx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
 	mov rbx, [rbx]						; RAX holds the address of the Mode structure
+	mov eax, [rbx]						; RAX holds UINT32 MaxMode
+	mov [vid_max], rax
+	jmp vid_query
+	
+next_video_mode:
+	mov rax, [vid_current]
+	add rax, 1						; Increment the mode # to check
+	mov [vid_current], rax
+	mov rbx, [vid_max]
+	cmp rax, rbx
+	je skip_set_video					; If we have reached the max then bail out
+	
+vid_query:
+	; Query a video mode
+	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
+	mov rdx, [vid_current]					; IN UINT32 ModeNumber
+	lea r8, [vid_size]					; OUT UINTN *SizeOfInfo
+	lea r9, [vid_info]					; OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION **Info
+	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE]
+
+	; Check mode settings
+	mov rsi, [vid_info]
+	lodsd							; UINT32 - Version
+	lodsd							; UINT32 - HorizontalResolution
+	cmp eax, 640						; Desired horizontal
+	jne next_video_mode
+	lodsd							; UINT32 - VerticalResolution
+	cmp eax, 480						; Desired vertical
+	jne next_video_mode
+	lodsd							; EFI_GRAPHICS_PIXEL_FORMAT - PixelFormat (UINT32)
+	bt eax, 0						; Bit 0 is set for 32-bit colour mode
+	jnc next_video_mode
+
+	; Set the video mode
+	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
+	mov rdx, [vid_current]					; IN UINT32 ModeNumber
+	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE]
+
+skip_set_video:
+	; Gather video mode details
+	mov rbx, [VIDEO]
+	add rbx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
+	mov rbx, [rbx]						; RBX holds the address of the Mode structure
 	mov rax, [rbx+24]					; RAX holds the FB base
 	mov [FB], rax						; Save the FB base
 	mov rax, [rbx+32]					; RAX holds the FB size
@@ -191,7 +234,6 @@ nextentry:
 	mov [HR], rax						; Save the Horizontal Resolution
 	mov eax, [rbx+8]					; RAX holds the Vertical Resolution
 	mov [VR], rax						; Save the Vertical Resolution
-	; TODO - Check EFI_GRAPHICS_PIXEL_FORMAT (RBX+12) to make sure bit 0 is set (32-bit colour mode), otherwise parse EFI_PIXEL_BITMASK  
 
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
@@ -339,54 +381,53 @@ halt:
 ; debug_dump_(rax|eax|ax|al) -- Dump content of RAX, EAX, AX, or AL
 ;  IN:	RAX = content to dump
 ; OUT:	Nothing, all registers preserved
-debug_dump_rax:
-	rol rax, 8
-	call debug_dump_al
-	rol rax, 8
-	call debug_dump_al
-	rol rax, 8
-	call debug_dump_al
-	rol rax, 8
-	call debug_dump_al
-	rol rax, 32
-debug_dump_eax:
-	rol eax, 8
-	call debug_dump_al
-	rol eax, 8
-	call debug_dump_al
-	rol eax, 16
-debug_dump_ax:
-	rol ax, 8
-	call debug_dump_al
-	rol ax, 8
-debug_dump_al:
-	push rbx
-	push rax
-	mov rbx, hextable
-	push rax						; Save RAX since we work in 2 parts
-	shr al, 4						; Shift high 4 bits into low 4 bits
-	xlatb
-	mov [tchar+0], al
-	pop rax
-	and al, 0x0f						; Clear the high 4 bits
-	xlatb
-	mov [tchar+2], al
-	push rdx
-	push rcx
-	lea rdx, [tchar]
-	mov rcx, [OUTPUT]
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
-
-	pop rcx
-	pop rdx
-	pop rax
-	pop rbx
-	ret
+;debug_dump_rax:
+;	rol rax, 8
+;	call debug_dump_al
+;	rol rax, 8
+;	call debug_dump_al
+;	rol rax, 8
+;	call debug_dump_al
+;	rol rax, 8
+;	call debug_dump_al
+;	rol rax, 32
+;debug_dump_eax:
+;	rol eax, 8
+;	call debug_dump_al
+;	rol eax, 8
+;	call debug_dump_al
+;	rol eax, 16
+;debug_dump_ax:
+;	rol ax, 8
+;	call debug_dump_al
+;	rol ax, 8
+;debug_dump_al:
+;	push rbx
+;	push rax
+;	mov rbx, hextable
+;	push rax						; Save RAX since we work in 2 parts
+;	shr al, 4						; Shift high 4 bits into low 4 bits
+;	xlatb
+;	mov [tchar+0], al
+;	pop rax
+;	and al, 0x0f						; Clear the high 4 bits
+;	xlatb
+;	mov [tchar+2], al
+;	push rdx
+;	push rcx
+;	lea rdx, [tchar]
+;	mov rcx, [OUTPUT]
+;	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+;
+;	pop rcx
+;	pop rdx
+;	pop rax
+;	pop rbx
+;	ret
 ; -----------------------------------------------------------------------------
 
 
-align 1024
-
+align 2048
 CODE_END:
 
 ; Data begins here
@@ -408,6 +449,10 @@ memmapsize:		dq 8192
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
+vid_current:		dq 0
+vid_max:		dq 0
+vid_size:		dq 0
+vid_info:		dq 0
 
 ACPI_TABLE_GUID:
 dd 0xeb9d2d30
