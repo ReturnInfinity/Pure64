@@ -381,55 +381,6 @@ halt:
 	hlt
 	jmp halt
 
-; -----------------------------------------------------------------------------
-; debug_dump_(rax|eax|ax|al) -- Dump content of RAX, EAX, AX, or AL
-;  IN:	RAX = content to dump
-; OUT:	Nothing, all registers preserved
-;debug_dump_rax:
-;	rol rax, 8
-;	call debug_dump_al
-;	rol rax, 8
-;	call debug_dump_al
-;	rol rax, 8
-;	call debug_dump_al
-;	rol rax, 8
-;	call debug_dump_al
-;	rol rax, 32
-;debug_dump_eax:
-;	rol eax, 8
-;	call debug_dump_al
-;	rol eax, 8
-;	call debug_dump_al
-;	rol eax, 16
-;debug_dump_ax:
-;	rol ax, 8
-;	call debug_dump_al
-;	rol ax, 8
-;debug_dump_al:
-;	push rbx
-;	push rax
-;	mov rbx, hextable
-;	push rax						; Save RAX since we work in 2 parts
-;	shr al, 4						; Shift high 4 bits into low 4 bits
-;	xlatb
-;	mov [tchar+0], al
-;	pop rax
-;	and al, 0x0f						; Clear the high 4 bits
-;	xlatb
-;	mov [tchar+2], al
-;	push rdx
-;	push rcx
-;	lea rdx, [tchar]
-;	mov rcx, [OUTPUT]
-;	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
-;
-;	pop rcx
-;	pop rdx
-;	pop rax
-;	pop rbx
-;	ret
-; -----------------------------------------------------------------------------
-
 
 align 2048
 CODE_END:
