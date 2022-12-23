@@ -11,6 +11,10 @@
 ; dd if=PAYLOAD of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
 ; =============================================================================
 
+; Set the desired screen resolution values below
+Horizontal_Resolution                         	equ 640
+Vertical_Resolution				equ 480
+
 BITS 64
 ORG 0x00400000
 %define u(x) __utf16__(x)
@@ -121,9 +125,9 @@ EntryPoint:
 	mov [OUTPUT], rax
 
 	; Set screen colour attributes
-;	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-;	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
-;	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
 	; Clear screen
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
@@ -199,10 +203,10 @@ vid_query:
 	mov rsi, [vid_info]
 	lodsd							; UINT32 - Version
 	lodsd							; UINT32 - HorizontalResolution
-	cmp eax, 640						; Desired horizontal
+	cmp eax, Horizontal_Resolution
 	jne next_video_mode
 	lodsd							; UINT32 - VerticalResolution
-	cmp eax, 480						; Desired vertical
+	cmp eax, Vertical_Resolution
 	jne next_video_mode
 	lodsd							; EFI_GRAPHICS_PIXEL_FORMAT - PixelFormat (UINT32)
 	bt eax, 0						; Bit 0 is set for 32-bit colour mode
