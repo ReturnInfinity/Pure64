@@ -108,7 +108,7 @@ EntryPoint:
 
 	; When calling an EFI function the caller must pass the first 4 integer values in registers
 	; via RCX, RDX, R8, and R9
-	; 5 and onward are on the stack
+	; 5 and onward are on the stack after the 32 byte shadow space
 
 	; Save entry addresses
 	mov rax, [EFI_SYSTEM_TABLE]
@@ -142,13 +142,13 @@ nextentry:
 	dec rcx
 	cmp rcx, 0
 	je error						; Bail out as no ACPI data was detected
-	mov rbx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
+	mov rdx, [ACPI_TABLE_GUID]				; First 64 bits of the ACPI GUID
 	lodsq
-	cmp rax, rbx						; Compare the table data to the expected GUID data
+	cmp rax, rdx						; Compare the table data to the expected GUID data
 	jne nextentry
-	mov rbx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
+	mov rdx, [ACPI_TABLE_GUID+8]				; Second 64 bits of the ACPI GUID
 	lodsq
-	cmp rax, rbx						; Compare the table data to the expected GUID data
+	cmp rax, rdx						; Compare the table data to the expected GUID data
 	jne nextentry
 	lodsq							; Load the address of the ACPI table
 	mov [ACPI], rax						; Save the address
@@ -171,10 +171,10 @@ nextentry:
 	; 16 UINTN - SizeOfInfo
 	; 24 EFI_PHYSICAL_ADDRESS - FrameBufferBase
 	; 32 UINTN - FrameBufferSize
-	mov rbx, [VIDEO]
-	add rbx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
-	mov rbx, [rbx]						; RAX holds the address of the Mode structure
-	mov eax, [rbx]						; RAX holds UINT32 MaxMode
+	mov rax, [VIDEO]
+	add rax, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
+	mov rax, [rax]						; RAX holds the address of the Mode structure
+	mov eax, [rax]						; RAX holds UINT32 MaxMode
 	mov [vid_max], rax
 	jmp vid_query
 	
@@ -182,8 +182,8 @@ next_video_mode:
 	mov rax, [vid_current]
 	add rax, 1						; Increment the mode # to check
 	mov [vid_current], rax
-	mov rbx, [vid_max]
-	cmp rax, rbx
+	mov rdx, [vid_max]
+	cmp rax, rdx
 	je skip_set_video					; If we have reached the max then bail out
 	
 vid_query:
@@ -214,14 +214,14 @@ vid_query:
 
 skip_set_video:
 	; Gather video mode details
-	mov rbx, [VIDEO]
-	add rbx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
-	mov rbx, [rbx]						; RBX holds the address of the Mode structure
-	mov rax, [rbx+24]					; RAX holds the FB base
+	mov rcx, [VIDEO]
+	add rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
+	mov rcx, [rcx]						; RCX holds the address of the Mode structure
+	mov rax, [rcx+24]					; RAX holds the FB base
 	mov [FB], rax						; Save the FB base
-	mov rax, [rbx+32]					; RAX holds the FB size
+	mov rax, [rcx+32]					; RAX holds the FB size
 	mov [FBS], rax						; Save the FB size
-	mov rbx, [rbx+8]					; RBX holds the address of the EFI_GRAPHICS_OUTPUT_MODE_INFORMATION Structure
+	mov rcx, [rcx+8]					; RCX holds the address of the EFI_GRAPHICS_OUTPUT_MODE_INFORMATION Structure
 	; EFI_GRAPHICS_OUTPUT_MODE_INFORMATION Structure
 	; 0  UINT32 - Version
 	; 4  UINT32 - HorizontalResolution
@@ -229,9 +229,9 @@ skip_set_video:
 	; 12 EFI_GRAPHICS_PIXEL_FORMAT - PixelFormat (UINT32)
 	; 16 EFI_PIXEL_BITMASK - PixelInformation (4 UINT32 - RedMask, GreenMask, BlueMask, ReservedMask)
 	; 32 UINT32 - PixelsPerScanLine (Should be the same as HorizontalResolution)
-	mov eax, [rbx+4]					; RAX holds the Horizontal Resolution
+	mov eax, [rcx+4]					; RAX holds the Horizontal Resolution
 	mov [HR], rax						; Save the Horizontal Resolution
-	mov eax, [rbx+8]					; RAX holds the Vertical Resolution
+	mov eax, [rcx+8]					; RAX holds the Vertical Resolution
 	mov [VR], rax						; Save the Vertical Resolution
 
 	; Copy Pure64 to the correct memory address
@@ -271,12 +271,12 @@ get_memmap:
 	lea r8, [memmapkey]					; OUT UINTN *MapKey
 	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
 	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
+	sub rsp, 32						; Shadow space
 	push r10
-	sub rsp, 32
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
-	add rsp, 32
 	pop r10
+	add rsp, 32
 	cmp al, 5						; EFI_BUFFER_TOO_SMALL
 	je get_memmap						; Attempt again as the memmapsize was updated by EFI
 	cmp rax, EFI_SUCCESS
