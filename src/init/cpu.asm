@@ -89,13 +89,15 @@ init_cpu:
 
 ; Enable AVX
 	mov rax, cr4
-	bts rax, 18			; Set Operating System Support for OSXSAVE and OSXSTOR instructions (Bit 18)
+	bts rax, 18			; Enable OSXSAVE (Bit 18)
 	mov cr4, rax
 
-	xor rcx, rcx
+	mov rcx, 0                      ; Set load XCR Nr. 0
 	xgetbv				; Load XCR0 register
-	or eax, 7			; Set AVX, SSE, X87 bits
-	xsetbv				; Save back to XCR0
+	bts rax, 0                      ; Set X87 enable (Bit 0)
+	bts rax, 1                      ; Set SSE enable (Bit 1)
+	bts rax, 2                      ; Set AVX enable (Bit 2)
+	xsetbv				; Save XCR0 register
 
 ; Enable and Configure Local APIC
 	mov rsi, [os_LocalAPICAddress]
