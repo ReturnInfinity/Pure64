@@ -87,6 +87,16 @@ init_cpu:
 ; Enable Math Co-processor
 	finit
 
+; Enable AVX
+	mov rax, cr4
+	bts rax, 18			; Set Operating System Support for OSXSAVE and OSXSTOR instructions (Bit 18)
+	mov cr4, rax
+
+	xor rcx, rcx
+	xgetbv				; Load XCR0 register
+	or eax, 7			; Set AVX, SSE, X87 bits
+	xsetbv				; Save back to XCR0
+
 ; Enable and Configure Local APIC
 	mov rsi, [os_LocalAPICAddress]
 	test rsi, rsi
