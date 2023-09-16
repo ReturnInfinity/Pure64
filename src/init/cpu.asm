@@ -87,6 +87,26 @@ init_cpu:
 ; Enable Math Co-processor
 	finit
 
+; Enable AVX
+	mov eax, 1                      ; CPUID Feature information 1
+	cpuid                           ; Sets info in eax and ecx
+	bt ecx, 28                      ; AVX is supported if bit 28 is set in ecx
+	jnc avx_not_supported           ; Skip activating AVX if not supported
+
+avx_supported:
+
+	mov rax, cr4
+	bts rax, 18			; Enable OSXSAVE (Bit 18)
+	mov cr4, rax
+
+	mov rcx, 0                      ; Set load XCR Nr. 0
+	xgetbv				; Load XCR0 register
+	bts rax, 0                      ; Set X87 enable (Bit 0)
+	bts rax, 1                      ; Set SSE enable (Bit 1)
+	bts rax, 2                      ; Set AVX enable (Bit 2)
+	xsetbv				; Save XCR0 register
+avx_not_supported:
+
 ; Enable and Configure Local APIC
 	mov rsi, [os_LocalAPICAddress]
 	test rsi, rsi
