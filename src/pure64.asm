@@ -144,54 +144,58 @@ rtc_poll:
 	mov ecx, (gdt64_end - gdt64)
 	rep movsb			; Move it to final pos.
 
-; Create the Level 4 Page Map. (Maps 4GBs of 2MB pages)
-; First create a PML4 entry.
+; Create the Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000002000, create the first entry there
-; A single PML4 entry can map 512GB with 2MB pages.
+; A single PML4 entry can map 512GiB with 2MiB pages
+; A single PML4 entry is 8 bytes in length
 	cld
-	mov edi, 0x00002000		; Create a PML4 entry for the first 4GB of RAM
-	mov eax, 0x00003007		; location of low PDP
+	mov edi, 0x00002000		; Create a PML4 entry for the first 4GiB of RAM
+	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
 	stosd
 	xor eax, eax
 	stosd
 
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00004007		; location of high PDP
+	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
 	stosd
 	xor eax, eax
 	stosd
 
-; Create the PDP entries.
-; The first PDP is stored at 0x0000000000003000, create the first entries there
-; A single PDP entry can map 1GB with 2MB pages
-	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+; Create the Page-Directory-Pointer-Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000003000, create the first entry there
+; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE is 8 bytes in length
+; 4 entries are created to map the first 4GiB of RAM
+	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
-	mov eax, 0x00010007		; location of first low PD
-create_pdpe_low:
+	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
+create_pdpte_low:
 	stosd
 	push eax
 	xor eax, eax
 	stosd
 	pop eax
-	add eax, 0x00001000		; 4K later (512 records x 8 bytes)
+	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
 	cmp ecx, 0
-	jne create_pdpe_low
+	jne create_pdpte_low
 
-; Create the low PD entries.
-	mov edi, 0x00010000
+; Create the low Page-Directory Entries (PDE).
+; A single PDE can map 2MiB of RAM
+; A single PDE is 8 bytes in length
+	mov edi, 0x00010000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 	xor ecx, ecx
-pd_low:					; Create a 2 MiB page
+pde_low:				; Create a 2 MiB page
 	stosd
 	push eax
 	xor eax, eax
 	stosd
 	pop eax
-	add eax, 0x00200000
+	add eax, 0x00200000		; Increment by 2MiB
 	inc ecx
 	cmp ecx, 2048
-	jne pd_low			; Create 2048 2 MiB page maps.
+	jne pde_low			; Create 2048 2 MiB page maps.
 
 ; Load the GDT
 	lgdt [GDTR64]
