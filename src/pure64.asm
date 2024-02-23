@@ -506,8 +506,10 @@ clearmapnext:
 	mov cl, [os_IOAPICCount]
 	mov rsi, os_IOAPICAddress
 nextIOAPIC:
-	lodsq
+	lodsq				; I/O APIC Address
 	stosq
+	lodsq				; Global System Interrupt Base
+	stosq	
 	sub cl, 1
 	cmp cl, 0
 	jne nextIOAPIC

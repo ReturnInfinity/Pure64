@@ -151,7 +151,7 @@ parseAPICTable:
 	xor eax, eax
 	lodsd				; Local APIC Address
 	mov [os_LocalAPICAddress], rax	; Save the Address of the Local APIC
-	lodsd				; Flags
+	lodsd				; Flags (1 = Dual 8259 Legacy PICs Installed)
 	add ebx, 44
 	mov rdi, 0x0000000000005100	; Valid CPU IDs
 
@@ -201,7 +201,7 @@ APICioapic:
 	lodsb				; IO APIC ID
 	lodsb				; Reserved
 	xor eax, eax
-	lodsd				; IO APIC Address
+	lodsd				; I/O APIC Address
 	push rdi
 	push rcx
 	mov rdi, os_IOAPICAddress
@@ -210,9 +210,9 @@ APICioapic:
 	shl cx, 3			; Quick multiply by 8
 	add rdi, rcx
 	pop rcx
-	stosd				; Store the IO APIC Address
-	lodsd				; System Vector Base
-	stosd				; Store the IO APIC Vector Base
+	stosd				; Store the I/O APIC Address
+	lodsd				; Global System Interrupt Base
+	stosd				; Store the Global System Interrupt Base
 	pop rdi
 	inc byte [os_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
@@ -221,10 +221,20 @@ APICinterruptsourceoverride:
 	xor eax, eax
 	lodsb				; Length (will be set to 10)
 	add ebx, eax
-	lodsb				; Bus
-	lodsb				; Source
+	mov rdi, os_IOAPICIntSource
+	xor ecx, ecx
+	mov cl, [os_IOAPICIntSourceC]
+	shl cx, 3			; Quick multiply by 8
+	add rdi, rcx
+	lodsb				; Bus Source
+	stosb
+	lodsb				; IRQ Source
+	stosb
 	lodsd				; Global System Interrupt
-	lodsw				; Flags
+	stosd
+	lodsw				; Flags - bit 1 Low(1)/High(0), Bit 3 Level(1)/Edge(0)
+	stosw
+	inc byte [os_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
 APICx2apic:

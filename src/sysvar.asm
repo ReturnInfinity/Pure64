@@ -14,7 +14,7 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 ; Memory locations
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
-SystemVariables:	equ 0x0000000000005A00
+SystemVariables:	equ 0x0000000000005800
 VBEModeInfoBlock:	equ 0x0000000000005C00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
@@ -23,22 +23,25 @@ os_LocalX2APICAddress:	equ SystemVariables + 0x10
 os_Counter_Timer:	equ SystemVariables + 0x18
 os_Counter_RTC:		equ SystemVariables + 0x20
 os_LocalAPICAddress:	equ SystemVariables + 0x28
-os_IOAPICAddress:	equ SystemVariables + 0x30
 os_HPETAddress:		equ SystemVariables + 0x38
 
-; DD - Starting at offset 128, increments by 4
-os_BSP:			equ SystemVariables + 128
-mem_amount:		equ SystemVariables + 132	; in MiB
+; DD - Starting at offset 0x80, increments by 4
+os_BSP:			equ SystemVariables + 0x80
+mem_amount:		equ SystemVariables + 0x84	; in MiB
 
-; DW - Starting at offset 256, increments by 2
-cpu_speed:		equ SystemVariables + 256
-cpu_activated:		equ SystemVariables + 258
-cpu_detected:		equ SystemVariables + 260
+; DW - Starting at offset 0x100, increments by 2
+cpu_speed:		equ SystemVariables + 0x100
+cpu_activated:		equ SystemVariables + 0x102
+cpu_detected:		equ SystemVariables + 0x104
 
-; DB - Starting at offset 384, increments by 1
-os_IOAPICCount:		equ SystemVariables + 384
-BootMode:		equ SystemVariables + 385	; 'U' for UEFI, otherwise BIOS
+; DB - Starting at offset 0x180, increments by 1
+os_IOAPICCount:		equ SystemVariables + 0x180
+BootMode:		equ SystemVariables + 0x181	; 'U' for UEFI, otherwise BIOS
+os_IOAPICIntSourceC:	equ SystemVariables + 0x182
 
+; Lists - Starting at offset 0x200
+os_IOAPICAddress:	equ SystemVariables + 0x200	; 16 bytes each
+os_IOAPICIntSource:	equ SystemVariables + 0x280	; 8 bytes each
 
 align 16
 GDTR32:					; Global Descriptors Table Register
