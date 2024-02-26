@@ -494,6 +494,8 @@ clearmapnext:
 	mov di, 0x5030
 	mov al, [os_IOAPICCount]
 	stosb
+	mov al, [os_IOAPICIntSourceC]
+	stosb
 
 	mov di, 0x5040
 	mov rax, [os_HPETAddress]

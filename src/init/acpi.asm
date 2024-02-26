@@ -221,20 +221,24 @@ APICinterruptsourceoverride:
 	xor eax, eax
 	lodsb				; Length (will be set to 10)
 	add ebx, eax
-;	mov rdi, os_IOAPICIntSource
-;	xor ecx, ecx
-;	mov cl, [os_IOAPICIntSourceC]
-;	shl cx, 3			; Quick multiply by 8
-;	add rdi, rcx
+	push rdi
+	push rcx
+	mov rdi, IM_IOAPICIntSource	; Copy this data directly to the InfoMap
+	xor ecx, ecx
+	mov cl, [os_IOAPICIntSourceC]
+	shl cx, 3			; Quick multiply by 8
+	add rdi, rcx
 	lodsb				; Bus Source
-;	stosb
+	stosb
 	lodsb				; IRQ Source
-;	stosb
+	stosb
 	lodsd				; Global System Interrupt
-;	stosd
+	stosd
 	lodsw				; Flags - bit 1 Low(1)/High(0), Bit 3 Level(1)/Edge(0)
-;	stosw
-;	inc byte [os_IOAPICIntSourceC]
+	stosw
+	pop rcx
+	pop rdi
+	inc byte [os_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
 APICx2apic:
