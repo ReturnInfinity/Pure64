@@ -57,10 +57,10 @@ start32:
 	mov fs, ax
 	mov gs, ax
 
-	mov edi, 0x5000			; Clear the info map and system variable
+	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
-	mov ecx, 768
-	rep stosd
+	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
+	rep stosd			; Don't overwrite the VBE data at 0x5F00
 
 	xor eax, eax			; Clear all registers
 	xor ebx, ebx

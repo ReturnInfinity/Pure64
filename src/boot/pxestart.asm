@@ -191,7 +191,7 @@ sign dw 0xAA55				; BIOS boot sector signature
 
 times 1024-$+$$ db 0			; Padding so that Pure64 will be aligned at 0x8000
 
-VBEModeInfoBlock: equ 0x5C00
+VBEModeInfoBlock: equ 0x5F00
 ; VESA
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes

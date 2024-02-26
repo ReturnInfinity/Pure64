@@ -15,7 +15,7 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
 SystemVariables:	equ 0x0000000000005800
-VBEModeInfoBlock:	equ 0x0000000000005C00		; 256 bytes
+VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
 os_ACPITableAddress:	equ SystemVariables + 0x00

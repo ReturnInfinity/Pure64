@@ -225,7 +225,7 @@ times 510-$+$$ db 0
 
 sign dw 0xAA55
 
-VBEModeInfoBlock: equ 0x5C00
+VBEModeInfoBlock: equ 0x5F00
 ; VESA
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes
