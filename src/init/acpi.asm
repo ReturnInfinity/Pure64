@@ -169,8 +169,8 @@ readAPICstructures:
 ;	je APICnmi
 ;	cmp al, 0x04			; Local APIC NMI
 ;	je APIClocalapicnmi
-;	cmp al, 0x05			; Local APIC Address Override
-;	je APICaddressoverride
+	cmp al, 0x05			; Local APIC Address Override
+	je APICaddressoverride
 	cmp al, 0x09			; Processor Local x2APIC
 	je APICx2apic
 ;	cmp al, 0x0A			; Local x2APIC NMI
@@ -178,7 +178,7 @@ readAPICstructures:
 
 	jmp APICignore
 
-APICapic:
+APICapic:				; Entry Type 0
 	xor eax, eax
 	xor edx, edx
 	lodsb				; Length (will be set to 8)
@@ -194,7 +194,7 @@ APICapic:
 	stosb
 	jmp readAPICstructures		; Read the next structure
 
-APICioapic:
+APICioapic:				; Entry Type 1
 	xor eax, eax
 	lodsb				; Length (will be set to 12)
 	add ebx, eax
@@ -218,7 +218,7 @@ APICioapic:
 	inc byte [os_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
 
-APICinterruptsourceoverride:
+APICinterruptsourceoverride:		; Entry Type 2
 	xor eax, eax
 	lodsb				; Length (will be set to 10)
 	add ebx, eax
@@ -242,7 +242,14 @@ APICinterruptsourceoverride:
 	inc byte [os_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
-APICx2apic:
+APICaddressoverride:			; Entry Type 5
+	lodsb				; Length (will be set to 10)
+	lodsw				; Reserved
+	lodsq				; 64-bit physical address of Local APIC
+	mov [os_ACPITableAddress], rax	; Overwrite the initial value from the MADT header
+	jmp readAPICstructures		; Read the next structure
+
+APICx2apic:				; Entry Type 9
 	xor eax, eax
 	xor edx, edx
 	lodsb				; Length (will be set to 16)
