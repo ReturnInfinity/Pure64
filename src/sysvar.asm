@@ -14,7 +14,8 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 ; Memory locations
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
-IM_IOAPICIntSource:	equ 0x0000000000005700
+IM_IOAPICAddress:	equ 0x0000000000005600		; 16 bytes per entry
+IM_IOAPICIntSource:	equ 0x0000000000005700		; 8 bytes per entry
 SystemVariables:	equ 0x0000000000005800
 VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
@@ -39,9 +40,6 @@ cpu_detected:		equ SystemVariables + 0x104
 os_IOAPICCount:		equ SystemVariables + 0x180
 BootMode:		equ SystemVariables + 0x181	; 'U' for UEFI, otherwise BIOS
 os_IOAPICIntSourceC:	equ SystemVariables + 0x182
-
-; Lists - Starting at offset 0x200
-os_IOAPICAddress:	equ SystemVariables + 0x200	; 16 bytes each
 
 align 16
 GDTR32:					; Global Descriptors Table Register

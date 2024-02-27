@@ -504,17 +504,6 @@ clearmapnext:
 	mov di, 0x5060
 	mov rax, [os_LocalAPICAddress]
 	stosq
-	xor ecx, ecx
-	mov cl, [os_IOAPICCount]
-	mov rsi, os_IOAPICAddress
-nextIOAPIC:
-	lodsq				; I/O APIC Address
-	stosq
-	lodsq				; Global System Interrupt Base
-	stosq	
-	sub cl, 1
-	cmp cl, 0
-	jne nextIOAPIC
 
 	mov di, 0x5080
 	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)

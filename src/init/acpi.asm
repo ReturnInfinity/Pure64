@@ -198,21 +198,22 @@ APICioapic:
 	xor eax, eax
 	lodsb				; Length (will be set to 12)
 	add ebx, eax
-	lodsb				; IO APIC ID
-	lodsb				; Reserved
-	xor eax, eax
-	lodsd				; I/O APIC Address
 	push rdi
 	push rcx
-	mov rdi, os_IOAPICAddress
+	mov rdi, IM_IOAPICAddress	; Copy this data directly to the InfoMap
 	xor ecx, ecx
 	mov cl, [os_IOAPICCount]
-	shl cx, 3			; Quick multiply by 8
+	shl cx, 4			; Quick multiply by 16
 	add rdi, rcx
 	pop rcx
-	stosd				; Store the I/O APIC Address
+	xor eax, eax
+	lodsb				; IO APIC ID
+	stosd
+	lodsb				; Reserved
+	lodsd				; I/O APIC Address
+	stosd
 	lodsd				; Global System Interrupt Base
-	stosd				; Store the Global System Interrupt Base
+	stosd
 	pop rdi
 	inc byte [os_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
