@@ -135,25 +135,15 @@ clearcs64_ap:
 	lidt [IDTR64]			; load IDT register
 
 ; Enable Local APIC on AP
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
-	mov rdi, rsi
-	lodsd
-	or eax, 0000000100000000b
-	stosd
+;	mov rsi, [os_LocalAPICAddress]
+;	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
+;	mov rdi, rsi
+;	lodsd
+;	or eax, 0000000100000000b
+;	stosd
 
 	call init_cpu			; Setup CPU
 
-	lock inc word [cpu_activated]
-	xor eax, eax
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov rdi, 0x00005700		; The location where the cpu values are stored
-	add rdi, rax			; RDI points to infomap CPU area + APIC ID. ex F701 would be APIC ID 1
-	mov al, 1
-	stosb
 	sti				; Activate interrupts for SMP
 	jmp ap_sleep
 

@@ -471,7 +471,7 @@ clearmapnext:
 	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
-; Build the infomap
+; Build the InfoMap
 	xor edi, edi
 	mov di, 0x5000
 	mov rax, [os_ACPITableAddress]

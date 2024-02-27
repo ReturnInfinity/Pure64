@@ -88,22 +88,19 @@ init_cpu:
 	finit
 
 ; Enable AVX
-	mov eax, 1                      ; CPUID Feature information 1
-	cpuid                           ; Sets info in eax and ecx
-	bt ecx, 28                      ; AVX is supported if bit 28 is set in ecx
-	jnc avx_not_supported           ; Skip activating AVX if not supported
-
+	mov eax, 1			; CPUID Feature information 1
+	cpuid				; Sets info in eax and ecx
+	bt ecx, 28			; AVX is supported if bit 28 is set in ecx
+	jnc avx_not_supported		; Skip activating AVX if not supported
 avx_supported:
-
 	mov rax, cr4
 	bts rax, 18			; Enable OSXSAVE (Bit 18)
 	mov cr4, rax
-
-	mov rcx, 0                      ; Set load XCR Nr. 0
+	mov rcx, 0			; Set load XCR Nr. 0
 	xgetbv				; Load XCR0 register
-	bts rax, 0                      ; Set X87 enable (Bit 0)
-	bts rax, 1                      ; Set SSE enable (Bit 1)
-	bts rax, 2                      ; Set AVX enable (Bit 2)
+	bts rax, 0			; Set X87 enable (Bit 0)
+	bts rax, 1			; Set SSE enable (Bit 1)
+	bts rax, 2			; Set AVX enable (Bit 2)
 	xsetbv				; Save XCR0 register
 avx_not_supported:
 
@@ -154,8 +151,18 @@ avx_not_supported:
 ;	bts eax, 16			;bit16:Mask interrupts (0==Unmasked, 1== Masked)
 ;	mov dword [rsi+0x370], eax
 
+	lock inc word [cpu_activated]
+	xor eax, eax
+	mov rsi, [os_LocalAPICAddress]
+	add rsi, 0x20			; Add the offset for the APIC ID location
+	lodsd				; APIC ID is stored in bits 31:24
+	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+	mov rdi, 0x00005700		; The location where the cpu values are stored
+	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5701 would be APIC ID 1
+	mov al, 1
+	stosb
 
-ret
+	ret
 
 
 ; =============================================================================

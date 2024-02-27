@@ -93,8 +93,6 @@ smp_wait2:
 
 ; Finish up
 noMP:
-	lock inc word [cpu_activated]	; BSP adds one here
-
 	xor eax, eax
 	mov rsi, [os_LocalAPICAddress]
 	add rsi, 0x20			; Add the offset for the APIC ID location
