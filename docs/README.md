@@ -202,6 +202,22 @@ IOAPIC list format:
 <tr><td>0x00</td><td>32-bit</td><td>Reserved</td><td>This value should be 0</td></tr>
 </table>
 
+IOAPIC_INTSOURCE list format:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Offset</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
+<tr><td>0x00</td><td>8-bit</td><td>Bus</td><td>0</td></tr>
+<tr><td>0x00</td><td>8-bit</td><td>Source</td><td>Bus-relative interrupt source</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Global System Interrupt</td><td>The Global System Interrupt that this bus-relative interrupt source will signal</td></tr>
+<tr><td>0x00</td><td>16-bit</td><td>Flags</td><td>MPS INTI flags</td></tr>
+</table>
+
+MPS INTI flags:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Flags</th><th>Bit Length</th><th>Bit Offset</th><th>Description</th></tr>
+<tr><td>Polarity</td><td>2</td><td>0</td><td>01 Active high, 11 Active low</td></tr>
+<tr><td>Trigger Mode</td><td>2</td><td>2</td><td>01 Edge-triggered, 11 Level-triggered</td></tr>
+</table>
+
 A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
