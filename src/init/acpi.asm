@@ -171,6 +171,12 @@ readAPICstructures:
 ;	je APIClocalapicnmi
 	cmp al, 0x05			; Local APIC Address Override
 	je APICaddressoverride
+;	cmp al, 0x06			; I/O SAPIC Structure
+;	je APICiosapic
+;	cmp al, 0x07			; Local SAPIC Structure
+;	je APIClocalsapic
+;	cmp al, 0x08			; Platform Interrupt Source Structure
+;	je APICplatformint
 	cmp al, 0x09			; Processor Local x2APIC
 	je APICx2apic
 ;	cmp al, 0x0A			; Local x2APIC NMI

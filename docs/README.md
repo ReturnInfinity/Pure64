@@ -193,6 +193,15 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5700 - 0x57FF</td><td>8 byte entries</td><td>IOAPIC_INTSOURCE</td><td>I/O APIC Interrupt Source Override Entries (based on IOAPIC_INTSOURCE_COUNT)</td></tr>
 </table>
 
+IOAPIC list format:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Offset</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
+<tr><td>0x00</td><td>32-bit</td><td>I/O APIC ID</td><td>The ID of an I/O APIC</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>I/O APIC Address</td><td>The 32-bit physical address to access this I/O APIC</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Global System Interrupt Base</td><td>The global system interrupt number where this I/O APIC’s interrupt inputs start</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Reserved</td><td>This value should be 0</td></tr>
+</table>
+
 A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
