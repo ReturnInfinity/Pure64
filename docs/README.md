@@ -175,18 +175,47 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5016 - 0x501F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5020</td><td>32-bit</td><td>RAMAMOUNT</td><td>Amount of system RAM in Mebibytes (<a href="http://en.wikipedia.org/wiki/Mebibyte">MiB</a>)</td></tr>
 <tr><td>0x5022 - 0x502F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
-<tr><td>0x5030</td><td>8-bit</td><td>IOAPIC_COUNT</td><td>Number of IO-APICs in the system</td></tr>
-<tr><td>0x5031 - 0x503F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5030</td><td>8-bit</td><td>IOAPIC_COUNT</td><td>Number of I/O APICs in the system</td></tr>
+<tr><td>0x5031</td><td>8-bit</td><td>IOAPIC_INTSOURCE_COUNT</td><td>Number of I/O APIC Interrupt Source Override</td></tr>
+<tr><td>0x5032 - 0x503F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5040</td><td>64-bit</td><td>HPET</td><td>Base memory address for the High Precision Event Timer</td></tr>
 <tr><td>0x5048 - 0x505F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5060</td><td>64-bit</td><td>LAPIC</td><td>Local APIC address</td></tr>
-<tr><td>0x5068 - 0x507F</td><td>64-bit</td><td>IOAPIC</td><td>IO-APIC addresses (based on IOAPIC_COUNT)</td></tr>
+<tr><td>0x5068 - 0x507F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5080</td><td>32-bit</td><td>VIDEO_BASE</td><td>Base memory for video (if graphics mode set)</td></tr>
 <tr><td>0x5084</td><td>16-bit</td><td>VIDEO_X</td><td>X resolution</td></tr>
 <tr><td>0x5086</td><td>16-bit</td><td>VIDEO_Y</td><td>Y resolution</td></tr>
 <tr><td>0x5088</td><td>8-bit</td><td>VIDEO_DEPTH</td><td>Color depth</td></tr>
 <tr><td>0x5089 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
-<tr><td>0x5100...</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
+<tr><td>0x5100 - 0x51FF</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
+<tr><td>0x5200 - 0x56FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5600 - 0x56FF</td><td>16 byte entries</td><td>IOAPIC</td><td>I/O APIC addresses (based on IOAPIC_COUNT)</td></tr>
+<tr><td>0x5700 - 0x57FF</td><td>8 byte entries</td><td>IOAPIC_INTSOURCE</td><td>I/O APIC Interrupt Source Override Entries (based on IOAPIC_INTSOURCE_COUNT)</td></tr>
+</table>
+
+IOAPIC list format:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Offset</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
+<tr><td>0x00</td><td>32-bit</td><td>I/O APIC ID</td><td>The ID of an I/O APIC</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>I/O APIC Address</td><td>The 32-bit physical address to access this I/O APIC</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Global System Interrupt Base</td><td>The global system interrupt number where this I/O APIC’s interrupt inputs start</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Reserved</td><td>This value should be 0</td></tr>
+</table>
+
+IOAPIC_INTSOURCE list format:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Offset</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
+<tr><td>0x00</td><td>8-bit</td><td>Bus</td><td>0</td></tr>
+<tr><td>0x00</td><td>8-bit</td><td>Source</td><td>Bus-relative interrupt source</td></tr>
+<tr><td>0x00</td><td>32-bit</td><td>Global System Interrupt</td><td>The Global System Interrupt that this bus-relative interrupt source will signal</td></tr>
+<tr><td>0x00</td><td>16-bit</td><td>Flags</td><td>MPS INTI flags</td></tr>
+</table>
+
+MPS INTI flags:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Flags</th><th>Bit Length</th><th>Bit Offset</th><th>Description</th></tr>
+<tr><td>Polarity</td><td>2</td><td>0</td><td>01 Active high, 11 Active low</td></tr>
+<tr><td>Trigger Mode</td><td>2</td><td>2</td><td>01 Edge-triggered, 11 Level-triggered</td></tr>
 </table>
 
 A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.

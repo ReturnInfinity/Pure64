@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; hard drive without making use of the file system.
@@ -225,7 +225,7 @@ times 510-$+$$ db 0
 
 sign dw 0xAA55
 
-VBEModeInfoBlock: equ 0x5C00
+VBEModeInfoBlock: equ 0x5F00
 ; VESA
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes

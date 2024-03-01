@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; System Variables
 ; =============================================================================
@@ -14,31 +14,32 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 ; Memory locations
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
-SystemVariables:	equ 0x0000000000005A00
-VBEModeInfoBlock:	equ 0x0000000000005C00		; 256 bytes
+IM_IOAPICAddress:	equ 0x0000000000005600		; 16 bytes per entry
+IM_IOAPICIntSource:	equ 0x0000000000005700		; 8 bytes per entry
+SystemVariables:	equ 0x0000000000005800
+VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
-os_ACPITableAddress:	equ SystemVariables + 0x00
-os_LocalX2APICAddress:	equ SystemVariables + 0x10
-os_Counter_Timer:	equ SystemVariables + 0x18
-os_Counter_RTC:		equ SystemVariables + 0x20
-os_LocalAPICAddress:	equ SystemVariables + 0x28
-os_IOAPICAddress:	equ SystemVariables + 0x30
-os_HPETAddress:		equ SystemVariables + 0x38
+p_ACPITableAddress:	equ SystemVariables + 0x00
+p_LocalAPICAddress:	equ SystemVariables + 0x10
+p_Counter_Timer:	equ SystemVariables + 0x18
+p_Counter_RTC:		equ SystemVariables + 0x20
+p_HPETAddress:		equ SystemVariables + 0x28
 
-; DD - Starting at offset 128, increments by 4
-os_BSP:			equ SystemVariables + 128
-mem_amount:		equ SystemVariables + 132	; in MiB
+; DD - Starting at offset 0x80, increments by 4
+p_BSP:			equ SystemVariables + 0x80
+p_mem_amount:		equ SystemVariables + 0x84	; in MiB
 
-; DW - Starting at offset 256, increments by 2
-cpu_speed:		equ SystemVariables + 256
-cpu_activated:		equ SystemVariables + 258
-cpu_detected:		equ SystemVariables + 260
+; DW - Starting at offset 0x100, increments by 2
+p_cpu_speed:		equ SystemVariables + 0x100
+p_cpu_activated:	equ SystemVariables + 0x102
+p_cpu_detected:		equ SystemVariables + 0x104
 
-; DB - Starting at offset 384, increments by 1
-os_IOAPICCount:		equ SystemVariables + 384
-BootMode:		equ SystemVariables + 385	; 'U' for UEFI, otherwise BIOS
-
+; DB - Starting at offset 0x180, increments by 1
+p_IOAPICCount:		equ SystemVariables + 0x180
+p_BootMode:		equ SystemVariables + 0x181	; 'U' for UEFI, otherwise BIOS
+p_IOAPICIntSourceC:	equ SystemVariables + 0x182
+p_x2APIC:		equ SystemVariables + 0x183
 
 align 16
 GDTR32:					; Global Descriptors Table Register

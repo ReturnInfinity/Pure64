@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 PXE Start -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; This is a stub file for loading Pure64 and a kernel/software package via PXE.
 ;
@@ -191,7 +191,7 @@ sign dw 0xAA55				; BIOS boot sector signature
 
 times 1024-$+$$ db 0			; Padding so that Pure64 will be aligned at 0x8000
 
-VBEModeInfoBlock: equ 0x5C00
+VBEModeInfoBlock: equ 0x5F00
 ; VESA
 ; Mandatory information for all VBE revisions
 VBEModeInfoBlock.ModeAttributes		equ VBEModeInfoBlock + 0	; DW - mode attributes

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
@@ -57,10 +57,10 @@ start32:
 	mov fs, ax
 	mov gs, ax
 
-	mov edi, 0x5000			; Clear the info map and system variable
+	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
-	mov ecx, 768
-	rep stosd
+	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
+	rep stosd			; Don't overwrite the VBE data at 0x5F00
 
 	xor eax, eax			; Clear all registers
 	xor ebx, ebx
@@ -263,7 +263,7 @@ clearcs64:
 
 ; Save the Boot Mode (it will be 'U' if started via UEFI)
 	mov al, [0x8005]
-	mov [BootMode], al		; Save the byte as a Boot Mode flag
+	mov [p_BootMode], al		; Save the byte as a Boot Mode flag
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -271,7 +271,7 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-	mov al, [BootMode]
+	mov al, [p_BootMode]
 	cmp al, 'U'
 	je uefi_memmap
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
@@ -313,7 +313,7 @@ processfree:
 
 end820:
 	shl ebx, 1
-	mov dword [mem_amount], ebx
+	mov dword [p_mem_amount], ebx
 	shr ebx, 1
 	jmp memmap_end
 
@@ -323,7 +323,7 @@ uefi_memmap:				; TODO fix this as it is a terrible hack
 	mov rcx, 32
 	rep stosb
 	mov ebx, 64
-	mov dword [mem_amount], ebx
+	mov dword [p_mem_amount], ebx
 memmap_end:
 
 ; Create the high memory map
@@ -444,7 +444,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 
 	lidt [IDTR64]			; load IDT register
 
-; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
+; Clear memory 0xf000 - 0xf7ff for the InfoMap (2048 bytes)
 	xor eax, eax
 	mov ecx, 256
 	mov edi, 0x0000F000
@@ -453,6 +453,21 @@ clearmapnext:
 	dec ecx
 	cmp ecx, 0
 	jne clearmapnext
+
+; Read APIC Address from MSR
+	mov ecx, 0x0000001B		; APIC_BASE
+	rdmsr				; Returns APIC in EDX:EAX
+	and eax, 0xFFFFF000		; Clear lower 12 bits
+	shl rdx, 32			; Shift lower 32 bits to upper 32 bits
+	add rax, rdx
+	mov [p_LocalAPICAddress], rax
+
+; Check for x2APIC support
+	mov eax, 1
+	cpuid				; x2APIC is supported if bit 21 is set
+	shr ecx, 21
+	and cl, 1
+	mov byte [p_x2APIC], cl
 
 	call init_acpi			; Find and process the ACPI tables
 
@@ -463,7 +478,7 @@ clearmapnext:
 	call init_smp			; Init of SMP
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
+	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
@@ -471,46 +486,39 @@ clearmapnext:
 	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
-; Build the infomap
+; Build the InfoMap
 	xor edi, edi
 	mov di, 0x5000
-	mov rax, [os_ACPITableAddress]
+	mov rax, [p_ACPITableAddress]
 	stosq
-	mov eax, [os_BSP]
+	mov eax, [p_BSP]
 	stosd
 
 	mov di, 0x5010
-	mov ax, [cpu_speed]
+	mov ax, [p_cpu_speed]
 	stosw
-	mov ax, [cpu_activated]
+	mov ax, [p_cpu_activated]
 	stosw
-	mov ax, [cpu_detected]
+	mov ax, [p_cpu_detected]
 	stosw
 
 	mov di, 0x5020
-	mov ax, [mem_amount]
+	mov ax, [p_mem_amount]
 	stosd
 
 	mov di, 0x5030
-	mov al, [os_IOAPICCount]
+	mov al, [p_IOAPICCount]
+	stosb
+	mov al, [p_IOAPICIntSourceC]
 	stosb
 
 	mov di, 0x5040
-	mov rax, [os_HPETAddress]
+	mov rax, [p_HPETAddress]
 	stosq
 
 	mov di, 0x5060
-	mov rax, [os_LocalAPICAddress]
+	mov rax, [p_LocalAPICAddress]
 	stosq
-	xor ecx, ecx
-	mov cl, [os_IOAPICCount]
-	mov rsi, os_IOAPICAddress
-nextIOAPIC:
-	lodsq
-	stosq
-	sub cl, 1
-	cmp cl, 0
-	jne nextIOAPIC
 
 	mov di, 0x5080
 	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)

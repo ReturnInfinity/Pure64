@@ -1,13 +1,13 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ACPI
 ; =============================================================================
 
 
 init_acpi:
-	mov al, [BootMode]
+	mov al, [p_BootMode]
 	cmp al, 'U'
 	je foundACPIfromUEFI
 	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
@@ -58,7 +58,7 @@ foundACPIv1:
 	cmp eax, 'RSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
-	mov [os_ACPITableAddress], rsi	; Save the RSDT Table Address
+	mov [p_ACPITableAddress], rsi	; Save the RSDT Table Address
 	add rsi, 4
 	xor eax, eax
 	lodsd				; Length
@@ -84,7 +84,7 @@ foundACPIv2:
 	cmp eax, 'XSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
-	mov [os_ACPITableAddress], rsi	; Save the XSDT Table Address
+	mov [p_ACPITableAddress], rsi	; Save the XSDT Table Address
 	add rsi, 4
 	xor eax, eax
 	lodsd				; Length
@@ -112,6 +112,9 @@ nextACPITable:
 	mov ebx, 'HPET'			; Signature for the HPET Description Table
 	cmp eax, ebx
 	je foundHPETTable
+;	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
+;	cmp eax, ebx
+;	je foundMCFGTable
 	cmp ecx, edx
 	jne nextACPITable
 	jmp init_smp_acpi_done		;noACPIAPIC
@@ -123,6 +126,10 @@ foundAPICTable:
 foundHPETTable:
 	call parseHPETTable
 	jmp nextACPITable
+
+;foundMCFGTable:
+;	call parseMCFGTable
+;	jmp nextACPITable
 
 init_smp_acpi_done:
 	ret
@@ -148,10 +155,8 @@ parseAPICTable:
 	lodsd				; OEM Revision
 	lodsd				; Creator ID
 	lodsd				; Creator Revision
-	xor eax, eax
-	lodsd				; Local APIC Address
-	mov [os_LocalAPICAddress], rax	; Save the Address of the Local APIC
-	lodsd				; Flags
+	lodsd				; Local APIC Address (This should match what was pulled already via the MSR)
+	lodsd				; Flags (1 = Dual 8259 Legacy PICs Installed)
 	add ebx, 44
 	mov rdi, 0x0000000000005100	; Valid CPU IDs
 
@@ -171,14 +176,20 @@ readAPICstructures:
 ;	je APIClocalapicnmi
 ;	cmp al, 0x05			; Local APIC Address Override
 ;	je APICaddressoverride
-	cmp al, 0x09			; Processor Local x2APIC
-	je APICx2apic
+;	cmp al, 0x06			; I/O SAPIC Structure
+;	je APICiosapic
+;	cmp al, 0x07			; Local SAPIC Structure
+;	je APIClocalsapic
+;	cmp al, 0x08			; Platform Interrupt Source Structure
+;	je APICplatformint
+;	cmp al, 0x09			; Processor Local x2APIC
+;	je APICx2apic
 ;	cmp al, 0x0A			; Local x2APIC NMI
 ;	je APICx2nmi
 
 	jmp APICignore
 
-APICapic:
+APICapic:				; Entry Type 0
 	xor eax, eax
 	xor edx, edx
 	lodsb				; Length (will be set to 8)
@@ -189,60 +200,75 @@ APICapic:
 	lodsd				; Flags (Bit 0 set if enabled/usable)
 	bt eax, 0			; Test to see if usable
 	jnc readAPICstructures		; Read the next structure if CPU not usable
-	inc word [cpu_detected]
+	inc word [p_cpu_detected]
 	xchg eax, edx			; Restore the APIC ID back to EAX
 	stosb
 	jmp readAPICstructures		; Read the next structure
 
-APICioapic:
+APICioapic:				; Entry Type 1
 	xor eax, eax
 	lodsb				; Length (will be set to 12)
 	add ebx, eax
-	lodsb				; IO APIC ID
-	lodsb				; Reserved
-	xor eax, eax
-	lodsd				; IO APIC Address
 	push rdi
 	push rcx
-	mov rdi, os_IOAPICAddress
+	mov rdi, IM_IOAPICAddress	; Copy this data directly to the InfoMap
 	xor ecx, ecx
-	mov cl, [os_IOAPICCount]
-	shl cx, 3			; Quick multiply by 8
+	mov cl, [p_IOAPICCount]
+	shl cx, 4			; Quick multiply by 16
 	add rdi, rcx
 	pop rcx
-	stosd				; Store the IO APIC Address
-	lodsd				; System Vector Base
-	stosd				; Store the IO APIC Vector Base
+	xor eax, eax
+	lodsb				; IO APIC ID
+	stosd
+	lodsb				; Reserved
+	lodsd				; I/O APIC Address
+	stosd
+	lodsd				; Global System Interrupt Base
+	stosd
 	pop rdi
-	inc byte [os_IOAPICCount]
+	inc byte [p_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
 
-APICinterruptsourceoverride:
+APICinterruptsourceoverride:		; Entry Type 2
 	xor eax, eax
 	lodsb				; Length (will be set to 10)
 	add ebx, eax
-	lodsb				; Bus
-	lodsb				; Source
+	push rdi
+	push rcx
+	mov rdi, IM_IOAPICIntSource	; Copy this data directly to the InfoMap
+	xor ecx, ecx
+	mov cl, [p_IOAPICIntSourceC]
+	shl cx, 3			; Quick multiply by 8
+	add rdi, rcx
+	lodsb				; Bus Source
+	stosb
+	lodsb				; IRQ Source
+	stosb
 	lodsd				; Global System Interrupt
-	lodsw				; Flags
+	stosd
+	lodsw				; Flags - bit 1 Low(1)/High(0), Bit 3 Level(1)/Edge(0)
+	stosw
+	pop rcx
+	pop rdi
+	inc byte [p_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
-APICx2apic:
-	xor eax, eax
-	xor edx, edx
-	lodsb				; Length (will be set to 16)
-	add ebx, eax
-	lodsw				; Reserved; Must be Zero
-	lodsd
-	xchg eax, edx			; Save the x2APIC ID to EDX
-	lodsd				; Flags (Bit 0 set if enabled/usable)
-	bt eax, 0			; Test to see if usable
-	jnc APICx2apicEnd		; Read the next structure if CPU not usable
-	xchg eax, edx			; Restore the x2APIC ID back to EAX
-	; TODO - Save the ID's somewhere
-APICx2apicEnd:
-	lodsd				; ACPI Processor UID
-	jmp readAPICstructures		; Read the next structure
+;APICx2apic:				; Entry Type 9
+;	xor eax, eax
+;	xor edx, edx
+;	lodsb				; Length (will be set to 16)
+;	add ebx, eax
+;	lodsw				; Reserved; Must be Zero
+;	lodsd
+;	xchg eax, edx			; Save the x2APIC ID to EDX
+;	lodsd				; Flags (Bit 0 set if enabled/usable)
+;	bt eax, 0			; Test to see if usable
+;	jnc APICx2apicEnd		; Read the next structure if CPU not usable
+;	xchg eax, edx			; Restore the x2APIC ID back to EAX
+;	; TODO - Save the ID's somewhere
+;APICx2apicEnd:
+;	lodsd				; ACPI Processor UID
+;	jmp readAPICstructures		; Read the next structure
 
 APICignore:
 	xor eax, eax
@@ -273,11 +299,35 @@ parseHPETTable:
 	lodsd				; Event Timer Block ID
 	lodsd				; Base Address Settings
 	lodsq				; Base Address Value
-	mov [os_HPETAddress], rax	; Save the Address of the HPET
+	mov [p_HPETAddress], rax	; Save the Address of the HPET
 	lodsb				; HPET Number
 	lodsw				; Main Counter Minimum
 	lodsw				; Page Protection And OEM Attribute
 	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+;parseMCFGTable:
+;	lodsd				; Length of MCFG in bytes
+;	lodsb				; Revision
+;	lodsb				; Checksum
+;	lodsd				; OEMID (First 4 bytes)
+;	lodsw				; OEMID (Last 2 bytes)
+;	lodsq				; OEM Table ID
+;	lodsd				; OEM Revision
+;	lodsd				; Creator ID
+;	lodsd				; Creator Revision
+;	lodsq				; Reserved
+;
+;	; Loop through each entry
+;	lodsq				; Base address of enhanced configuration mechanism
+;	lodsw				; PCI Segment Group Number
+;	lodsb				; Start PCI bus number decoded by this host bridge
+;	lodsb				; End PCI bus number decoded by this host bridge
+;	lodsd				; Reserved
+;
+;	ret
 ; -----------------------------------------------------------------------------
 
 

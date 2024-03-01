@@ -1,6 +1,6 @@
 ; =============================================================================
 ; UEFI loader for Pure64
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; Adapted from https://stackoverflow.com/questions/72947069/how-to-write-hello-world-efi-application-in-nasm
 ; and https://github.com/charlesap/nasm-uefi/blob/master/shoe-x64.asm

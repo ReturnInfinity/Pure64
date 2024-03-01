@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2023 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT SMP AP
 ; =============================================================================
@@ -123,7 +123,7 @@ clearcs64_ap:
 	xor eax, eax
 
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
+	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
@@ -135,25 +135,15 @@ clearcs64_ap:
 	lidt [IDTR64]			; load IDT register
 
 ; Enable Local APIC on AP
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
-	mov rdi, rsi
-	lodsd
-	or eax, 0000000100000000b
-	stosd
+;	mov rsi, [p_LocalAPICAddress]
+;	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
+;	mov rdi, rsi
+;	lodsd
+;	or eax, 0000000100000000b
+;	stosd
 
 	call init_cpu			; Setup CPU
 
-	lock inc word [cpu_activated]
-	xor eax, eax
-	mov rsi, [os_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov rdi, 0x00005700		; The location where the cpu values are stored
-	add rdi, rax			; RDI points to infomap CPU area + APIC ID. ex F701 would be APIC ID 1
-	mov al, 1
-	stosb
 	sti				; Activate interrupts for SMP
 	jmp ap_sleep
 
