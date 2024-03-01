@@ -67,7 +67,7 @@ rtc:
 	push rdi
 	push rax
 
-	add qword [os_Counter_RTC], 1	; 64-bit counter started at boot up
+	add qword [p_Counter_RTC], 1	; 64-bit counter started at boot up
 
 	mov al, 0x0C			; Select RTC register C
 	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data

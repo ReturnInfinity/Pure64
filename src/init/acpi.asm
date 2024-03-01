@@ -7,7 +7,7 @@
 
 
 init_acpi:
-	mov al, [BootMode]
+	mov al, [p_BootMode]
 	cmp al, 'U'
 	je foundACPIfromUEFI
 	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
@@ -58,7 +58,7 @@ foundACPIv1:
 	cmp eax, 'RSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
-	mov [os_ACPITableAddress], rsi	; Save the RSDT Table Address
+	mov [p_ACPITableAddress], rsi	; Save the RSDT Table Address
 	add rsi, 4
 	xor eax, eax
 	lodsd				; Length
@@ -84,7 +84,7 @@ foundACPIv2:
 	cmp eax, 'XSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
-	mov [os_ACPITableAddress], rsi	; Save the XSDT Table Address
+	mov [p_ACPITableAddress], rsi	; Save the XSDT Table Address
 	add rsi, 4
 	xor eax, eax
 	lodsd				; Length
@@ -182,8 +182,8 @@ readAPICstructures:
 ;	je APIClocalsapic
 ;	cmp al, 0x08			; Platform Interrupt Source Structure
 ;	je APICplatformint
-	cmp al, 0x09			; Processor Local x2APIC
-	je APICx2apic
+;	cmp al, 0x09			; Processor Local x2APIC
+;	je APICx2apic
 ;	cmp al, 0x0A			; Local x2APIC NMI
 ;	je APICx2nmi
 
@@ -200,7 +200,7 @@ APICapic:				; Entry Type 0
 	lodsd				; Flags (Bit 0 set if enabled/usable)
 	bt eax, 0			; Test to see if usable
 	jnc readAPICstructures		; Read the next structure if CPU not usable
-	inc word [cpu_detected]
+	inc word [p_cpu_detected]
 	xchg eax, edx			; Restore the APIC ID back to EAX
 	stosb
 	jmp readAPICstructures		; Read the next structure
@@ -213,7 +213,7 @@ APICioapic:				; Entry Type 1
 	push rcx
 	mov rdi, IM_IOAPICAddress	; Copy this data directly to the InfoMap
 	xor ecx, ecx
-	mov cl, [os_IOAPICCount]
+	mov cl, [p_IOAPICCount]
 	shl cx, 4			; Quick multiply by 16
 	add rdi, rcx
 	pop rcx
@@ -226,7 +226,7 @@ APICioapic:				; Entry Type 1
 	lodsd				; Global System Interrupt Base
 	stosd
 	pop rdi
-	inc byte [os_IOAPICCount]
+	inc byte [p_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
 
 APICinterruptsourceoverride:		; Entry Type 2
@@ -237,7 +237,7 @@ APICinterruptsourceoverride:		; Entry Type 2
 	push rcx
 	mov rdi, IM_IOAPICIntSource	; Copy this data directly to the InfoMap
 	xor ecx, ecx
-	mov cl, [os_IOAPICIntSourceC]
+	mov cl, [p_IOAPICIntSourceC]
 	shl cx, 3			; Quick multiply by 8
 	add rdi, rcx
 	lodsb				; Bus Source
@@ -250,25 +250,25 @@ APICinterruptsourceoverride:		; Entry Type 2
 	stosw
 	pop rcx
 	pop rdi
-	inc byte [os_IOAPICIntSourceC]
+	inc byte [p_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
-APICx2apic:				; Entry Type 9
-	xor eax, eax
-	xor edx, edx
-	lodsb				; Length (will be set to 16)
-	add ebx, eax
-	lodsw				; Reserved; Must be Zero
-	lodsd
-	xchg eax, edx			; Save the x2APIC ID to EDX
-	lodsd				; Flags (Bit 0 set if enabled/usable)
-	bt eax, 0			; Test to see if usable
-	jnc APICx2apicEnd		; Read the next structure if CPU not usable
-	xchg eax, edx			; Restore the x2APIC ID back to EAX
-	; TODO - Save the ID's somewhere
-APICx2apicEnd:
-	lodsd				; ACPI Processor UID
-	jmp readAPICstructures		; Read the next structure
+;APICx2apic:				; Entry Type 9
+;	xor eax, eax
+;	xor edx, edx
+;	lodsb				; Length (will be set to 16)
+;	add ebx, eax
+;	lodsw				; Reserved; Must be Zero
+;	lodsd
+;	xchg eax, edx			; Save the x2APIC ID to EDX
+;	lodsd				; Flags (Bit 0 set if enabled/usable)
+;	bt eax, 0			; Test to see if usable
+;	jnc APICx2apicEnd		; Read the next structure if CPU not usable
+;	xchg eax, edx			; Restore the x2APIC ID back to EAX
+;	; TODO - Save the ID's somewhere
+;APICx2apicEnd:
+;	lodsd				; ACPI Processor UID
+;	jmp readAPICstructures		; Read the next structure
 
 APICignore:
 	xor eax, eax
@@ -299,7 +299,7 @@ parseHPETTable:
 	lodsd				; Event Timer Block ID
 	lodsd				; Base Address Settings
 	lodsq				; Base Address Value
-	mov [os_HPETAddress], rax	; Save the Address of the HPET
+	mov [p_HPETAddress], rax	; Save the Address of the HPET
 	lodsb				; HPET Number
 	lodsw				; Main Counter Minimum
 	lodsw				; Page Protection And OEM Attribute

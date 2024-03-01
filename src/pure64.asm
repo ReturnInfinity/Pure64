@@ -263,7 +263,7 @@ clearcs64:
 
 ; Save the Boot Mode (it will be 'U' if started via UEFI)
 	mov al, [0x8005]
-	mov [BootMode], al		; Save the byte as a Boot Mode flag
+	mov [p_BootMode], al		; Save the byte as a Boot Mode flag
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -271,7 +271,7 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-	mov al, [BootMode]
+	mov al, [p_BootMode]
 	cmp al, 'U'
 	je uefi_memmap
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
@@ -313,7 +313,7 @@ processfree:
 
 end820:
 	shl ebx, 1
-	mov dword [mem_amount], ebx
+	mov dword [p_mem_amount], ebx
 	shr ebx, 1
 	jmp memmap_end
 
@@ -323,7 +323,7 @@ uefi_memmap:				; TODO fix this as it is a terrible hack
 	mov rcx, 32
 	rep stosb
 	mov ebx, 64
-	mov dword [mem_amount], ebx
+	mov dword [p_mem_amount], ebx
 memmap_end:
 
 ; Create the high memory map
@@ -460,7 +460,14 @@ clearmapnext:
 	and eax, 0xFFFFF000		; Clear lower 12 bits
 	shl rdx, 32			; Shift lower 32 bits to upper 32 bits
 	add rax, rdx
-	mov [os_LocalAPICAddress], rax
+	mov [p_LocalAPICAddress], rax
+
+; Check for x2APIC support
+	mov eax, 1
+	cpuid				; x2APIC is supported if bit 21 is set
+	shr ecx, 21
+	and cl, 1
+	mov byte [p_x2APIC], cl
 
 	call init_acpi			; Find and process the ACPI tables
 
@@ -471,7 +478,7 @@ clearmapnext:
 	call init_smp			; Init of SMP
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
+	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
@@ -482,35 +489,35 @@ clearmapnext:
 ; Build the InfoMap
 	xor edi, edi
 	mov di, 0x5000
-	mov rax, [os_ACPITableAddress]
+	mov rax, [p_ACPITableAddress]
 	stosq
-	mov eax, [os_BSP]
+	mov eax, [p_BSP]
 	stosd
 
 	mov di, 0x5010
-	mov ax, [cpu_speed]
+	mov ax, [p_cpu_speed]
 	stosw
-	mov ax, [cpu_activated]
+	mov ax, [p_cpu_activated]
 	stosw
-	mov ax, [cpu_detected]
+	mov ax, [p_cpu_detected]
 	stosw
 
 	mov di, 0x5020
-	mov ax, [mem_amount]
+	mov ax, [p_mem_amount]
 	stosd
 
 	mov di, 0x5030
-	mov al, [os_IOAPICCount]
+	mov al, [p_IOAPICCount]
 	stosb
-	mov al, [os_IOAPICIntSourceC]
+	mov al, [p_IOAPICIntSourceC]
 	stosb
 
 	mov di, 0x5040
-	mov rax, [os_HPETAddress]
+	mov rax, [p_HPETAddress]
 	stosq
 
 	mov di, 0x5060
-	mov rax, [os_LocalAPICAddress]
+	mov rax, [p_LocalAPICAddress]
 	stosq
 
 	mov di, 0x5080

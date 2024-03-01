@@ -123,7 +123,7 @@ clearcs64_ap:
 	xor eax, eax
 
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
-	mov rsi, [os_LocalAPICAddress]	; We would call os_smp_get_id here but the stack is not ...
+	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
@@ -135,7 +135,7 @@ clearcs64_ap:
 	lidt [IDTR64]			; load IDT register
 
 ; Enable Local APIC on AP
-;	mov rsi, [os_LocalAPICAddress]
+;	mov rsi, [p_LocalAPICAddress]
 ;	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
 ;	mov rdi, rsi
 ;	lodsd

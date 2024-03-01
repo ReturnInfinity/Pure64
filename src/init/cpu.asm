@@ -133,7 +133,7 @@ avx_not_supported:
 	mov eax, 0x000001FF
 	call apic_write			; Enable the APIC (bit 8) and set spurious vector to 0xFF
 
-	lock inc word [cpu_activated]
+	lock inc word [p_cpu_activated]
 	mov ecx, APIC_ID
 	call apic_read			; APIC ID is stored in bits 31:24
 	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
@@ -151,7 +151,7 @@ avx_not_supported:
 ;	All other registers preserved
 apic_read:
 	push rsi
-	mov rsi, [os_LocalAPICAddress]
+	mov rsi, [p_LocalAPICAddress]
 	add rsi, rcx			; Add offset
 	lodsd
 	pop rsi
@@ -166,7 +166,7 @@ apic_read:
 ; OUT:	All registers preserved
 apic_write:
 	push rdi
-	mov rdi, [os_LocalAPICAddress]
+	mov rdi, [p_LocalAPICAddress]
 	add rdi, rcx			; Add offset
 	stosd
 	pop rdi
