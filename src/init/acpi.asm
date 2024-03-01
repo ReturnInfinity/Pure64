@@ -155,9 +155,7 @@ parseAPICTable:
 	lodsd				; OEM Revision
 	lodsd				; Creator ID
 	lodsd				; Creator Revision
-	xor eax, eax
-	lodsd				; Local APIC Address
-	mov [os_LocalAPICAddress], rax	; Save the Address of the Local APIC
+	lodsd				; Local APIC Address (This should match what was pulled already via the MSR)
 	lodsd				; Flags (1 = Dual 8259 Legacy PICs Installed)
 	add ebx, 44
 	mov rdi, 0x0000000000005100	; Valid CPU IDs
@@ -176,8 +174,8 @@ readAPICstructures:
 ;	je APICnmi
 ;	cmp al, 0x04			; Local APIC NMI
 ;	je APIClocalapicnmi
-	cmp al, 0x05			; Local APIC Address Override
-	je APICaddressoverride
+;	cmp al, 0x05			; Local APIC Address Override
+;	je APICaddressoverride
 ;	cmp al, 0x06			; I/O SAPIC Structure
 ;	je APICiosapic
 ;	cmp al, 0x07			; Local SAPIC Structure
@@ -253,13 +251,6 @@ APICinterruptsourceoverride:		; Entry Type 2
 	pop rcx
 	pop rdi
 	inc byte [os_IOAPICIntSourceC]
-	jmp readAPICstructures		; Read the next structure
-
-APICaddressoverride:			; Entry Type 5
-	lodsb				; Length (will be set to 10)
-	lodsw				; Reserved
-	lodsq				; 64-bit physical address of Local APIC
-	mov [os_ACPITableAddress], rax	; Overwrite the initial value from the MADT header
 	jmp readAPICstructures		; Read the next structure
 
 APICx2apic:				; Entry Type 9

@@ -444,7 +444,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 
 	lidt [IDTR64]			; load IDT register
 
-; Clear memory 0xf000 - 0xf7ff for the infomap (2048 bytes)
+; Clear memory 0xf000 - 0xf7ff for the InfoMap (2048 bytes)
 	xor eax, eax
 	mov ecx, 256
 	mov edi, 0x0000F000
@@ -453,6 +453,14 @@ clearmapnext:
 	dec ecx
 	cmp ecx, 0
 	jne clearmapnext
+
+; Read APIC Address from MSR
+	mov ecx, 0x0000001B		; APIC_BASE
+	rdmsr				; Returns APIC in EDX:EAX
+	and eax, 0xFFFFF000		; Clear lower 12 bits
+	shl rdx, 32			; Shift lower 32 bits to upper 32 bits
+	add rax, rdx
+	mov [os_LocalAPICAddress], rax
 
 	call init_acpi			; Find and process the ACPI tables
 

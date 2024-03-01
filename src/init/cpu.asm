@@ -105,44 +105,33 @@ avx_supported:
 avx_not_supported:
 
 ; Enable and Configure Local APIC
-	mov rsi, [os_LocalAPICAddress]
-	test rsi, rsi
-	je noMP				; Skip MP init if we didn't get a valid LAPIC address
-
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020
 	call apic_write			; Disable softint delivery
-
 	mov ecx, APIC_LVT_TMR
 	mov eax, 0x00010000
 	call apic_write			; Disable timer interrupts
-
 	mov ecx, APIC_LVT_PERF
 	mov eax, 0x00010000
 	call apic_write			; Disable performance counter interrupts
-
-;	mov eax, 0x01000000		; Set bits 31-24 for all cores to be in Group 1
-;	mov dword [rsi+0xD0], eax	; Logical Destination Register
-
-;	xor eax, eax
-;	not eax				; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
-;	mov dword [rsi+0xE0], eax	; Destination Format Register
-
-	mov ecx, APIC_SPURIOUS
-	mov eax, 0x000001FF
-	call apic_write			; Enable the APIC (bit 8) and set spurious vector to 0xFF
-
+	mov ecx, APIC_LDR
+	xor eax, eax
+	call apic_write			; Set Logical Destination Register
+	mov ecx, APIC_DFR
+	not eax				; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
+	call apic_write			; Set Destination Format Register
 	mov ecx, APIC_LVT_LINT0
 	mov eax, 0x00008700		; Bit 15 (1 = Level), Bits 10:8 for Ext
 	call apic_write			; Enable normal external interrupts
-
 	mov ecx, APIC_LVT_LINT1
 	mov eax, 0x00000400
 	call apic_write			; Enable normal NMI processing
-
 	mov ecx, APIC_LVT_ERR
 	mov eax, 0x00010000
 	call apic_write			; Disable error interrupts
+	mov ecx, APIC_SPURIOUS
+	mov eax, 0x000001FF
+	call apic_write			; Enable the APIC (bit 8) and set spurious vector to 0xFF
 
 	lock inc word [cpu_activated]
 	mov ecx, APIC_ID
