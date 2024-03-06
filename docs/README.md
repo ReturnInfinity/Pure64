@@ -187,7 +187,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5086</td><td>16-bit</td><td>VIDEO_Y</td><td>Y resolution</td></tr>
 <tr><td>0x5088</td><td>8-bit</td><td>VIDEO_DEPTH</td><td>Color depth</td></tr>
 <tr><td>0x5089 - 0x508F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
-<tr><td>0x5090 - 0x5091</td><td>16-bit</td><td>PCIE_COUNT</td><td>Number of PCIe buses</td></tr>
+<tr><td>0x5090</td><td>16-bit</td><td>PCIE_COUNT</td><td>Number of PCIe buses</td></tr>
 <tr><td>0x5092 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5100 - 0x51FF</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 <tr><td>0x5200 - 0x53FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
