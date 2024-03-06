@@ -14,6 +14,7 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 ; Memory locations
 E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
+IM_PCIE:		equ 0x0000000000005400		; 16 bytes per entry
 IM_IOAPICAddress:	equ 0x0000000000005600		; 16 bytes per entry
 IM_IOAPICIntSource:	equ 0x0000000000005700		; 8 bytes per entry
 SystemVariables:	equ 0x0000000000005800
@@ -34,6 +35,7 @@ p_mem_amount:		equ SystemVariables + 0x84	; in MiB
 p_cpu_speed:		equ SystemVariables + 0x100
 p_cpu_activated:	equ SystemVariables + 0x102
 p_cpu_detected:		equ SystemVariables + 0x104
+p_PCIECount:		equ SystemVariables + 0x106
 
 ; DB - Starting at offset 0x180, increments by 1
 p_IOAPICCount:		equ SystemVariables + 0x180
