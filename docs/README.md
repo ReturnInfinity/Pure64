@@ -186,11 +186,24 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5084</td><td>16-bit</td><td>VIDEO_X</td><td>X resolution</td></tr>
 <tr><td>0x5086</td><td>16-bit</td><td>VIDEO_Y</td><td>Y resolution</td></tr>
 <tr><td>0x5088</td><td>8-bit</td><td>VIDEO_DEPTH</td><td>Color depth</td></tr>
-<tr><td>0x5089 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5089 - 0x508F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5090 - 0x5091</td><td>16-bit</td><td>PCIE_COUNT</td><td>Number of PCIe buses</td></tr>
+<tr><td>0x5092 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5100 - 0x51FF</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
-<tr><td>0x5200 - 0x56FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5200 - 0x53FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5400 - 0x55FF</td><td>16 byte entries</td><td>PCIE</td><td>PCIe bus data</td></tr>
 <tr><td>0x5600 - 0x56FF</td><td>16 byte entries</td><td>IOAPIC</td><td>I/O APIC addresses (based on IOAPIC_COUNT)</td></tr>
 <tr><td>0x5700 - 0x57FF</td><td>8 byte entries</td><td>IOAPIC_INTSOURCE</td><td>I/O APIC Interrupt Source Override Entries (based on IOAPIC_INTSOURCE_COUNT)</td></tr>
+</table>
+
+PCIE list format:
+<table border="1" cellpadding="2" cellspacing="0">
+<tr><th>Offset</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
+<tr><td>0x00</td><td>64-bit</td><td>Base</td><td>The base address of enhanced configuration mechanism</td></tr>
+<tr><td>0x08</td><td>16-bit</td><td>Group</td><td>The PCI segment group number</td></tr>
+<tr><td>0x0A</td><td>8-bit</td><td>Start Bus</td><td>Start PCI bus number decoded by this host bridge</td></tr>
+<tr><td>0x0B</td><td>8-bit</td><td>End Bus</td><td>End PCI bus number decoded by this host bridge</td></tr>
+<tr><td>0x0C</td><td>32-bit</td><td>Reserved</td><td>This value should be 0</td></tr>
 </table>
 
 IOAPIC list format:

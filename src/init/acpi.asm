@@ -112,9 +112,9 @@ nextACPITable:
 	mov ebx, 'HPET'			; Signature for the HPET Description Table
 	cmp eax, ebx
 	je foundHPETTable
-;	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
-;	cmp eax, ebx
-;	je foundMCFGTable
+	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
+	cmp eax, ebx
+	je foundMCFGTable
 	cmp ecx, edx
 	jne nextACPITable
 	jmp init_smp_acpi_done		;noACPIAPIC
@@ -127,9 +127,9 @@ foundHPETTable:
 	call parseHPETTable
 	jmp nextACPITable
 
-;foundMCFGTable:
-;	call parseMCFGTable
-;	jmp nextACPITable
+foundMCFGTable:
+	call parseMCFGTable
+	jmp nextACPITable
 
 init_smp_acpi_done:
 	ret
@@ -308,26 +308,48 @@ parseHPETTable:
 
 
 ; -----------------------------------------------------------------------------
-;parseMCFGTable:
-;	lodsd				; Length of MCFG in bytes
-;	lodsb				; Revision
-;	lodsb				; Checksum
-;	lodsd				; OEMID (First 4 bytes)
-;	lodsw				; OEMID (Last 2 bytes)
-;	lodsq				; OEM Table ID
-;	lodsd				; OEM Revision
-;	lodsd				; Creator ID
-;	lodsd				; Creator Revision
-;	lodsq				; Reserved
-;
-;	; Loop through each entry
-;	lodsq				; Base address of enhanced configuration mechanism
-;	lodsw				; PCI Segment Group Number
-;	lodsb				; Start PCI bus number decoded by this host bridge
-;	lodsb				; End PCI bus number decoded by this host bridge
-;	lodsd				; Reserved
-;
-;	ret
+parseMCFGTable:
+	push rdi
+	push rcx
+	xor eax, eax
+	xor ecx, ecx
+	mov cx, [p_PCIECount]
+	shl ecx, 4
+	mov rdi, IM_PCIE
+	add rdi, rcx
+	lodsd				; Length of MCFG in bytes
+	sub eax, 44			; Subtract the size of the table header
+	shr eax, 4			; Quick divide by 16
+	mov ecx, eax			; ECX now stores the number of 16-byte records
+	add word [p_PCIECount], cx
+	lodsb				; Revision
+	lodsb				; Checksum
+	lodsd				; OEMID (First 4 bytes)
+	lodsw				; OEMID (Last 2 bytes)
+	lodsq				; OEM Table ID
+	lodsd				; OEM Revision
+	lodsd				; Creator ID
+	lodsd				; Creator Revision
+	lodsq				; Reserved
+
+	; Loop through each entry
+parseMCFGTable_next:
+	lodsq				; Base address of enhanced configuration mechanism
+	stosq
+	lodsw				; PCI Segment Group Number
+	stosw
+	lodsb				; Start PCI bus number decoded by this host bridge
+	stosb
+	lodsb				; End PCI bus number decoded by this host bridge
+	stosb
+	lodsd				; Reserved
+	stosd
+	sub ecx, 1
+	jnz parseMCFGTable_next
+
+	pop rcx
+	pop rdi
+	ret
 ; -----------------------------------------------------------------------------
 
 
