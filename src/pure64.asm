@@ -528,6 +528,10 @@ clearmapnext:
 	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
 	stosb
 
+	mov di, 0x5090
+	mov ax, [p_PCIECount]
+	stosw
+
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
 	mov edi, 0x100000		; Destination address at the 1MiB mark
