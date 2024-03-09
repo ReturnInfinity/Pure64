@@ -346,6 +346,10 @@ parseMCFGTable_next:
 	stosd
 	sub ecx, 1
 	jnz parseMCFGTable_next
+	xor eax, eax
+	not rax				; 0xFFFFFFFFFFFFFFFF
+	stosq				; Mark the end of the table
+	stosq
 
 	pop rcx
 	pop rdi
