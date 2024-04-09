@@ -84,6 +84,13 @@ rtc_poll:
 	out 0x70, al			; Select the address
 	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
 	out 0x71, al			; Write the data
+	mov al, 0x0B			; Status Register B
+	out 0x70, al			; Select the address
+	mov al, 01000000b		; Set Periodic Interrupt Enable (bit 6)
+	out 0x71, al			; Write the data
+	mov al, 0x0C			; Status Register B
+	out 0x70, al			; Select the address
+	in al, 0x71			; Read the value to clear any existing interrupt value
 
 ; Remap PIC IRQ's
 	mov al, 00010001b		; begin PIC 1 initialization
