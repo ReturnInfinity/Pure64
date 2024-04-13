@@ -193,6 +193,15 @@ pde_low:				; Create a 2 MiB page
 ; Load the GDT
 	lgdt [GDTR64]
 
+; Enable extended properties
+;	mov eax, cr4
+;	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
+;	mov cr4, eax
+
+; Point cr3 at PML4
+	mov rax, 0x00002008		; Write-thru enabled (Bit 3)
+	mov cr3, rax
+
 	xor eax, eax			; aka r0
 	xor ebx, ebx			; aka r3
 	xor ecx, ecx			; aka r1
