@@ -7,11 +7,8 @@
 
 
 init_acpi:
-	mov al, [p_BootMode]
-	cmp al, 'U'
-	je foundACPIfromUEFI
-	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
-	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
+	jmp foundACPIfromUEFI
+
 searchingforACPI:
 	lodsq				; Load a quad word from RSI and store in RAX, then increment RSI by 8
 	cmp rax, rbx

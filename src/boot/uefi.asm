@@ -12,8 +12,8 @@
 ; =============================================================================
 
 ; Set the desired screen resolution values below
-Horizontal_Resolution		equ 640
-Vertical_Resolution		equ 480
+Horizontal_Resolution		equ 800
+Vertical_Resolution		equ 600
 
 BITS 64
 ORG 0x00400000
@@ -126,7 +126,7 @@ EntryPoint:
 
 	; Set screen colour attributes
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
+	mov rdx, 0x07						; IN UINTN Attribute Light black background, grey foreground
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
 	; Clear screen
@@ -185,7 +185,7 @@ next_video_mode:
 	mov rdx, [vid_max]
 	cmp rax, rdx
 	je skip_set_video					; If we have reached the max then bail out
-	
+
 vid_query:
 	; Query a video mode
 	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
@@ -243,10 +243,6 @@ skip_set_video:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
-	; Signal to Pure64 that it was booted via UEFI
-	mov al, 'U'
-	mov [0x8005], al
-
 	; Save video values to the area of memory where Pure64 expects them
 	mov rdi, 0x00005C00 + 40				; VBEModeInfoBlock.PhysBasePtr
 	mov rax, [FB]
@@ -300,62 +296,26 @@ get_memmap:
 	; Stop interrupts
 	cli
 
-	; Build a 32-bit memory table for 4GiB of identity mapped memory
-	mov rdi, 0x200000
-	mov rax, 0x00000083
-	mov rcx, 1024
-nextpage:
-	stosd
-	add rax, 0x400000
-	dec rcx
-	cmp rcx, 0
-	jne nextpage	
+	; Clear registers
+	xor eax, eax			; aka r0
+	xor ecx, ecx			; aka r1
+	xor edx, edx			; aka r2
+	xor ebx, ebx			; aka r3
+	mov rsp, 0x8000			; aka r4
+	xor ebp, ebp			; aka r5
+	xor esi, esi			; aka r6
+	xor edi, edi			; aka r7
+	xor r8, r8
+	xor r9, r9
+	xor r10, r10
+	xor r11, r11
+	xor r12, r12
+	xor r13, r13
+	xor r14, r14
+	xor r15, r15
 
-	; Load the custom GDT
-	lgdt [gdtr]
+	jmp 0x8000
 
-	; Switch to compatibility mode
-	mov rax, SYS32_CODE_SEL					; Compatibility mode
-	push rax
-	lea rax, [compatmode]
-	push rax
-	retfq
-
-BITS 32
-compatmode:
-	; Set the segment registers
-	mov eax, SYS32_DATA_SEL
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-	mov ss, ax
-
-	; Deactivate IA-32e mode by clearing CR0.PG
-	mov eax, cr0
-	btc eax, 31						; Clear PG (Bit 31)
-	mov cr0, eax
-
-	; Load CR3
-	mov eax, 0x00200000					; Address of memory map
-	mov cr3, eax
-
-	; Disable IA-32e mode by setting IA32_EFER.LME = 0
-	mov ecx, 0xC0000080					; EFER MSR number
-	rdmsr							; Read EFER
-	and eax, 0xFFFFFEFF 					; Clear LME (Bit 8)
-	wrmsr							; Write EFER
-
-	mov eax, 0x00000010					; Set PSE (Bit 4)
-	mov cr4, eax
-
-	; Enable legacy paged-protected mode by setting CR0.PG
-	mov eax, 0x00000001					; Set PM (Bit 0)
-	mov cr0, eax
-
-	jmp SYS32_CODE_SEL:0x8000				; 32-bit jump to set CS
-
-BITS 64
 exitfailure:
 	mov rdi, [FB]
 	mov eax, 0x00FF0000					; Red
@@ -417,26 +377,7 @@ db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 hextable: 		db '0123456789ABCDEF'
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
-msg_OK:			dw u('OK'), 0
-
-align 16
-gdtr:					; Global Descriptors Table Register
-dw gdt_end - gdt - 1			; limit of GDT (size minus one)
-dq gdt					; linear address of GDT
-
-align 16
-gdt:
-SYS64_NULL_SEL equ $-gdt		; Null Segment
-dq 0x0000000000000000
-SYS32_CODE_SEL equ $-gdt		; 32-bit code descriptor
-dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS32_DATA_SEL equ $-gdt		; 32-bit data descriptor
-dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
-SYS64_CODE_SEL equ $-gdt		; 64-bit code segment, read/execute, nonconforming
-dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS64_DATA_SEL equ $-gdt		; 64-bit data segment, read/write, expand down
-dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
-gdt_end:
+msg_OK:			dw u('UEFI OK'), 0
 
 align 4096
 PAYLOAD:
@@ -462,7 +403,7 @@ EFI_NO_MEDIA						equ 12
 EFI_MEDIA_CHANGED					equ 13
 EFI_NOT_FOUND						equ 14
 
-EFI_SYSTEM_TABLE_CONOUT                         	equ 64
+EFI_SYSTEM_TABLE_CONOUT					equ 64
 EFI_SYSTEM_TABLE_RUNTIMESERVICES			equ 88
 EFI_SYSTEM_TABLE_BOOTSERVICES				equ 96
 EFI_SYSTEM_TABLE_NUMBEROFENTRIES			equ 104

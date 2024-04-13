@@ -17,12 +17,12 @@
 ; =============================================================================
 
 
-BITS 32
+BITS 64
 ORG 0x00008000
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
-	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
+	jmp start64			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
 	db 0x36, 0x34			; '64' marker
 
@@ -47,29 +47,15 @@ BITS 16
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
 ; =============================================================================
-; 32-bit mode
-BITS 32
-start32:
-	mov eax, 16			; Set the correct segment registers
-	mov ds, ax
-	mov es, ax
-	mov ss, ax
-	mov fs, ax
-	mov gs, ax
+; 64-bit mode
+BITS 64
+start64:
+	mov esp, 0x8000			; Set a known free location for the stack
 
 	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
 	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
 	rep stosd			; Don't overwrite the VBE data at 0x5F00
-
-	xor eax, eax			; Clear all registers
-	xor ebx, ebx
-	xor ecx, ecx
-	xor edx, edx
-	xor esi, esi
-	xor edi, edi
-	xor ebp, ebp
-	mov esp, 0x8000			; Set a known free location for the stack
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -149,7 +135,7 @@ rtc_poll:
 	mov esi, gdt64
 	mov edi, 0x00001000		; GDT address
 	mov ecx, (gdt64_end - gdt64)
-	rep movsb			; Move it to final pos.
+	rep movsb			; Copy it to final location
 
 ; Create the Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000002000, create the first entry there
@@ -178,10 +164,10 @@ rtc_poll:
 	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
 create_pdpte_low:
 	stosd
-	push eax
+	push rax
 	xor eax, eax
 	stosd
-	pop eax
+	pop rax
 	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
 	cmp ecx, 0
@@ -192,51 +178,21 @@ create_pdpte_low:
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00010000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	xor ecx, ecx
+	mov ecx, 2048			; Create 2048 2 MiB page maps.
 pde_low:				; Create a 2 MiB page
 	stosd
-	push eax
+	push rax
 	xor eax, eax
 	stosd
-	pop eax
+	pop rax
 	add eax, 0x00200000		; Increment by 2MiB
-	inc ecx
-	cmp ecx, 2048
-	jne pde_low			; Create 2048 2 MiB page maps.
+	dec ecx
+	cmp ecx, 0
+	jne pde_low
 
 ; Load the GDT
 	lgdt [GDTR64]
 
-; Enable extended properties
-	mov eax, cr4
-	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
-	mov cr4, eax
-
-; Point cr3 at PML4
-	mov eax, 0x00002008		; Write-thru enabled (Bit 3)
-	mov cr3, eax
-
-; Enable long mode and SYSCALL/SYSRET
-	mov ecx, 0xC0000080		; EFER MSR number
-	rdmsr				; Read EFER
-	or eax, 0x00000101 		; LME (Bit 8)
-	wrmsr				; Write EFER
-
-; Enable paging to activate long mode
-	mov eax, cr0
-	or eax, 0x80000000		; PG (Bit 31)
-	mov cr0, eax
-
-	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
-
-
-align 16
-
-; =============================================================================
-; 64-bit mode
-BITS 64
-
-start64:
 	xor eax, eax			; aka r0
 	xor ebx, ebx			; aka r3
 	xor ecx, ecx			; aka r1
@@ -254,75 +210,26 @@ start64:
 	xor r14, r14
 	xor r15, r15
 
-	mov ds, ax			; Clear the legacy segment registers
+	mov ax, 0x10			; TODO Is this needed?
+	mov ds, ax
 	mov es, ax
 	mov ss, ax
 	mov fs, ax
 	mov gs, ax
 
-	mov rax, clearcs64		; Do a proper 64-bit jump. Should not be needed as the ...
-	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
-	nop				; out of compatibility mode and into 64-bit mode
+	; Set CS with a far return
+	push SYS64_CODE_SEL
+	push clearcs64
+	retfq
 clearcs64:
-	xor eax, eax
 
 	lgdt [GDTR64]			; Reload the GDT
-
-; Save the Boot Mode (it will be 'U' if started via UEFI)
-	mov al, [0x8005]
-	mov [p_BootMode], al		; Save the byte as a Boot Mode flag
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
-
-	mov al, [p_BootMode]
-	cmp al, 'U'
-	je uefi_memmap
-; Process the E820 memory map to find all possible 2MiB pages that are free to use
-; Build a map at 0x400000
-	xor ecx, ecx
-	xor ebx, ebx			; Counter for pages found
-	mov esi, 0x00006000		; E820 Map location
-nextentry:
-	add esi, 16			; Skip ESI to type marker
-	mov eax, [esi]			; Load the 32-bit type marker
-	cmp eax, 0			; End of the list?
-	je end820
-	cmp eax, 1			; Is it marked as free?
-	je processfree
-	add esi, 16			; Skip ESI to start of next entry
-	jmp nextentry
-
-processfree:
-	sub esi, 16
-	mov rax, [rsi]			; Physical start address
-	add esi, 8
-	mov rcx, [rsi]			; Physical length
-	add esi, 24
-	shr rcx, 21			; Convert bytes to # of 2 MiB pages
-	cmp rcx, 0			; Do we have at least 1 page?
-	je nextentry
-	shl rax, 1
-	mov edx, 0x1FFFFF
-	not rdx				; Clear bits 20 - 0
-	and rax, rdx
-	; At this point RAX points to the start and RCX has the # of pages
-	shr rax, 21			; page # to start on
-	mov rdi, 0x400000		; 4 MiB into physical memory
-	add rdi, rax
-	mov al, 1
-	add ebx, ecx
-	rep stosb
-	jmp nextentry
-
-end820:
-	shl ebx, 1
-	mov dword [p_mem_amount], ebx
-	shr ebx, 1
-	jmp memmap_end
 
 uefi_memmap:				; TODO fix this as it is a terrible hack
 	mov rdi, 0x400000
@@ -375,7 +282,7 @@ pd_high_entry:
 
 pd_high_done:
 
-; Build a temporary IDT
+; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
 	mov rcx, 32
