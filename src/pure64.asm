@@ -392,6 +392,11 @@ clearmapnext:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
+	mov rdi, [0x00005F00 + 40]
+	mov eax, 0x00202020		; 0x00RRGGBB
+	mov ecx, 800 * 600
+	rep stosd
+
 	call init_acpi			; Find and process the ACPI tables
 
 	call init_cpu			; Configure the BSP CPU
@@ -444,11 +449,11 @@ clearmapnext:
 	stosq
 
 	mov di, 0x5080
-	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
+	mov eax, [0x00005F00]		; Base address of video memory 
+	stosd				; TODO QWORD
+	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
-	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
-	stosd
-	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
+	mov al, 32			; Color depth
 	stosb
 
 	mov di, 0x5090

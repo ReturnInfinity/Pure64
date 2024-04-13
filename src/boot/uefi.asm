@@ -244,17 +244,15 @@ skip_set_video:
 	jne sig_fail
 
 	; Save video values to the area of memory where Pure64 expects them
-	mov rdi, 0x00005C00 + 40				; VBEModeInfoBlock.PhysBasePtr
+	mov rdi, 0x00005F00
 	mov rax, [FB]
-	stosd
-	mov rdi, 0x00005C00 + 18				; VBEModeInfoBlock.XResolution & .YResolution
+	stosq
+	mov rax, [FBS]
+	stosq
 	mov rax, [HR]
 	stosw
 	mov rax, [VR]
 	stosw
-	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
-	mov rax, 32
-	stosb
 
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	lea rdx, [msg_OK]					; IN CHAR16 *String
@@ -313,6 +311,12 @@ get_memmap:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
+
+	mov rdi, [FB]
+	mov eax, 0x00101010					; 0x00RRGGBB
+	mov rcx, [FBS]
+	shr rcx, 2						; Quick divide by 4 (32-bit colour)
+	rep stosd
 
 	jmp 0x8000
 
