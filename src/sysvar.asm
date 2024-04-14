@@ -6,13 +6,13 @@
 ; =============================================================================
 
 
-message: db 10, 'Pure64 OK', 10
+message_pure64:		db 10, 'Pure64 ', 0
+message_ok:		db 'OK', 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
-E820Map:		equ 0x0000000000004000
 InfoMap:		equ 0x0000000000005000
 IM_PCIE:		equ 0x0000000000005400		; 16 bytes per entry
 IM_IOAPICAddress:	equ 0x0000000000005600		; 16 bytes per entry

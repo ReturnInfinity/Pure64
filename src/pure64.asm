@@ -100,25 +100,34 @@ rtc_poll:
 	out 0x21, al
 	out 0xA1, al
 
-; Configure serial port @ 0x03F8
+; Configure serial port @ 0x03F8 as 115200 8N1
 	mov dx, 0x03F8 + 1		; Interrupt Enable
 	mov al, 0x00			; Disable all interrupts
 	out dx, al
 	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 80
+	mov al, 80			; Enable DLAB
 	out dx, al
-	mov dx, 0x03F8 + 0		; Divisor Latch
-	mov ax, 1			; 1 = 115200 baud
-	out dx, ax
+	mov dx, 0x03F8 + 0		; Divisor Latch Low
+	mov al, 1			; 1 = 115200 baud
+	out dx, al
+	mov dx, 0x03F8 + 1		; Divisor Latch High
+	mov al, 0
+	out dx, al
 	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 3			; 8 bits, no parity, one stop bit
+	mov al, 3			; 8 data bits (0-1 set), one stop bit (2 set), no parity (3-5 clear), DLB (7 clear)
+	out dx, al
+	mov dx, 0x03F8 + 2		; Interrupt Identification and FIFO Control
+	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
 	out dx, al
 	mov dx, 0x03F8 + 4		; Modem Control
-	mov al, 3
+	mov al, 0			; No flow control, no interrupts
 	out dx, al
-	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	mov dx, 0x03F8 + 2
-	out dx, al
+
+	mov rsi, message_pure64		; Location of message
+	call debug_msg
+
+;	mov al, 'a'			; Newline
+;	call debug_msg_char
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
@@ -142,17 +151,13 @@ rtc_poll:
 ; A single PML4 entry can map 512GiB with 2MiB pages
 ; A single PML4 entry is 8 bytes in length
 	cld
-	mov edi, 0x00002000		; Create a PML4 entry for the first 4GiB of RAM
+	mov edi, 0x00002000		; Create a PML4 entry for physical memory
 	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
-	stosd
-	xor eax, eax
-	stosd
+	stosq
 
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
 	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
-	stosd
-	xor eax, eax
-	stosd
+	stosq
 
 ; Create the Page-Directory-Pointer-Table Entries (PDPTE)
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
@@ -163,12 +168,8 @@ rtc_poll:
 	mov edi, 0x00003000		; location of low PDPE
 	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
 create_pdpte_low:
-	stosd
-	push rax
-	xor eax, eax
-	stosd
-	pop rax
-	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
+	stosq
+	add rax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
 	cmp ecx, 0
 	jne create_pdpte_low
@@ -180,12 +181,8 @@ create_pdpte_low:
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 	mov ecx, 2048			; Create 2048 2 MiB page maps.
 pde_low:				; Create a 2 MiB page
-	stosd
-	push rax
-	xor eax, eax
-	stosd
-	pop rax
-	add eax, 0x00200000		; Increment by 2MiB
+	stosq
+	add rax, 0x00200000		; Increment by 2MiB
 	dec ecx
 	cmp ecx, 0
 	jne pde_low
@@ -468,23 +465,8 @@ clearmapnext:
 	rep movsq			; Copy 8 bytes at a time
 
 ; Output message via serial port
-	cld				; Clear the direction flag.. we want to increment through the string
-	mov dx, 0x03F8			; Address of first serial port
-	mov rsi, message		; Location of message
-	mov cx, 11			; Length of message
-serial_nextchar:
-	jrcxz serial_done		; If RCX is 0 then the function is complete
-	add dx, 5			; Offset to Line Status Register
-	in al, dx
-	sub dx, 5			; Back to to base
-	and al, 0x20
-	cmp al, 0
-	je serial_nextchar
-	dec cx
-	lodsb				; Get char from string and store in AL
-	out dx, al			; Send the char to the serial port
-	jmp serial_nextchar
-serial_done:
+	mov rsi, message_ok		; Location of message
+	call debug_msg
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
@@ -511,6 +493,59 @@ serial_done:
 %include "init/smp.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
+
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a single char via the serial port
+; IN: AL = Byte to send
+debug_msg_char:
+	pushf
+	push rdx
+	push rax			; Save the byte
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_char_wait:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_char_wait
+	pop rax				; Restore the byte
+	out dx, al			; Send the char to the serial port
+debug_msg_char_done:
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a message via the serial port
+; IN: RSI = Location of message
+debug_msg:
+	pushf
+	push rdx
+	push rax
+	cld				; Clear the direction flag.. we want to increment through the string
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_next:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_next
+	lodsb				; Get char from string and store in AL
+	cmp al, 0
+	je debug_msg_done
+	out dx, al			; Send the char to the serial port
+	jmp debug_msg_next
+debug_msg_done:
+	pop rax
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
 
 EOF:
 	db 0xDE, 0xAD, 0xC0, 0xDE

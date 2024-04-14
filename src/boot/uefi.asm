@@ -126,12 +126,17 @@ EntryPoint:
 
 	; Set screen colour attributes
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	mov rdx, 0x07						; IN UINTN Attribute Light black background, grey foreground
+	mov rdx, 0x07						; IN UINTN Attribute - Black background, grey foreground
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
 	; Clear screen
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_CLEAR_SCREEN]
+
+	; Output 'UEFI '
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_uefi]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Find the address of the ACPI data from the UEFI configuration table
 	mov rax, [EFI_SYSTEM_TABLE]
@@ -246,19 +251,20 @@ skip_set_video:
 	; Save video values to the area of memory where Pure64 expects them
 	mov rdi, 0x00005F00
 	mov rax, [FB]
-	stosq
+	stosq							; 64-bit Frame Buffer Base
 	mov rax, [FBS]
-	stosq
+	stosq							; 64-bit Frame Buffer Size in bytes
 	mov rax, [HR]
-	stosw
+	stosw							; 16-bit Screen X
 	mov rax, [VR]
-	stosw
+	stosw							; 16-bit Screen Y
 
+	; Output 'OK' as we are about to leave UEFI
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	lea rdx, [msg_OK]					; IN CHAR16 *String
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
-	; Get Memory Map
+	; Get Memory Map from UEFI and save it to 0x6000
 get_memmap:
 	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
 	lea rdx, 0x6000						; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
@@ -279,7 +285,7 @@ get_memmap:
 	; 0  UINT32 - Type
 	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
 	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
-	; 24 UINT64 - NumberOfPages
+	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank
 
@@ -295,14 +301,14 @@ get_memmap:
 	cli
 
 	; Clear registers
-	xor eax, eax			; aka r0
-	xor ecx, ecx			; aka r1
-	xor edx, edx			; aka r2
-	xor ebx, ebx			; aka r3
-	mov rsp, 0x8000			; aka r4
-	xor ebp, ebp			; aka r5
-	xor esi, esi			; aka r6
-	xor edi, edi			; aka r7
+	xor eax, eax
+	xor ecx, ecx
+	xor edx, edx
+	xor ebx, ebx
+	mov rsp, 0x8000
+	xor ebp, ebp
+	xor esi, esi
+	xor edi, edi
 	xor r8, r8
 	xor r9, r9
 	xor r10, r10
@@ -312,8 +318,9 @@ get_memmap:
 	xor r14, r14
 	xor r15, r15
 
+	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
-	mov eax, 0x00101010					; 0x00RRGGBB
+	mov eax, 0x0000FF00					; 0x00RRGGBB
 	mov rcx, [FBS]
 	shr rcx, 2						; Quick divide by 4 (32-bit colour)
 	rep stosd
@@ -321,12 +328,12 @@ get_memmap:
 	jmp 0x8000
 
 exitfailure:
+	; Set screen to red on exit failure
 	mov rdi, [FB]
-	mov eax, 0x00FF0000					; Red
+	mov eax, 0x00FF0000					; 0x00RRGGBB
 	mov rcx, [FBS]
 	shr rcx, 2						; Quick divide by 4 (32-bit colour)
 	rep stosd
-	jmp halt
 error:
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	lea rdx, [msg_error]					; IN CHAR16 *String
@@ -378,10 +385,11 @@ dd 0x9042a9de
 dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
-hextable: 		db '0123456789ABCDEF'
+msg_uefi:		dw u('UEFI '), 0
+msg_OK:			dw u('OK'), 0
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
-msg_OK:			dw u('UEFI OK'), 0
+
 
 align 4096
 PAYLOAD:
