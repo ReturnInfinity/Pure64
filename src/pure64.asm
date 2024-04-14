@@ -392,9 +392,10 @@ clearmapnext:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
-	mov rdi, [0x00005F00 + 40]
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
 	mov eax, 0x00202020		; 0x00RRGGBB
-	mov ecx, 800 * 600
 	rep stosd
 
 	call init_acpi			; Find and process the ACPI tables
