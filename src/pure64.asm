@@ -150,16 +150,14 @@ rtc_poll:
 ; PML4 is stored at 0x0000000000002000, create the first entry there
 ; A single PML4 entry can map 512GiB with 2MiB pages
 ; A single PML4 entry is 8 bytes in length
-	cld
 	mov edi, 0x00002000		; Create a PML4 entry for physical memory
 	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
 	stosq
-
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
 	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
 	stosq
 
-; Create the Page-Directory-Pointer-Table Entries (PDPTE)
+; Create the Low Page-Directory-Pointer-Table Entries (PDPTE)
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
 ; A single PDPTE can map 1GiB with 2MiB pages
 ; A single PDPTE is 8 bytes in length
@@ -174,13 +172,13 @@ create_pdpte_low:
 	cmp ecx, 0
 	jne create_pdpte_low
 
-; Create the low Page-Directory Entries (PDE).
+; Create the Low Page-Directory Entries (PDE)
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00010000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	mov ecx, 2048			; Create 2048 2 MiB page maps.
-pde_low:				; Create a 2 MiB page
+	mov ecx, 2048			; Create 2048 2MiB page maps
+pde_low:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
 	dec ecx
@@ -237,18 +235,30 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-uefi_memmap:				; TODO fix this as it is a terrible hack
-	mov rdi, 0x400000
-	mov al, 1
-	mov rcx, 32
-	rep stosb
-	mov ebx, 64
-	mov dword [p_mem_amount], ebx
-memmap_end:
+; Parse the Memory Map at 0x6000
+;uefi_memmap:
+;	xor ebx, ebx			; Running counter of 4K pages
+;	mov esi, 0x6018
+;uefi_memmap_next:
+;	mov rax, [rsi]
+;	cmp rax, 0
+;	je uefi_memmap_end
+;	add rbx, rax
+;	add esi, 48
+;	jmp uefi_memmap_next
+;uefi_memmap_end:
+;	mov dword [p_mem_amount], ebx
 
-; Create the high memory map
-	mov rcx, rbx
-	shr rcx, 9			; TODO - This isn't the exact math but good enough
+; FIXME - Don't hardcode the RAM to 64MiB
+	mov eax, 64
+	mov dword [p_mem_amount], eax
+
+; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
+; High PDPTE is stored at 0x0000000000004000, create the first entry there
+; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE is 8 bytes in length
+; 1 entry is created to map the first 1GiB of physical RAM to 0xFFFF800000000000
+; FIXME - Create more than just one PDPE depending on the amount of RAM in the system
 	add rcx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00004000		; location of high PDPE
 	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
@@ -259,34 +269,20 @@ create_pdpe_high:
 	cmp ecx, 0
 	jne create_pdpe_high
 
-; Create the high PD entries
-; EBX contains the number of pages that should exist in the map, once they are all found bail out
-	xor ecx, ecx
-	xor eax, eax
-	xor edx, edx
-	mov edi, 0x00020000		; Location of high PD entries
-	mov esi, 0x00400000		; Location of free pages map
-
-pd_high:
-	cmp rdx, rbx			; Compare mapped pages to max pages
-	je pd_high_done
-	lodsb
-	cmp al, 1
-	je pd_high_entry
-	add rcx, 1
-	jmp pd_high
-
-pd_high_entry:
+; Create the High Page-Directory Entries (PDE).
+; A single PDE can map 2MiB of RAM
+; A single PDE is 8 bytes in length
+; FIXME - Map more than 64MiB depending on the amount of RAM in the system
+	mov edi, 0x00020000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	shl rcx, 21
-	add rax, rcx
-	shr rcx, 21
+	add rax, 0x00400000		; Start at 4MiB in
+	mov ecx, 32			; Create 32 2MiB page maps
+pde_high:				; Create a 2MiB page
 	stosq
-	add rcx, 1
-	add rdx, 1			; We have mapped a valid page
-	jmp pd_high
-
-pd_high_done:
+	add rax, 0x00200000		; Increment by 2MiB
+	dec ecx
+	cmp ecx, 0
+	jne pde_high
 
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
