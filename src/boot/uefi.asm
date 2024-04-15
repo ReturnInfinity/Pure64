@@ -129,7 +129,7 @@ EntryPoint:
 	mov rdx, 0x07						; IN UINTN Attribute - Black background, grey foreground
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
-	; Clear screen
+	; Clear screen (This also sets the cursor position to 0,0)
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_CLEAR_SCREEN]
 
@@ -248,6 +248,44 @@ skip_set_video:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
+get_memmap:
+	; Output 'OK' as we are about to leave UEFI
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_OK]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+
+	; Get Memory Map from UEFI and save it [memmap]
+	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
+	mov rdx, [memmap]					; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
+	lea r8, [memmapkey]					; OUT UINTN *MapKey
+	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
+	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
+	mov [rsp+32], r10
+	mov rax, [BS]
+	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
+	cmp al, EFI_BUFFER_TOO_SMALL
+	je get_memmap						; Attempt again as the memmapsize was updated by EFI
+	cmp rax, EFI_SUCCESS
+	jne exitfailure
+	; Output at 0x6000 is as follows:
+	; 0  UINT32 - Type
+	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
+	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
+	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
+	; 32 UINT64 - Attribute
+	; 40 UINT64 - Blank
+
+	; Exit Boot services as UEFI is no longer needed
+	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
+	mov rdx, [memmapkey]					; IN UINTN MapKey
+	mov rax, [BS]
+	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
+	cmp rax, EFI_SUCCESS
+	jne get_memmap						; If it failed, get the memory map and try to exit again
+
+	; Stop interrupts
+	cli
+
 	; Save video values to the area of memory where Pure64 expects them
 	mov rdi, 0x00005F00
 	mov rax, [FB]
@@ -258,47 +296,24 @@ skip_set_video:
 	stosw							; 16-bit Screen X
 	mov rax, [VR]
 	stosw							; 16-bit Screen Y
+	xor eax, eax
+	stosd
+	mov rax, [memmap]
+	stosq
+	mov rax, [memmapsize]
+	stosq
+	mov rax, [memmapkey]
+	stosq
+	mov rax, [memmapdescsize]
+	stosq
+	mov rax, [memmapdescver]
 
-	; Output 'OK' as we are about to leave UEFI
-	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	lea rdx, [msg_OK]					; IN CHAR16 *String
-	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
-
-	; Get Memory Map from UEFI and save it to 0x6000
-get_memmap:
-	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
-	lea rdx, 0x6000						; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
-	lea r8, [memmapkey]					; OUT UINTN *MapKey
-	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
-	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
-	sub rsp, 32						; Shadow space
-	push r10
-	mov rax, [BS]
-	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
-	pop r10
-	add rsp, 32
-	cmp al, 5						; EFI_BUFFER_TOO_SMALL
-	je get_memmap						; Attempt again as the memmapsize was updated by EFI
-	cmp rax, EFI_SUCCESS
-	jne error
-	; Output at 0x6000 is as follows:
-	; 0  UINT32 - Type
-	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
-	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
-	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
-	; 32 UINT64 - Attribute
-	; 40 UINT64 - Blank
-
-	; Exit Boot services as EFI is no longer needed
-	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
-	mov rdx, [memmapkey]					; IN UINTN MapKey
-	mov rax, [BS]
-	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
-	cmp rax, EFI_SUCCESS
-	jne exitfailure
-
-	; Stop interrupts
-	cli
+	; Set screen to green before jumping to Pure64
+	mov rdi, [FB]
+	mov eax, 0x0000FF00					; 0x00RRGGBB
+	mov rcx, [FBS]
+	shr rcx, 2						; Quick divide by 4 (32-bit colour)
+	rep stosd
 
 	; Clear registers
 	xor eax, eax
@@ -317,13 +332,6 @@ get_memmap:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
-
-	; Set screen to green before jumping to Pure64
-	mov rdi, [FB]
-	mov eax, 0x0000FF00					; 0x00RRGGBB
-	mov rcx, [FBS]
-	shr rcx, 2						; Quick divide by 4 (32-bit colour)
-	rep stosd
 
 	jmp 0x8000
 
@@ -366,7 +374,8 @@ FB:			dq 0	; Frame buffer base address
 FBS:			dq 0	; Frame buffer size
 HR:			dq 0	; Horizontal Resolution
 VR:			dq 0	; Vertical Resolution
-memmapsize:		dq 8192
+memmap:			dq 0x200000	; Store the Memory Map from UEFI here
+memmapsize:		dq 32768	; Max size we are expecting
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
@@ -386,7 +395,7 @@ dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
 msg_uefi:		dw u('UEFI '), 0
-msg_OK:			dw u('OK'), 0
+msg_OK:			dw u('OK '), 0
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
 

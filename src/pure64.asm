@@ -185,6 +185,13 @@ pde_low:				; Create a 2MiB page
 	cmp ecx, 0
 	jne pde_low
 
+	; Debug - Set screen to blue prior to loading GDT and PML4
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x002020F0		; 0x00RRGGBB
+	rep stosd
+
 ; Load the GDT
 	lgdt [GDTR64]
 
@@ -229,25 +236,40 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
+	; Debug - Set screen to purple after loading GDT and PML4
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x00F020F0		; 0x00RRGGBB
+	rep stosd
+
+
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
 	mov eax, 0x90909090		; to fall through to the AP Init code
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-; Parse the Memory Map at 0x6000
-;uefi_memmap:
-;	xor ebx, ebx			; Running counter of 4K pages
-;	mov esi, 0x6018
-;uefi_memmap_next:
-;	mov rax, [rsi]
-;	cmp rax, 0
-;	je uefi_memmap_end
-;	add rbx, rax
-;	add esi, 48
-;	jmp uefi_memmap_next
-;uefi_memmap_end:
-;	mov dword [p_mem_amount], ebx
+; Parse the Memory Map at 0x200000
+uefi_memmap:
+	xor ebx, ebx			; Running counter of 4K pages
+	mov esi, 0x200000
+uefi_memmap_next:
+	mov rax, [rsi]
+	cmp rax, 7
+	je uefi_memmap_conventional
+	cmp rax, 0
+	je uefi_memmap_end
+uefi_memmap_skip:
+	add esi, 48
+	jmp uefi_memmap_next
+uefi_memmap_conventional:
+	mov rax, [rsi + 24]
+	add rbx, rax
+	jmp uefi_memmap_skip
+uefi_memmap_end:
+	shr rbx, 8
+	mov dword [p_mem_amount], ebx
 
 ; FIXME - Don't hardcode the RAM to 64MiB
 	mov eax, 64
