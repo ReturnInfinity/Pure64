@@ -286,7 +286,7 @@ get_memmap:
 	; Stop interrupts
 	cli
 
-	; Save video values to the area of memory where Pure64 expects them
+	; Save UEFI values to the area of memory where Pure64 expects them
 	mov rdi, 0x00005F00
 	mov rax, [FB]
 	stosq							; 64-bit Frame Buffer Base
@@ -297,16 +297,17 @@ get_memmap:
 	mov rax, [VR]
 	stosw							; 16-bit Screen Y
 	xor eax, eax
-	stosd
+	stosd							; Padding
 	mov rax, [memmap]
-	stosq
+	stosq							; Memory Map Base
 	mov rax, [memmapsize]
-	stosq
+	stosq							; Size of Memory Map in bytes
 	mov rax, [memmapkey]
-	stosq
+	stosq							; The key used to exit Boot Services
 	mov rax, [memmapdescsize]
-	stosq
+	stosq							; EFI_MEMORY_DESCRIPTOR size in bytes
 	mov rax, [memmapdescver]
+	stosq							; EFI_MEMORY_DESCRIPTOR version
 
 	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
@@ -375,7 +376,7 @@ FBS:			dq 0	; Frame buffer size
 HR:			dq 0	; Horizontal Resolution
 VR:			dq 0	; Vertical Resolution
 memmap:			dq 0x200000	; Store the Memory Map from UEFI here
-memmapsize:		dq 32768	; Max size we are expecting
+memmapsize:		dq 32768	; Max size we are expecting in bytes
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0

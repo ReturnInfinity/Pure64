@@ -55,7 +55,7 @@ start64:
 	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
 	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
-	rep stosd			; Don't overwrite the VBE data at 0x5F00
+	rep stosd			; Don't overwrite the UEFI data at 0x5F00
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -242,7 +242,6 @@ clearcs64:
 	shr rcx, 2			; Quick divide by 4
 	mov eax, 0x00F020F0		; 0x00RRGGBB
 	rep stosd
-
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -464,9 +463,14 @@ clearmapnext:
 	mov rax, [p_LocalAPICAddress]
 	stosq
 
+	; TODO - Copy the data we received from GOP
+	; FB
+	; FBS
+	; X
+	; Y
 	mov di, 0x5080
 	mov eax, [0x00005F00]		; Base address of video memory 
-	stosd				; TODO QWORD
+	stosd
 	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
 	mov al, 32			; Color depth
@@ -502,7 +506,7 @@ clearmapnext:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
-	jmp 0x00100000
+	jmp 0x00100000			; Done with Pure64, jump to the kernel
 
 
 %include "init/acpi.asm"
@@ -535,6 +539,7 @@ debug_msg_char_done:
 	popf
 	ret
 ; -----------------------------------------------------------------------------
+
 
 ; -----------------------------------------------------------------------------
 ; debug_msg_char - Send a message via the serial port

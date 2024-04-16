@@ -73,19 +73,19 @@ OUTPUT_ARCH("i386:x86-64")
 
 SECTIONS
 {
-    . = 0x100000;
-    .text : {
-        *(.text)
-    }
-    .data : {
-        *(.data)
-    }
-    .rodata : {
-        *(.rodata)
-    }
-    .bss : {
-        *(.bss)
-    }
+	. = 0x100000;
+	.text : {
+		*(.text)
+	}
+	.data : {
+		*(.data)
+	}
+	.rodata : {
+		*(.rodata)
+	}
+	.bss : {
+		*(.bss)
+	}
 }
 
 ```
@@ -108,7 +108,7 @@ extern int main(void);
 
 void _start(void)
 {
-    main();
+	main();
 }
 ```
 This file would **always** have to be linked in front of everything else. For the above example that would mean the linker command above would have to become:
