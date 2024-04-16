@@ -248,6 +248,9 @@ skip_set_video:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
+;	mov rbx, [FB]						; Display the framebuffer address
+;	call printhex
+
 get_memmap:
 	; Output 'OK' as we are about to leave UEFI
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
@@ -356,6 +359,39 @@ halt:
 	hlt
 	jmp halt
 
+; -----------------------------------------------------------------------------
+; printhex - Display a 64-bit value in hex
+; IN: RBX = Value
+printhex:			 
+	mov rbp, 16	; Stack msialigned by 8 at function entry
+	push rax
+	push rcx
+	push rdx	; 3 pushes also align stack on 16 byte boundary
+			; (8+3*8)=32, 32 evenly divisible by 16
+	sub rsp, 32	; Allocate 32 bytes of shadow space
+printhex_loop:
+	rol rbx, 4
+	mov rax, rbx
+	and rax, 0Fh
+	lea rcx, [Hex]
+	mov rax, [rax + rcx]
+	mov byte [Num], al
+	lea rdx, [Num]
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+	dec rbp
+	jnz printhex_loop
+	lea rdx, [NL]
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+
+	add rsp, 32
+	pop rdx
+	pop rcx
+	pop rax
+	ret
+; -----------------------------------------------------------------------------
+
 
 align 2048
 CODE_END:
@@ -399,6 +435,9 @@ msg_uefi:		dw u('UEFI '), 0
 msg_OK:			dw u('OK '), 0
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
+Hex:			db '0123456789ABCDEF'
+Num:			dw 0, 0
+NL:			dw 13, 10, 0
 
 
 align 4096
