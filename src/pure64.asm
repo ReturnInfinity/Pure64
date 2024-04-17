@@ -151,11 +151,18 @@ rtc_poll:
 ; A single PML4 entry can map 512GiB with 2MiB pages
 ; A single PML4 entry is 8 bytes in length
 	mov edi, 0x00002000		; Create a PML4 entry for physical memory
-	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
+	mov eax, 0x0000300F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), location of low PDP (4KiB aligned)
 	stosq
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
+	mov eax, 0x0000400F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), location of high PDP (4KiB aligned)
 	stosq
+
+; Check to see if the system supports 1 GiB pages
+; If it does we will use that for identity mapping the lower memory
+	mov eax, 0x80000001
+	cpuid
+	bt edx, 26			; Page1GB
+	jc pdpte_1GB
 
 ; Create the Low Page-Directory-Pointer-Table Entries (PDPTE)
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
@@ -164,13 +171,12 @@ rtc_poll:
 ; 4 entries are created to map the first 4GiB of RAM
 	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
-	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
-create_pdpte_low:
+	mov eax, 0x0001000F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), location of first low PD (4KiB aligned)
+pdpte_low:
 	stosq
 	add rax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne create_pdpte_low
+	jnz pdpte_low
 
 ; Create the Low Page-Directory Entries (PDE)
 ; A single PDE can map 2MiB of RAM
@@ -182,9 +188,25 @@ pde_low:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
 	dec ecx
-	cmp ecx, 0
-	jne pde_low
+	jnz pde_low
+	jmp skip1GB
 
+; Create the Low Page-Directory-Pointer Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000003000, create the first entry there
+; A single PDPTE can map 1GiB
+; A single PDPTE is 8 bytes in length
+; 512 entries are created to map the first 512GiB of RAM
+pdpte_1GB:
+	mov ecx, 512			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov edi, 0x00003000		; location of low PDPE
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), 7 (PS)
+pdpte_low_1GB:				; Create a 1GiB page
+	stosq
+	add rax, 0x40000000		; Increment by 1GiB
+	dec ecx
+	jnz pdpte_low_1GB
+
+skip1GB:
 	; Debug - Set screen to blue prior to loading GDT and PML4
 	mov rdi, [0x00005F00]		; Frame buffer base
 	mov rcx, [0x00005F08]		; Frame buffer size

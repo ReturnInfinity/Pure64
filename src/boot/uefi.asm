@@ -363,7 +363,7 @@ halt:
 ; printhex - Display a 64-bit value in hex
 ; IN: RBX = Value
 printhex:			 
-	mov rbp, 16	; Stack msialigned by 8 at function entry
+	mov rbp, 16	; Counter
 	push rax
 	push rcx
 	push rdx	; 3 pushes also align stack on 16 byte boundary
