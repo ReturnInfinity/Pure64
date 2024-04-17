@@ -174,8 +174,17 @@ exception_gate_19:
 	jmp exception_gate_main
 
 exception_gate_main:
+	; Output message via serial port
+	mov rsi, message_error		; Location of message
+	call debug_msg
+	; Set screen to Red
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x00FF0000		; 0x00RRGGBB
+	rep stosd
 exception_gate_main_hang:
-	nop
+	hlt
 	jmp exception_gate_main_hang	; Hang. User must reset machine at this point
 ; -----------------------------------------------------------------------------
 

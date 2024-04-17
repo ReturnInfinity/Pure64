@@ -8,6 +8,7 @@
 
 message_pure64:		db 10, 'Pure64 ', 0
 message_ok:		db 'OK', 10, 0
+message_error:		db 'Error', 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
