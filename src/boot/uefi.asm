@@ -311,6 +311,9 @@ get_memmap:
 	stosq							; EFI_MEMORY_DESCRIPTOR size in bytes
 	mov rax, [memmapdescver]
 	stosq							; EFI_MEMORY_DESCRIPTOR version
+	mov rdi, 0x00005FFF
+	mov al, 'U'
+	stosb							; 'U' as we booted via UEFI
 
 	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
@@ -363,12 +366,12 @@ halt:
 ; printhex - Display a 64-bit value in hex
 ; IN: RBX = Value
 printhex:			 
-	mov rbp, 16	; Counter
+	mov rbp, 16						; Counter
 	push rax
 	push rcx
-	push rdx	; 3 pushes also align stack on 16 byte boundary
-			; (8+3*8)=32, 32 evenly divisible by 16
-	sub rsp, 32	; Allocate 32 bytes of shadow space
+	push rdx						; 3 pushes also align stack on 16 byte boundary
+								; (8+3*8)=32, 32 evenly divisible by 16
+	sub rsp, 32						; Allocate 32 bytes of shadow space
 printhex_loop:
 	rol rbx, 4
 	mov rax, rbx
@@ -381,7 +384,7 @@ printhex_loop:
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 	dec rbp
 	jnz printhex_loop
-	lea rdx, [NL]
+	lea rdx, [newline]
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
@@ -398,21 +401,21 @@ CODE_END:
 
 ; Data begins here
 DATA:
-EFI_IMAGE_HANDLE:	dq 0	; EFI gives this in RCX
-EFI_SYSTEM_TABLE:	dq 0	; And this in RDX
-EFI_RETURN:		dq 0	; And this in RSP
-BS:			dq 0	; Boot services
-RTS:			dq 0	; Runtime services
-CONFIG:			dq 0	; Config Table address
-ACPI:			dq 0	; ACPI table address
-OUTPUT:			dq 0	; Output services
-VIDEO:			dq 0	; Video services
-FB:			dq 0	; Frame buffer base address
-FBS:			dq 0	; Frame buffer size
-HR:			dq 0	; Horizontal Resolution
-VR:			dq 0	; Vertical Resolution
-memmap:			dq 0x200000	; Store the Memory Map from UEFI here
-memmapsize:		dq 32768	; Max size we are expecting in bytes
+EFI_IMAGE_HANDLE:	dq 0					; EFI gives this in RCX
+EFI_SYSTEM_TABLE:	dq 0					; And this in RDX
+EFI_RETURN:		dq 0					; And this in RSP
+BS:			dq 0					; Boot services
+RTS:			dq 0					; Runtime services
+CONFIG:			dq 0					; Config Table address
+ACPI:			dq 0					; ACPI table address
+OUTPUT:			dq 0					; Output services
+VIDEO:			dq 0					; Video services
+FB:			dq 0					; Frame buffer base address
+FBS:			dq 0					; Frame buffer size
+HR:			dq 0					; Horizontal Resolution
+VR:			dq 0					; Vertical Resolution
+memmap:			dq 0x200000				; Store the Memory Map from UEFI here
+memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
@@ -437,13 +440,13 @@ msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
 Hex:			db '0123456789ABCDEF'
 Num:			dw 0, 0
-NL:			dw 13, 10, 0
+newline:		dw 13, 10, 0
 
 
 align 4096
 PAYLOAD:
 
-align 65536				; Pad out to 64K
+align 65536							; Pad out to 64K
 DATA_END:
 END:
 
