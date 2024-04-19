@@ -22,7 +22,7 @@ ORG 0x00008000
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
-	jmp start64			; This command will be overwritten with 'NOP's before the AP's are started
+	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
 	db 0x36, 0x34			; '64' marker
 
@@ -45,6 +45,111 @@ BITS 16
 	mov esp, 0x8000			; Set a known free location for the stack
 
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
+
+; =============================================================================
+; This is 32-bit code so it's important that the encoding of the first few instructions also
+; work in 64-bit mode. If a 'U' is stored at 0x5FFF then we know it was a UEFI boot and can
+; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
+BITS 32
+bootmode:
+	mov esi, 0x5FFF
+	lodsb
+	cmp al, 'U'
+	je start64
+
+	mov eax, 16			; Set the correct segment registers
+	mov ds, ax
+	mov es, ax
+	mov ss, ax
+	mov fs, ax
+	mov gs, ax
+
+	xor eax, eax			; Clear all registers
+	xor ebx, ebx
+	xor ecx, ecx
+	xor edx, edx
+	xor esi, esi
+	xor edi, edi
+	xor ebp, ebp
+	mov esp, 0x8000			; Set a known free location for the stack
+
+;	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+;	mov edi, 0x00210000
+;	mov ecx, 81920
+;	rep stosd			; Write 320KiB
+
+; Create the Page Map Level 4 Entries (PML4E)
+; PML4 is stored at 0x0000000000002000, create the first entry there
+; A single PML4 entry can map 512GiB with 2MiB pages
+; A single PML4 entry is 8 bytes in length
+	cld
+	mov edi, 0x00202000		; Create a PML4 entry for the first 4GiB of RAM
+	mov eax, 0x00203007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
+	stosd
+	xor eax, eax
+	stosd
+
+; Create the Page-Directory-Pointer-Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000003000, create the first entry there
+; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE is 8 bytes in length
+; 4 entries are created to map the first 4GiB of RAM
+	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov edi, 0x00203000		; location of low PDPE
+	mov eax, 0x00410007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
+pdpte_low_32:
+	stosd
+	push eax
+	xor eax, eax
+	stosd
+	pop eax
+	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
+	dec ecx
+	cmp ecx, 0
+	jne pdpte_low_32
+
+; Create the low Page-Directory Entries (PDE).
+; A single PDE can map 2MiB of RAM
+; A single PDE is 8 bytes in length
+	mov edi, 0x00210000		; Location of first PDE
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
+	xor ecx, ecx
+pde_low_32:				; Create a 2 MiB page
+	stosd
+	push eax
+	xor eax, eax
+	stosd
+	pop eax
+	add eax, 0x00200000		; Increment by 2MiB
+	inc ecx
+	cmp ecx, 2048
+	jne pde_low_32			; Create 2048 2 MiB page maps.
+
+; Load the GDT
+	lgdt [tGDTR64]
+
+; Enable extended properties
+	mov eax, cr4
+	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
+	mov cr4, eax
+
+; Point cr3 at PML4
+	mov eax, 0x00202008		; Write-thru enabled (Bit 3)
+	mov cr3, eax
+
+; Enable long mode and SYSCALL/SYSRET
+	mov ecx, 0xC0000080		; EFER MSR number
+	rdmsr				; Read EFER
+	or eax, 0x00000101 		; LME (Bit 8)
+	wrmsr				; Write EFER
+
+; Enable paging to activate long mode
+	mov eax, cr0
+	or eax, 0x80000000		; PG (Bit 31)
+	mov cr0, eax
+
+	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
+
 
 ; =============================================================================
 ; 64-bit mode

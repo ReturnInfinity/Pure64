@@ -59,6 +59,11 @@ dq 0x00CF92000000FFFF			; 32-bit data descriptor
 gdt32_end:
 
 align 16
+tGDTR64:				; Global Descriptors Table Register
+dw gdt64_end - gdt64 - 1		; limit of GDT (size minus one)
+dq gdt64				; linear address of GDT
+
+align 16
 GDTR64:					; Global Descriptors Table Register
 dw gdt64_end - gdt64 - 1		; limit of GDT (size minus one)
 dq 0x0000000000001000			; linear address of GDT
