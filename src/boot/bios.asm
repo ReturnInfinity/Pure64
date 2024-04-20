@@ -13,10 +13,13 @@
 ; Default location of the second stage boot loader. This loads
 ; 32 KiB from sector 16 into memory at 0x8000
 %define DAP_SECTORS 64
-%define DAP_STARTSECTOR 262114+16
+%define DAP_STARTSECTOR 262160
 %define DAP_ADDRESS 0x8000
 %define DAP_SEGMENT 0x0000
 
+; Set the desired screen resolution values below
+Horizontal_Resolution		equ 800
+Vertical_Resolution		equ 600
 
 BITS 16
 org 0x7C00
@@ -121,9 +124,9 @@ VBESearch:
 	jne VBESearch			; Try next mode
 	cmp byte [VBEModeInfoBlock.BitsPerPixel], 32 ; Desired bit depth
 	jne VBESearch			; If not equal, try next mode
-	cmp word [VBEModeInfoBlock.XResolution], 800 ; Desired XRes here
+	cmp word [VBEModeInfoBlock.XResolution], Horizontal_Resolution ; Desired XRes here
 	jne VBESearch
-	cmp word [VBEModeInfoBlock.YResolution], 600 ; Desired YRes here
+	cmp word [VBEModeInfoBlock.YResolution], Vertical_Resolution ; Desired YRes here
 	jne VBESearch
 
 	or bx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
@@ -145,7 +148,7 @@ VBESearch:
 	jne sig_fail
 
 	mov al, 'B'			; 'B' as we booted via BIOS
-	mov [0x5FFF], al
+	mov [0x5FFF], al		; Store the boot marker
 
 	mov si, msg_OK
 	call print_string_16

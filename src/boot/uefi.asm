@@ -169,7 +169,7 @@ nextentry:
 	jne error
 
 	; Parse the graphics information
-	; Mode Structure
+	; EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Structure
 	; 0  UINT32 - MaxMode
 	; 4  UINT32 - Mode
 	; 8  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION - *Info;
@@ -180,7 +180,9 @@ nextentry:
 	add rax, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
 	mov rax, [rax]						; RAX holds the address of the Mode structure
 	mov eax, [rax]						; RAX holds UINT32 MaxMode
-	mov [vid_max], rax
+	mov ebx, [rax+4]					; RBX holds UINT32 Mode (The current mode)
+	mov [vid_max], rax					; The maximum video modes we can check
+	mov [vid_orig], rbx					; The mode currently used by UEFI
 	jmp vid_query
 	
 next_video_mode:
@@ -216,6 +218,8 @@ vid_query:
 	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
 	mov rdx, [vid_current]					; IN UINT32 ModeNumber
 	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE]
+	cmp rax, EFI_SUCCESS
+	jne next_video_mode
 
 skip_set_video:
 	; Gather video mode details
@@ -312,8 +316,8 @@ get_memmap:
 	mov rax, [memmapdescver]
 	stosq							; EFI_MEMORY_DESCRIPTOR version
 	mov rdi, 0x00005FFF
-	mov al, 'U'
-	stosb							; 'U' as we booted via UEFI
+	mov al, 'U'						; 'U' as we booted via UEFI
+	stosb							; Store the boor marker
 
 	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
@@ -419,6 +423,7 @@ memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
+vid_orig:		dq 0
 vid_current:		dq 0
 vid_max:		dq 0
 vid_size:		dq 0

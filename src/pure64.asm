@@ -53,9 +53,9 @@ BITS 16
 BITS 32
 bootmode:
 	mov esi, 0x5FFF
-	lodsb
-	cmp al, 'U'
-	je start64
+	lodsb				; Load the boot marker
+	cmp al, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
+	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
 
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
@@ -73,13 +73,26 @@ bootmode:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
-;	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
-;	mov edi, 0x00210000
-;	mov ecx, 81920
-;	rep stosd			; Write 320KiB
+	; Save the frame buffer address, 
+	mov esi, 0x5F00
+	mov eax, [0x5F00 + 40]
+	stosd				; 64-bit Frame Buffer Base (low)
+	xor eax, eax
+	stosd				; 64-bit Frame Buffer Base (high)
+	stosd				; 64-bit Frame Buffer Size in bytes (low)
+	stosd				; 64-bit Frame Buffer Size in bytes (high)
+	mov eax, [0x5F00 + 18]
+	stosw				; 16-bit Screen X
+	mov eax, [0x5F00 + 20]
+	stosw				; 16-bit Screen y
 
-; Create the Page Map Level 4 Entries (PML4E)
-; PML4 is stored at 0x0000000000002000, create the first entry there
+	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+	mov edi, 0x00210000
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
+
+; Create the temporary Page Map Level 4 Entries (PML4E)
+; PML4 is stored at 0x0000000000202000, create the first entry there
 ; A single PML4 entry can map 512GiB with 2MiB pages
 ; A single PML4 entry is 8 bytes in length
 	cld
@@ -89,14 +102,14 @@ bootmode:
 	xor eax, eax
 	stosd
 
-; Create the Page-Directory-Pointer-Table Entries (PDPTE)
-; PDPTE is stored at 0x0000000000003000, create the first entry there
+; Create the temporary Page-Directory-Pointer-Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000203000, create the first entry there
 ; A single PDPTE can map 1GiB with 2MiB pages
 ; A single PDPTE is 8 bytes in length
 ; 4 entries are created to map the first 4GiB of RAM
 	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00203000		; location of low PDPE
-	mov eax, 0x00410007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
+	mov eax, 0x00210007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
 pdpte_low_32:
 	stosd
 	push eax
@@ -108,7 +121,7 @@ pdpte_low_32:
 	cmp ecx, 0
 	jne pdpte_low_32
 
-; Create the low Page-Directory Entries (PDE).
+; Create the temporary low Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00210000		; Location of first PDE
@@ -160,7 +173,7 @@ start64:
 	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
 	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
-	rep stosd			; Don't overwrite the UEFI data at 0x5F00
+	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
