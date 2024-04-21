@@ -252,6 +252,7 @@ skip_set_video:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
+; Debug
 ;	mov rbx, [FB]						; Display the framebuffer address
 ;	call printhex
 
@@ -315,9 +316,6 @@ get_memmap:
 	stosq							; EFI_MEMORY_DESCRIPTOR size in bytes
 	mov rax, [memmapdescver]
 	stosq							; EFI_MEMORY_DESCRIPTOR version
-	mov rdi, 0x00005FFF
-	mov al, 'U'						; 'U' as we booted via UEFI
-	stosb							; Store the boor marker
 
 	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
@@ -344,6 +342,7 @@ get_memmap:
 	xor r14, r14
 	xor r15, r15
 
+	mov bl, 'U'
 	jmp 0x8000
 
 exitfailure:

@@ -25,6 +25,41 @@ BITS 16
 org 0x7C00
 
 entry:
+	jmp bootcode
+	nop
+
+; BPB (BIOS Parameter Block)
+dq 0		; OEM identifier
+dw 0		; Bytes per sector
+db 0		; Sectors per cluster
+dw 0		; Reserved sectors
+db 0		; Number of FATs
+dw 0		; Number of root directory entries
+dw 0		; The total sectors in the logical volume
+db 0		; Media descriptor type
+dw 0		; Number of sectors per FAT
+dw 0		; Number of sectors per track
+dw 0		; Number of heads or sides on the storage media
+dd 0		; Number of hidden sectors
+dd 0		; Large sector count
+
+; EBPB (Extended Boot Record)
+dd 0		; Sectors per FAT
+dw 0		; Flags
+dw 0		; FAT version number
+dd 0		; The cluster number of the root directory
+dw 0		; The sector number of the FSInfo structure
+dw 0		; The sector number of the backup boot sector
+dq 0		; Reserved
+dd 0		; Reserved
+db 0		; Drive number
+db 0		; Flags in Windows NT
+db 0		; Signature
+dd 0		; Volume ID 'Serial' number
+times 11 db 0	; Volume label string
+dq 0		; System identifier string. Always "FAT32   "
+
+bootcode:
 	cli				; Disable interrupts
 	cld				; Clear direction flag
 	xor eax, eax
@@ -35,11 +70,6 @@ entry:
 	sti				; Enable interrupts
 
 	mov [DriveNumber], dl		; BIOS passes drive number in DL
-
-	mov ah, 0
-	mov al, 11100011b		; 9600bps, no parity, 1 stop bit, 8 data bits
-	mov dx, 0			; Serial port 0
-	int 0x14			; Configure serial port
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -107,8 +137,8 @@ check_A20:
 	mov al, 0xDF
 	out 0x60, al
 
-	mov si, msg_Load
-	call print_string_16
+;	mov si, msg_Load
+;	call print_string_16
 
 	mov cx, 0x4000 - 1		; Start looking from here
 VBESearch:
@@ -143,15 +173,15 @@ VBESearch:
 	jc read_fail
 
 	; Verify that the 2nd stage boot loader was read.
-	mov ax, [0x8006]
-	cmp ax, 0x3436			; Match against the Pure64 binary
-	jne sig_fail
+;	mov ax, [0x8006]
+;	cmp ax, 0x3436			; Match against the Pure64 binary
+;	jne sig_fail
 
-	mov al, 'B'			; 'B' as we booted via BIOS
-	mov [0x5FFF], al		; Store the boot marker
+	mov bl, 'B'			; 'B' as we booted via BIOS
+;	mov [0x5FFF], al		; Store the boot marker
 
-	mov si, msg_OK
-	call print_string_16
+;	mov si, msg_OK
+;	call print_string_16
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
@@ -162,12 +192,12 @@ VBESearch:
 	jmp 8:0x8000			; Jump to 32-bit protected mode
 
 read_fail:
-	mov si, msg_ReadFail
-	call print_string_16
-	jmp halt
+;	mov si, msg_ReadFail
+;	call print_string_16
+;	jmp halt
 sig_fail:
-	mov si, msg_SigFail
-	call print_string_16
+;	mov si, msg_SigFail
+;	call print_string_16
 halt:
 	hlt
 	jmp halt
@@ -177,19 +207,19 @@ halt:
 ;------------------------------------------------------------------------------
 ; 16-bit function to output a string to the serial port
 ; IN:	SI - Address of start of string
-print_string_16:			; Output string in SI to screen
-	pusha
-	mov dx, 0			; Port 0
-.repeat:
-	mov ah, 0x01			; Serial - Write character to port
-	lodsb				; Get char from string
-	cmp al, 0
-	je .done			; If char is zero, end of string
-	int 0x14			; Output the character
-	jmp short .repeat
-.done:
-	popa
-	ret
+;print_string_16:			; Output string in SI to screen
+;	pusha
+;	mov dx, 0			; Port 0
+;.repeat:
+;	mov ah, 0x01			; Serial - Write character to port
+;	lodsb				; Get char from string
+;	cmp al, 0
+;	je .done			; If char is zero, end of string
+;	int 0x14			; Output the character
+;	jmp short .repeat
+;.done:
+;	popa
+;	ret
 ;------------------------------------------------------------------------------
 
 align 16
@@ -214,19 +244,20 @@ dw DAP_ADDRESS
 dw DAP_SEGMENT
 dq DAP_STARTSECTOR
 
-msg_Load db 10, "MBR ", 0
-msg_OK db "OK", 0
-msg_SigFail db "- Bad Sig!", 0
-msg_ReadFail db "Failed to read!", 0
+DriveNumber db 0x00
+
+;msg_Load db 10, "MBR ", 0
+;msg_OK db "OK", 0
+;msg_SigFail db "- Bad Sig!", 0
+;msg_ReadFail db "Failed to read!", 0
 
 times 446-$+$$ db 0
 
-; False partition table entry required by some BIOS vendors.
-db 0x80, 0x00, 0x01, 0x00, 0xEB, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
-DriveNumber db 0x00
+; Partition entries (4x 16-bytes)
 
 times 510-$+$$ db 0
 
+; Boot signature
 sign dw 0xAA55
 
 VBEModeInfoBlock: equ 0x5F00

@@ -52,9 +52,7 @@ BITS 16
 ; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
 BITS 32
 bootmode:
-	mov esi, 0x5FFF
-	lodsb				; Load the boot marker
-	cmp al, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
+	cmp bl, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
 	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
 
 	mov eax, 16			; Set the correct segment registers
@@ -165,6 +163,8 @@ pde_low_32:				; Create a 2 MiB page
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
+	mov bl, 'B'
+
 ; Enable paging to activate long mode
 	mov eax, cr0
 	or eax, 0x80000000		; PG (Bit 31)
@@ -184,8 +184,7 @@ start64:
 	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
 	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
 
-	mov al, [0x5FFF]
-	mov [p_BootMode], al
+	mov [p_BootMode], bl
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
