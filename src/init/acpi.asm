@@ -136,6 +136,10 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
+	mov rdi, [0x00005F00 + 40]
+	mov eax, 0x00FF0000					; 0x00RRGGBB
+	mov ecx, 800 * 600
+	rep stosd
 	jmp $
 
 

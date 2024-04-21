@@ -17,12 +17,12 @@
 ; =============================================================================
 
 
-BITS 32
+BITS 64
 ORG 0x00008000
 PURE64SIZE equ 4096			; Pad Pure64 to this length
 
 start:
-	jmp start32			; This command will be overwritten with 'NOP's before the AP's are started
+	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started
 	nop
 	db 0x36, 0x34			; '64' marker
 
@@ -47,20 +47,20 @@ BITS 16
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
 ; =============================================================================
-; 32-bit mode
+; This is 32-bit code so it's important that the encoding of the first few instructions also
+; work in 64-bit mode. If a 'U' is stored at 0x5FFF then we know it was a UEFI boot and can
+; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
 BITS 32
-start32:
+bootmode:
+	cmp bl, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
+	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
 	mov ss, ax
 	mov fs, ax
 	mov gs, ax
-
-	mov edi, 0x5000			; Clear the info map and system variable memory
-	xor eax, eax
-	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
-	rep stosd			; Don't overwrite the VBE data at 0x5F00
 
 	xor eax, eax			; Clear all registers
 	xor ebx, ebx
@@ -70,6 +70,121 @@ start32:
 	xor edi, edi
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
+
+	; Save the frame buffer address, size (after its calculated), and the screen x,y
+	mov bx, [0x5F00 + 20]
+	push ebx
+	mov ax, [0x5F00 + 18]
+	push eax
+	mul ebx
+	mov ecx, eax
+	shl ecx, 2			; Quick multiply by 4
+	mov edi, 0x5F00
+	mov eax, [0x5F00 + 40]
+	stosd				; 64-bit Frame Buffer Base (low)
+	xor eax, eax
+	stosd				; 64-bit Frame Buffer Base (high)
+	mov eax, ecx
+	stosd				; 64-bit Frame Buffer Size in bytes (low)
+	xor eax, eax
+	stosd				; 64-bit Frame Buffer Size in bytes (high)
+	pop eax
+	stosw				; 16-bit Screen X
+	pop eax
+	stosw				; 16-bit Screen y
+
+	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+	mov edi, 0x00210000
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
+
+; Create the temporary Page Map Level 4 Entries (PML4E)
+; PML4 is stored at 0x0000000000202000, create the first entry there
+; A single PML4 entry can map 512GiB with 2MiB pages
+; A single PML4 entry is 8 bytes in length
+	cld
+	mov edi, 0x00202000		; Create a PML4 entry for the first 4GiB of RAM
+	mov eax, 0x00203007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
+	stosd
+	xor eax, eax
+	stosd
+
+; Create the temporary Page-Directory-Pointer-Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000203000, create the first entry there
+; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE is 8 bytes in length
+; 4 entries are created to map the first 4GiB of RAM
+	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov edi, 0x00203000		; location of low PDPE
+	mov eax, 0x00210007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
+pdpte_low_32:
+	stosd
+	push eax
+	xor eax, eax
+	stosd
+	pop eax
+	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
+	dec ecx
+	cmp ecx, 0
+	jne pdpte_low_32
+
+; Create the temporary low Page-Directory Entries (PDE).
+; A single PDE can map 2MiB of RAM
+; A single PDE is 8 bytes in length
+	mov edi, 0x00210000		; Location of first PDE
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
+	xor ecx, ecx
+pde_low_32:				; Create a 2 MiB page
+	stosd
+	push eax
+	xor eax, eax
+	stosd
+	pop eax
+	add eax, 0x00200000		; Increment by 2MiB
+	inc ecx
+	cmp ecx, 2048
+	jne pde_low_32			; Create 2048 2 MiB page maps.
+
+; Load the GDT
+	lgdt [tGDTR64]
+
+; Enable extended properties
+	mov eax, cr4
+	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
+	mov cr4, eax
+
+; Point cr3 at PML4
+	mov eax, 0x00202008		; Write-thru enabled (Bit 3)
+	mov cr3, eax
+
+; Enable long mode and SYSCALL/SYSRET
+	mov ecx, 0xC0000080		; EFER MSR number
+	rdmsr				; Read EFER
+	or eax, 0x00000101 		; LME (Bit 8)
+	wrmsr				; Write EFER
+
+	mov bl, 'B'
+
+; Enable paging to activate long mode
+	mov eax, cr0
+	or eax, 0x80000000		; PG (Bit 31)
+	mov cr0, eax
+
+	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
+
+
+; =============================================================================
+; 64-bit mode
+BITS 64
+start64:
+	mov esp, 0x8000			; Set a known free location for the stack
+
+	mov edi, 0x5000			; Clear the info map and system variable memory
+	xor eax, eax
+	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
+	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
+
+	mov [p_BootMode], bl
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
@@ -114,25 +229,34 @@ rtc_poll:
 	out 0x21, al
 	out 0xA1, al
 
-; Configure serial port @ 0x03F8
+; Configure serial port @ 0x03F8 as 115200 8N1
 	mov dx, 0x03F8 + 1		; Interrupt Enable
 	mov al, 0x00			; Disable all interrupts
 	out dx, al
 	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 80
+	mov al, 80			; Enable DLAB
 	out dx, al
-	mov dx, 0x03F8 + 0		; Divisor Latch
-	mov ax, 1			; 1 = 115200 baud
-	out dx, ax
+	mov dx, 0x03F8 + 0		; Divisor Latch Low
+	mov al, 1			; 1 = 115200 baud
+	out dx, al
+	mov dx, 0x03F8 + 1		; Divisor Latch High
+	mov al, 0
+	out dx, al
 	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 3			; 8 bits, no parity, one stop bit
+	mov al, 3			; 8 data bits (0-1 set), one stop bit (2 set), no parity (3-5 clear), DLB (7 clear)
+	out dx, al
+	mov dx, 0x03F8 + 2		; Interrupt Identification and FIFO Control
+	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
 	out dx, al
 	mov dx, 0x03F8 + 4		; Modem Control
-	mov al, 3
+	mov al, 0			; No flow control, no interrupts
 	out dx, al
-	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	mov dx, 0x03F8 + 2
-	out dx, al
+
+	mov rsi, message_pure64		; Location of message
+	call debug_msg
+
+;	mov al, 'a'			; Newline
+;	call debug_msg_char
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
@@ -149,94 +273,88 @@ rtc_poll:
 	mov esi, gdt64
 	mov edi, 0x00001000		; GDT address
 	mov ecx, (gdt64_end - gdt64)
-	rep movsb			; Move it to final pos.
+	rep movsb			; Copy it to final location
 
 ; Create the Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000002000, create the first entry there
-; A single PML4 entry can map 512GiB with 2MiB pages
+; A single PML4 entry can map 512GiB
 ; A single PML4 entry is 8 bytes in length
-	cld
-	mov edi, 0x00002000		; Create a PML4 entry for the first 4GiB of RAM
+	mov edi, 0x00002000		; Create a PML4 entry for physical memory
 	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
-	stosd
-	xor eax, eax
-	stosd
-
+	stosq
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
 	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
-	stosd
-	xor eax, eax
-	stosd
+	stosq
 
-; Create the Page-Directory-Pointer-Table Entries (PDPTE)
+; Check to see if the system supports 1 GiB pages
+; If it does we will use that for identity mapping the lower memory
+	mov eax, 0x80000001
+	cpuid
+	bt edx, 26			; Page1GB
+	jc pdpte_1GB
+
+; Create the Low Page-Directory-Pointer-Table Entries (PDPTE)
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
-; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
 ; 4 entries are created to map the first 4GiB of RAM
 	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
 	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
-create_pdpte_low:
-	stosd
-	push eax
-	xor eax, eax
-	stosd
-	pop eax
-	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
+pdpte_low:
+	stosq
+	add rax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne create_pdpte_low
+	jnz pdpte_low
 
-; Create the low Page-Directory Entries (PDE).
+; Create the Low Page-Directory Entries (PDE)
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00010000		; Location of first PDE
-	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	xor ecx, ecx
-pde_low:				; Create a 2 MiB page
-	stosd
-	push eax
-	xor eax, eax
-	stosd
-	pop eax
-	add eax, 0x00200000		; Increment by 2MiB
-	inc ecx
-	cmp ecx, 2048
-	jne pde_low			; Create 2048 2 MiB page maps.
+	mov eax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), and 7 (PS) set
+	mov ecx, 2048			; Create 2048 2MiB page maps
+pde_low:				; Create a 2MiB page
+	stosq
+	add rax, 0x00200000		; Increment by 2MiB
+	dec ecx
+	jnz pde_low
+	jmp skip1GB
+
+; Create the Low Page-Directory-Pointer Table Entries (PDPTE)
+; PDPTE is stored at 0x0000000000003000, create the first entry there
+; A single PDPTE can map 1GiB
+; A single PDPTE is 8 bytes in length
+; 512 entries are created to map the first 512GiB of RAM
+pdpte_1GB:
+	mov ecx, 512			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov edi, 0x00003000		; location of low PDPE
+	mov eax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), 7 (PS)
+pdpte_low_1GB:				; Create a 1GiB page
+	stosq
+	add rax, 0x40000000		; Increment by 1GiB
+	dec ecx
+	jnz pdpte_low_1GB
+
+skip1GB:
+	; Debug - Set screen to blue prior to loading GDT and PML4
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x002020F0		; 0x00RRGGBB
+	rep stosd
 
 ; Load the GDT
 	lgdt [GDTR64]
 
 ; Enable extended properties
-	mov eax, cr4
-	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
-	mov cr4, eax
+;	mov eax, cr4
+;	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
+;	mov cr4, eax
 
 ; Point cr3 at PML4
-	mov eax, 0x00002008		; Write-thru enabled (Bit 3)
-	mov cr3, eax
+	mov rax, 0x00002008		; Write-thru enabled (Bit 3)
+	mov cr3, rax
 
-; Enable long mode and SYSCALL/SYSRET
-	mov ecx, 0xC0000080		; EFER MSR number
-	rdmsr				; Read EFER
-	or eax, 0x00000101 		; LME (Bit 8)
-	wrmsr				; Write EFER
-
-; Enable paging to activate long mode
-	mov eax, cr0
-	or eax, 0x80000000		; PG (Bit 31)
-	mov cr0, eax
-
-	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
-
-
-align 16
-
-; =============================================================================
-; 64-bit mode
-BITS 64
-
-start64:
 	xor eax, eax			; aka r0
 	xor ebx, ebx			; aka r3
 	xor ecx, ecx			; aka r1
@@ -254,23 +372,27 @@ start64:
 	xor r14, r14
 	xor r15, r15
 
-	mov ds, ax			; Clear the legacy segment registers
+	mov ax, 0x10			; TODO Is this needed?
+	mov ds, ax
 	mov es, ax
 	mov ss, ax
 	mov fs, ax
 	mov gs, ax
 
-	mov rax, clearcs64		; Do a proper 64-bit jump. Should not be needed as the ...
-	jmp rax				; jmp SYS64_CODE_SEL:start64 would have sent us ...
-	nop				; out of compatibility mode and into 64-bit mode
+	; Set CS with a far return
+	push SYS64_CODE_SEL
+	push clearcs64
+	retfq
 clearcs64:
-	xor eax, eax
 
 	lgdt [GDTR64]			; Reload the GDT
 
-; Save the Boot Mode (it will be 'U' if started via UEFI)
-	mov al, [0x8005]
-	mov [p_BootMode], al		; Save the byte as a Boot Mode flag
+	; Debug - Set screen to purple after loading GDT and PML4
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x00F020F0		; 0x00RRGGBB
+	rep stosd
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -278,64 +400,37 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-	mov al, [p_BootMode]
-	cmp al, 'U'
-	je uefi_memmap
-; Process the E820 memory map to find all possible 2MiB pages that are free to use
-; Build a map at 0x400000
-	xor ecx, ecx
-	xor ebx, ebx			; Counter for pages found
-	mov esi, 0x00006000		; E820 Map location
-nextentry:
-	add esi, 16			; Skip ESI to type marker
-	mov eax, [esi]			; Load the 32-bit type marker
-	cmp eax, 0			; End of the list?
-	je end820
-	cmp eax, 1			; Is it marked as free?
-	je processfree
-	add esi, 16			; Skip ESI to start of next entry
-	jmp nextentry
-
-processfree:
-	sub esi, 16
-	mov rax, [rsi]			; Physical start address
-	add esi, 8
-	mov rcx, [rsi]			; Physical length
-	add esi, 24
-	shr rcx, 21			; Convert bytes to # of 2 MiB pages
-	cmp rcx, 0			; Do we have at least 1 page?
-	je nextentry
-	shl rax, 1
-	mov edx, 0x1FFFFF
-	not rdx				; Clear bits 20 - 0
-	and rax, rdx
-	; At this point RAX points to the start and RCX has the # of pages
-	shr rax, 21			; page # to start on
-	mov rdi, 0x400000		; 4 MiB into physical memory
-	add rdi, rax
-	mov al, 1
-	add ebx, ecx
-	rep stosb
-	jmp nextentry
-
-end820:
-	shl ebx, 1
+; Parse the Memory Map at 0x200000
+uefi_memmap:
+	xor ebx, ebx			; Running counter of 4K pages
+	mov esi, 0x200000
+uefi_memmap_next:
+	mov rax, [rsi]
+	cmp rax, 7
+	je uefi_memmap_conventional
+	cmp rax, 0
+	je uefi_memmap_end
+uefi_memmap_skip:
+	add esi, 48
+	jmp uefi_memmap_next
+uefi_memmap_conventional:
+	mov rax, [rsi + 24]
+	add rbx, rax
+	jmp uefi_memmap_skip
+uefi_memmap_end:
+	shr rbx, 8
 	mov dword [p_mem_amount], ebx
-	shr ebx, 1
-	jmp memmap_end
 
-uefi_memmap:				; TODO fix this as it is a terrible hack
-	mov rdi, 0x400000
-	mov al, 1
-	mov rcx, 32
-	rep stosb
-	mov ebx, 64
-	mov dword [p_mem_amount], ebx
-memmap_end:
+; FIXME - Don't hardcode the RAM to 64MiB
+	mov eax, 64
+	mov dword [p_mem_amount], eax
 
-; Create the high memory map
-	mov rcx, rbx
-	shr rcx, 9			; TODO - This isn't the exact math but good enough
+; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
+; High PDPTE is stored at 0x0000000000004000, create the first entry there
+; A single PDPTE can map 1GiB with 2MiB pages
+; A single PDPTE is 8 bytes in length
+; 1 entry is created to map the first 1GiB of physical RAM to 0xFFFF800000000000
+; FIXME - Create more than just one PDPE depending on the amount of RAM in the system
 	add rcx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
 	mov edi, 0x00004000		; location of high PDPE
 	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
@@ -346,36 +441,22 @@ create_pdpe_high:
 	cmp ecx, 0
 	jne create_pdpe_high
 
-; Create the high PD entries
-; EBX contains the number of pages that should exist in the map, once they are all found bail out
-	xor ecx, ecx
-	xor eax, eax
-	xor edx, edx
-	mov edi, 0x00020000		; Location of high PD entries
-	mov esi, 0x00400000		; Location of free pages map
-
-pd_high:
-	cmp rdx, rbx			; Compare mapped pages to max pages
-	je pd_high_done
-	lodsb
-	cmp al, 1
-	je pd_high_entry
-	add rcx, 1
-	jmp pd_high
-
-pd_high_entry:
+; Create the High Page-Directory Entries (PDE).
+; A single PDE can map 2MiB of RAM
+; A single PDE is 8 bytes in length
+; FIXME - Map more than 64MiB depending on the amount of RAM in the system
+	mov edi, 0x00020000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	shl rcx, 21
-	add rax, rcx
-	shr rcx, 21
+	add rax, 0x00400000		; Start at 4MiB in
+	mov ecx, 32			; Create 32 2MiB page maps
+pde_high:				; Create a 2MiB page
 	stosq
-	add rcx, 1
-	add rdx, 1			; We have mapped a valid page
-	jmp pd_high
+	add rax, 0x00200000		; Increment by 2MiB
+	dec ecx
+	cmp ecx, 0
+	jne pde_high
 
-pd_high_done:
-
-; Build a temporary IDT
+; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
 	mov rcx, 32
@@ -476,6 +557,12 @@ clearmapnext:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x00206020		; 0x00RRGGBB
+	rep stosd
+
 	call init_acpi			; Find and process the ACPI tables
 
 	call init_cpu			; Configure the BSP CPU
@@ -527,12 +614,17 @@ clearmapnext:
 	mov rax, [p_LocalAPICAddress]
 	stosq
 
+	; TODO - Copy the data we received from GOP
+	; FB
+	; FBS
+	; X
+	; Y
 	mov di, 0x5080
-	mov eax, [VBEModeInfoBlock.PhysBasePtr]		; Base address of video memory (if graphics mode is set)
+	mov eax, [0x00005F00]		; Base address of video memory 
 	stosd
-	mov eax, [VBEModeInfoBlock.XResolution]		; X and Y resolution (16-bits each)
+	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
-	mov al, [VBEModeInfoBlock.BitsPerPixel]		; Color depth
+	mov al, 32			; Color depth
 	stosb
 
 	mov di, 0x5090
@@ -546,23 +638,8 @@ clearmapnext:
 	rep movsq			; Copy 8 bytes at a time
 
 ; Output message via serial port
-	cld				; Clear the direction flag.. we want to increment through the string
-	mov dx, 0x03F8			; Address of first serial port
-	mov rsi, message		; Location of message
-	mov cx, 11			; Length of message
-serial_nextchar:
-	jrcxz serial_done		; If RCX is 0 then the function is complete
-	add dx, 5			; Offset to Line Status Register
-	in al, dx
-	sub dx, 5			; Back to to base
-	and al, 0x20
-	cmp al, 0
-	je serial_nextchar
-	dec cx
-	lodsb				; Get char from string and store in AL
-	out dx, al			; Send the char to the serial port
-	jmp serial_nextchar
-serial_done:
+	mov rsi, message_ok		; Location of message
+	call debug_msg
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
@@ -580,7 +657,7 @@ serial_done:
 	xor r13, r13
 	xor r14, r14
 	xor r15, r15
-	jmp 0x00100000
+	jmp 0x00100000			; Done with Pure64, jump to the kernel
 
 
 %include "init/acpi.asm"
@@ -589,6 +666,60 @@ serial_done:
 %include "init/smp.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
+
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a single char via the serial port
+; IN: AL = Byte to send
+debug_msg_char:
+	pushf
+	push rdx
+	push rax			; Save the byte
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_char_wait:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_char_wait
+	pop rax				; Restore the byte
+	out dx, al			; Send the char to the serial port
+debug_msg_char_done:
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a message via the serial port
+; IN: RSI = Location of message
+debug_msg:
+	pushf
+	push rdx
+	push rax
+	cld				; Clear the direction flag.. we want to increment through the string
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_next:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_next
+	lodsb				; Get char from string and store in AL
+	cmp al, 0
+	je debug_msg_done
+	out dx, al			; Send the char to the serial port
+	jmp debug_msg_next
+debug_msg_done:
+	pop rax
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
 
 EOF:
 	db 0xDE, 0xAD, 0xC0, 0xDE

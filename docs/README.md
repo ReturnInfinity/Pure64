@@ -73,19 +73,19 @@ OUTPUT_ARCH("i386:x86-64")
 
 SECTIONS
 {
-    . = 0x100000;
-    .text : {
-        *(.text)
-    }
-    .data : {
-        *(.data)
-    }
-    .rodata : {
-        *(.rodata)
-    }
-    .bss : {
-        *(.bss)
-    }
+	. = 0x100000;
+	.text : {
+		*(.text)
+	}
+	.data : {
+		*(.data)
+	}
+	.rodata : {
+		*(.rodata)
+	}
+	.bss : {
+		*(.bss)
+	}
 }
 
 ```
@@ -108,7 +108,7 @@ extern int main(void);
 
 void _start(void)
 {
-    main();
+	main();
 }
 ```
 This file would **always** have to be linked in front of everything else. For the above example that would mean the linker command above would have to become:
@@ -231,13 +231,14 @@ MPS INTI flags:
 <tr><td>Trigger Mode</td><td>2</td><td>2</td><td>01 Edge-triggered, 11 Level-triggered</td></tr>
 </table>
 
-A copy of the E820 System Memory Map is stored at memory address `0x0000000000006000`. Each E820 record is 32 bytes in length and the memory map is terminated by a blank record.
+A copy of the UEFI System Memory Map is stored at memory address `0x0000000000006000`. Each UEFI record is 48 bytes in length and the memory map is terminated by a blank record.
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
-<tr><td>Starting Address</td><td>64-bit</td><td>The starting address for this record</td></tr>
-<tr><td>Length</td><td>64-bit</td><td>The length of memory for this record</td></tr>
-<tr><td>Memory Type</td><td>32-bit</td><td>Type 1 is usable memory, Type 2 is not usable</td></tr>
-<tr><td>Extended Attributes</td><td>32-bit</td><td>ACPI 3.0 Extended Attributes bitfield</td></tr>
-<tr><td>Padding</td><td>64-bit</td><td>Padding for 32-byte alignment</td></tr>
+<tr><td>Type</td><td>64-bit</td><td>The type of the memory region</td></tr>
+<tr><td>Physical Start</td><td>64-bit</td><td>Physical Address - 4K aligned</td></tr>
+<tr><td>Virtual Start</td><td>64-bit</td><td>Virtual Address - 4K aligned</td></tr>
+<tr><td>NumberOfPages</td><td>64-bit</td><td>The number of 4K pages in this section</td></tr>
+<tr><td>Attribute</td><td>64-bit</td><td>See document linked below</td></tr>
+<tr><td>Padding</td><td>64-bit</td><td>Padding</td></tr>
 </table>
-For more information on the E820 Memory Map: <a href="http://wiki.osdev.org/Detecting_Memory_%28x86%29">OSDev wiki on E820</a>
+For more information on the UEFI Memory Map: <a href="https://uefi.org/specs/UEFI/2.9_A/07_Services_Boot_Services.html#efi-boot-services-getmemorymap">UEFI Specs</a>

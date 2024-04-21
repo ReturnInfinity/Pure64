@@ -110,17 +110,12 @@ startap64:
 	xor r14, r14
 	xor r15, r15
 
+	mov ax, 0x10			; TODO Is this needed?
 	mov ds, ax			; Clear the legacy segment registers
 	mov es, ax
 	mov ss, ax
 	mov fs, ax
 	mov gs, ax
-
-	mov rax, clearcs64_ap
-	jmp rax
-	nop
-clearcs64_ap:
-	xor eax, eax
 
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...

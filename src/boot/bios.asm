@@ -1,27 +1,65 @@
 ; =============================================================================
-; Pure64 PXE Start -- a 64-bit OS/software loader written in Assembly for x86-64 systems
+; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
 ; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
-; This is a stub file for loading Pure64 and a kernel/software package via PXE.
+; This Master Boot Record will load Pure64 from a pre-defined location on the
+; hard drive without making use of the file system.
 ;
-; Windows - copy /b pxestart.bin + pure64.sys + kernel64.sys pxeboot.bin
-; Unix - cat pxestart.bin pure64.sys kernel64.sys > pxeboot.bin
-;
-; Max size of the resulting pxeboot.bin is 33792 bytes. 1K for the PXE loader
-; stub and up to 32KiB for the code/data. PXE loads the file to address
-; 0x00007C00 (Just like a boot sector).
-;
-; File Sizes
-; pxestart.bin	 1024 bytes
-; pure64.sys	 4096 bytes
-; kernel64.sys	16384 bytes (or so)
+; In this code we are expecting a BMFS-formatted drive. With BMFS the Pure64
+; binary is required to start at sector 16 (8192 bytes from the start). A small
+; check is made to make sure Pure64 was loaded by comparing a signature.
 ; =============================================================================
 
+; Default location of the second stage boot loader. This loads
+; 32 KiB from sector 16 into memory at 0x8000
+%define DAP_SECTORS 64
+%define DAP_STARTSECTOR 262160
+%define DAP_ADDRESS 0x8000
+%define DAP_SEGMENT 0x0000
+
+; Set the desired screen resolution values below
+Horizontal_Resolution		equ 800
+Vertical_Resolution		equ 600
 
 BITS 16
 org 0x7C00
 
-start:
+entry:
+	jmp bootcode
+	nop
+
+; BPB (BIOS Parameter Block)
+dq 0		; OEM identifier
+dw 0		; Bytes per sector
+db 0		; Sectors per cluster
+dw 0		; Reserved sectors
+db 0		; Number of FATs
+dw 0		; Number of root directory entries
+dw 0		; The total sectors in the logical volume
+db 0		; Media descriptor type
+dw 0		; Number of sectors per FAT
+dw 0		; Number of sectors per track
+dw 0		; Number of heads or sides on the storage media
+dd 0		; Number of hidden sectors
+dd 0		; Large sector count
+
+; EBPB (Extended Boot Record)
+dd 0		; Sectors per FAT
+dw 0		; Flags
+dw 0		; FAT version number
+dd 0		; The cluster number of the root directory
+dw 0		; The sector number of the FSInfo structure
+dw 0		; The sector number of the backup boot sector
+dq 0		; Reserved
+dd 0		; Reserved
+db 0		; Drive number
+db 0		; Flags in Windows NT
+db 0		; Signature
+dd 0		; Volume ID 'Serial' number
+times 11 db 0	; Volume label string
+dq 0		; System identifier string. Always "FAT32   "
+
+bootcode:
 	cli				; Disable interrupts
 	cld				; Clear direction flag
 	xor eax, eax
@@ -31,10 +69,7 @@ start:
 	mov sp, 0x7C00
 	sti				; Enable interrupts
 
-	mov ah, 0
-	mov al, 11100011b		; 9600bps, no parity, 1 stop bit, 8 data bits
-	mov dx, 0			; Serial port 0
-	int 0x14			; Configure serial port
+	mov [DriveNumber], dl		; BIOS passes drive number in DL
 
 ; Get the BIOS E820 Memory Map
 ; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
@@ -102,38 +137,53 @@ check_A20:
 	mov al, 0xDF
 	out 0x60, al
 
-	mov si, msg_Load		; Print message
-	call print_string_16
+;	mov si, msg_Load
+;	call print_string_16
 
+	mov cx, 0x4000 - 1		; Start looking from here
+VBESearch:
+	inc cx
+	cmp cx, 0x5000
+	je halt
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
 	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
-	; CX queries the mode, it should be in the form 0x41XX as bit 14 is set for LFB and bit 8 is set for VESA mode
-	; 0x4112 is 640x480x24bit, 0x4129 should be 32bit
-	; 0x4115 is 800x600x24bit, 0x412E should be 32bit
-	; 0x4118 is 1024x768x24bit, 0x4138 should be 32bit
-	; 0x411B is 1280x1024x24bit, 0x413D should be 32bit
-	mov cx, 0x4118			; Put your desired mode here
+
 	mov bx, cx			; Mode is saved to BX for the set command later
 	int 0x10
-
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
-	jne halt
-	cmp byte [VBEModeInfoBlock.BitsPerPixel], 24	; Make sure this matches the number of bits for the mode!
-	jne halt			; If set bit mode was unsuccessful then bail out
+	jne VBESearch			; Try next mode
+	cmp byte [VBEModeInfoBlock.BitsPerPixel], 32 ; Desired bit depth
+	jne VBESearch			; If not equal, try next mode
+	cmp word [VBEModeInfoBlock.XResolution], Horizontal_Resolution ; Desired XRes here
+	jne VBESearch
+	cmp word [VBEModeInfoBlock.YResolution], Vertical_Resolution ; Desired YRes here
+	jne VBESearch
+
 	or bx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
 	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
 	jne halt
 
-	mov ax, [0x8006]
-	cmp ax, 0x3436			; Match against the Pure64 binary
-	jne sig_fail
+	; Read the 2nd stage boot loader into memory.
+	mov ah, 0x42			; Extended Read
+	mov dl, [DriveNumber]		; http://www.ctyme.com/intr/rb-0708.htm
+	mov si, DAP
+	int 0x13
+	jc read_fail
 
-	mov si, msg_OK
-	call print_string_16
+	; Verify that the 2nd stage boot loader was read.
+;	mov ax, [0x8006]
+;	cmp ax, 0x3436			; Match against the Pure64 binary
+;	jne sig_fail
 
-; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
+	mov bl, 'B'			; 'B' as we booted via BIOS
+;	mov [0x5FFF], al		; Store the boot marker
+
+;	mov si, msg_OK
+;	call print_string_16
+
+	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
 	lgdt [cs:GDTR32]		; Load GDT register
 	mov eax, cr0
@@ -141,9 +191,13 @@ check_A20:
 	mov cr0, eax
 	jmp 8:0x8000			; Jump to 32-bit protected mode
 
+read_fail:
+;	mov si, msg_ReadFail
+;	call print_string_16
+;	jmp halt
 sig_fail:
-	mov si, msg_SigFail
-	call print_string_16
+;	mov si, msg_SigFail
+;	call print_string_16
 halt:
 	hlt
 	jmp halt
@@ -153,21 +207,20 @@ halt:
 ;------------------------------------------------------------------------------
 ; 16-bit function to output a string to the serial port
 ; IN:	SI - Address of start of string
-print_string_16:			; Output string in SI to screen
-	pusha
-	mov dx, 0			; Port 0
-.repeat:
-	mov ah, 0x01			; Serial - Write character to port
-	lodsb				; Get char from string
-	cmp al, 0
-	je .done			; If char is zero, end of string
-	int 0x14			; Output the character
-	jmp short .repeat
-.done:
-	popa
-	ret
+;print_string_16:			; Output string in SI to screen
+;	pusha
+;	mov dx, 0			; Port 0
+;.repeat:
+;	mov ah, 0x01			; Serial - Write character to port
+;	lodsb				; Get char from string
+;	cmp al, 0
+;	je .done			; If char is zero, end of string
+;	int 0x14			; Output the character
+;	jmp short .repeat
+;.done:
+;	popa
+;	ret
 ;------------------------------------------------------------------------------
-
 
 align 16
 GDTR32:					; Global Descriptors Table Register
@@ -176,20 +229,36 @@ dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-dw 0x0000, 0x0000, 0x0000, 0x0000	; Null desciptor
+dw 0x0000, 0x0000, 0x0000, 0x0000	; Null descriptor
 dw 0xFFFF, 0x0000, 0x9A00, 0x00CF	; 32-bit code descriptor
 dw 0xFFFF, 0x0000, 0x9200, 0x00CF	; 32-bit data descriptor
 gdt32_end:
 
-msg_Load db "PXE ", 0
-msg_OK db "OK", 0
-msg_SigFail db "- Bad Sig!", 0
+align 4
 
-times 510-$+$$ db 0			; Pad out for a normal boot sector
+DAP:
+db 0x10
+db 0x00
+dw DAP_SECTORS
+dw DAP_ADDRESS
+dw DAP_SEGMENT
+dq DAP_STARTSECTOR
 
-sign dw 0xAA55				; BIOS boot sector signature
+DriveNumber db 0x00
 
-times 1024-$+$$ db 0			; Padding so that Pure64 will be aligned at 0x8000
+;msg_Load db 10, "MBR ", 0
+;msg_OK db "OK", 0
+;msg_SigFail db "- Bad Sig!", 0
+;msg_ReadFail db "Failed to read!", 0
+
+times 446-$+$$ db 0
+
+; Partition entries (4x 16-bytes)
+
+times 510-$+$$ db 0
+
+; Boot signature
+sign dw 0xAA55
 
 VBEModeInfoBlock: equ 0x5F00
 ; VESA

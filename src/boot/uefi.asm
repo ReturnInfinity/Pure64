@@ -12,8 +12,8 @@
 ; =============================================================================
 
 ; Set the desired screen resolution values below
-Horizontal_Resolution		equ 640
-Vertical_Resolution		equ 480
+Horizontal_Resolution		equ 800
+Vertical_Resolution		equ 600
 
 BITS 64
 ORG 0x00400000
@@ -126,12 +126,17 @@ EntryPoint:
 
 	; Set screen colour attributes
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
-	mov rdx, 0x7F						; IN UINTN Attribute Light grey background, white foreground
+	mov rdx, 0x07						; IN UINTN Attribute - Black background, grey foreground
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_SET_ATTRIBUTE]
 
-	; Clear screen
+	; Clear screen (This also sets the cursor position to 0,0)
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_CLEAR_SCREEN]
+
+	; Output 'UEFI '
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	lea rdx, [msg_uefi]					; IN CHAR16 *String
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
 	; Find the address of the ACPI data from the UEFI configuration table
 	mov rax, [EFI_SYSTEM_TABLE]
@@ -164,7 +169,7 @@ nextentry:
 	jne error
 
 	; Parse the graphics information
-	; Mode Structure
+	; EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Structure
 	; 0  UINT32 - MaxMode
 	; 4  UINT32 - Mode
 	; 8  EFI_GRAPHICS_OUTPUT_MODE_INFORMATION - *Info;
@@ -175,7 +180,9 @@ nextentry:
 	add rax, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
 	mov rax, [rax]						; RAX holds the address of the Mode structure
 	mov eax, [rax]						; RAX holds UINT32 MaxMode
-	mov [vid_max], rax
+	mov ebx, [rax+4]					; RBX holds UINT32 Mode (The current mode)
+	mov [vid_max], rax					; The maximum video modes we can check
+	mov [vid_orig], rbx					; The mode currently used by UEFI
 	jmp vid_query
 	
 next_video_mode:
@@ -185,7 +192,7 @@ next_video_mode:
 	mov rdx, [vid_max]
 	cmp rax, rdx
 	je skip_set_video					; If we have reached the max then bail out
-	
+
 vid_query:
 	; Query a video mode
 	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
@@ -211,6 +218,8 @@ vid_query:
 	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
 	mov rdx, [vid_current]					; IN UINT32 ModeNumber
 	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE]
+	cmp rax, EFI_SUCCESS
+	jne next_video_mode
 
 skip_set_video:
 	; Gather video mode details
@@ -243,126 +252,106 @@ skip_set_video:
 	cmp ax, 0x3436						; Match against the Pure64 binary
 	jne sig_fail
 
-	; Signal to Pure64 that it was booted via UEFI
-	mov al, 'U'
-	mov [0x8005], al
+; Debug
+;	mov rbx, [FB]						; Display the framebuffer address
+;	call printhex
 
-	; Save video values to the area of memory where Pure64 expects them
-	mov rdi, 0x00005C00 + 40				; VBEModeInfoBlock.PhysBasePtr
-	mov rax, [FB]
-	stosd
-	mov rdi, 0x00005C00 + 18				; VBEModeInfoBlock.XResolution & .YResolution
-	mov rax, [HR]
-	stosw
-	mov rax, [VR]
-	stosw
-	mov rdi, 0x00005C00 + 25				; VBEModeInfoBlock.BitsPerPixel
-	mov rax, 32
-	stosb
-
+get_memmap:
+	; Output 'OK' as we are about to leave UEFI
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	lea rdx, [msg_OK]					; IN CHAR16 *String
 	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
 
-	; Get Memory Map
-get_memmap:
+	; Get Memory Map from UEFI and save it [memmap]
 	lea rcx, [memmapsize]					; IN OUT UINTN *MemoryMapSize
-	lea rdx, 0x6000						; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
+	mov rdx, [memmap]					; OUT EFI_MEMORY_DESCRIPTOR *MemoryMap
 	lea r8, [memmapkey]					; OUT UINTN *MapKey
 	lea r9, [memmapdescsize]				; OUT UINTN *DescriptorSize
 	lea r10, [memmapdescver]				; OUT UINT32 *DescriptorVersion
-	sub rsp, 32						; Shadow space
-	push r10
+	mov [rsp+32], r10
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_GETMEMORYMAP]
-	pop r10
-	add rsp, 32
-	cmp al, 5						; EFI_BUFFER_TOO_SMALL
+	cmp al, EFI_BUFFER_TOO_SMALL
 	je get_memmap						; Attempt again as the memmapsize was updated by EFI
 	cmp rax, EFI_SUCCESS
-	jne error
+	jne exitfailure
 	; Output at 0x6000 is as follows:
 	; 0  UINT32 - Type
 	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
 	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
-	; 24 UINT64 - NumberOfPages
+	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank
 
-	; Exit Boot services as EFI is no longer needed
+	; Exit Boot services as UEFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
 	mov rdx, [memmapkey]					; IN UINTN MapKey
 	mov rax, [BS]
 	call [rax + EFI_BOOT_SERVICES_EXITBOOTSERVICES]
 	cmp rax, EFI_SUCCESS
-	jne exitfailure
+	jne get_memmap						; If it failed, get the memory map and try to exit again
 
 	; Stop interrupts
 	cli
 
-	; Build a 32-bit memory table for 4GiB of identity mapped memory
-	mov rdi, 0x200000
-	mov rax, 0x00000083
-	mov rcx, 1024
-nextpage:
-	stosd
-	add rax, 0x400000
-	dec rcx
-	cmp rcx, 0
-	jne nextpage	
+	; Save UEFI values to the area of memory where Pure64 expects them
+	mov rdi, 0x00005F00
+	mov rax, [FB]
+	stosq							; 64-bit Frame Buffer Base
+	mov rax, [FBS]
+	stosq							; 64-bit Frame Buffer Size in bytes
+	mov rax, [HR]
+	stosw							; 16-bit Screen X
+	mov rax, [VR]
+	stosw							; 16-bit Screen Y
+	xor eax, eax
+	stosd							; Padding
+	mov rax, [memmap]
+	stosq							; Memory Map Base
+	mov rax, [memmapsize]
+	stosq							; Size of Memory Map in bytes
+	mov rax, [memmapkey]
+	stosq							; The key used to exit Boot Services
+	mov rax, [memmapdescsize]
+	stosq							; EFI_MEMORY_DESCRIPTOR size in bytes
+	mov rax, [memmapdescver]
+	stosq							; EFI_MEMORY_DESCRIPTOR version
 
-	; Load the custom GDT
-	lgdt [gdtr]
-
-	; Switch to compatibility mode
-	mov rax, SYS32_CODE_SEL					; Compatibility mode
-	push rax
-	lea rax, [compatmode]
-	push rax
-	retfq
-
-BITS 32
-compatmode:
-	; Set the segment registers
-	mov eax, SYS32_DATA_SEL
-	mov ds, ax
-	mov es, ax
-	mov fs, ax
-	mov gs, ax
-	mov ss, ax
-
-	; Deactivate IA-32e mode by clearing CR0.PG
-	mov eax, cr0
-	btc eax, 31						; Clear PG (Bit 31)
-	mov cr0, eax
-
-	; Load CR3
-	mov eax, 0x00200000					; Address of memory map
-	mov cr3, eax
-
-	; Disable IA-32e mode by setting IA32_EFER.LME = 0
-	mov ecx, 0xC0000080					; EFER MSR number
-	rdmsr							; Read EFER
-	and eax, 0xFFFFFEFF 					; Clear LME (Bit 8)
-	wrmsr							; Write EFER
-
-	mov eax, 0x00000010					; Set PSE (Bit 4)
-	mov cr4, eax
-
-	; Enable legacy paged-protected mode by setting CR0.PG
-	mov eax, 0x00000001					; Set PM (Bit 0)
-	mov cr0, eax
-
-	jmp SYS32_CODE_SEL:0x8000				; 32-bit jump to set CS
-
-BITS 64
-exitfailure:
+	; Set screen to green before jumping to Pure64
 	mov rdi, [FB]
-	mov eax, 0x00FF0000					; Red
+	mov eax, 0x0000FF00					; 0x00RRGGBB
 	mov rcx, [FBS]
 	shr rcx, 2						; Quick divide by 4 (32-bit colour)
 	rep stosd
-	jmp halt
+
+	; Clear registers
+	xor eax, eax
+	xor ecx, ecx
+	xor edx, edx
+	xor ebx, ebx
+	mov rsp, 0x8000
+	xor ebp, ebp
+	xor esi, esi
+	xor edi, edi
+	xor r8, r8
+	xor r9, r9
+	xor r10, r10
+	xor r11, r11
+	xor r12, r12
+	xor r13, r13
+	xor r14, r14
+	xor r15, r15
+
+	mov bl, 'U'
+	jmp 0x8000
+
+exitfailure:
+	; Set screen to red on exit failure
+	mov rdi, [FB]
+	mov eax, 0x00FF0000					; 0x00RRGGBB
+	mov rcx, [FBS]
+	shr rcx, 2						; Quick divide by 4 (32-bit colour)
+	rep stosd
 error:
 	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
 	lea rdx, [msg_error]					; IN CHAR16 *String
@@ -376,29 +365,64 @@ halt:
 	hlt
 	jmp halt
 
+; -----------------------------------------------------------------------------
+; printhex - Display a 64-bit value in hex
+; IN: RBX = Value
+printhex:			 
+	mov rbp, 16						; Counter
+	push rax
+	push rcx
+	push rdx						; 3 pushes also align stack on 16 byte boundary
+								; (8+3*8)=32, 32 evenly divisible by 16
+	sub rsp, 32						; Allocate 32 bytes of shadow space
+printhex_loop:
+	rol rbx, 4
+	mov rax, rbx
+	and rax, 0Fh
+	lea rcx, [Hex]
+	mov rax, [rax + rcx]
+	mov byte [Num], al
+	lea rdx, [Num]
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+	dec rbp
+	jnz printhex_loop
+	lea rdx, [newline]
+	mov rcx, [OUTPUT]					; IN EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL *This
+	call [rcx + EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_OUTPUTSTRING]
+
+	add rsp, 32
+	pop rdx
+	pop rcx
+	pop rax
+	ret
+; -----------------------------------------------------------------------------
+
 
 align 2048
 CODE_END:
 
 ; Data begins here
 DATA:
-EFI_IMAGE_HANDLE:	dq 0	; EFI gives this in RCX
-EFI_SYSTEM_TABLE:	dq 0	; And this in RDX
-EFI_RETURN:		dq 0	; And this in RSP
-BS:			dq 0	; Boot services
-RTS:			dq 0	; Runtime services
-CONFIG:			dq 0	; Config Table address
-ACPI:			dq 0	; ACPI table address
-OUTPUT:			dq 0	; Output services
-VIDEO:			dq 0	; Video services
-FB:			dq 0	; Frame buffer base address
-FBS:			dq 0	; Frame buffer size
-HR:			dq 0	; Horizontal Resolution
-VR:			dq 0	; Vertical Resolution
-memmapsize:		dq 8192
+EFI_IMAGE_HANDLE:	dq 0					; EFI gives this in RCX
+EFI_SYSTEM_TABLE:	dq 0					; And this in RDX
+EFI_RETURN:		dq 0					; And this in RSP
+BS:			dq 0					; Boot services
+RTS:			dq 0					; Runtime services
+CONFIG:			dq 0					; Config Table address
+ACPI:			dq 0					; ACPI table address
+OUTPUT:			dq 0					; Output services
+VIDEO:			dq 0					; Video services
+FB:			dq 0					; Frame buffer base address
+FBS:			dq 0					; Frame buffer size
+HR:			dq 0					; Horizontal Resolution
+VR:			dq 0					; Vertical Resolution
+memmap:			dq 0x200000				; Store the Memory Map from UEFI here
+memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
+vid_orig:		dq 0
 vid_current:		dq 0
 vid_max:		dq 0
 vid_size:		dq 0
@@ -414,34 +438,19 @@ dd 0x9042a9de
 dw 0x23dc, 0x4a38
 db 0x96, 0xfb, 0x7a, 0xde, 0xd0, 0x80, 0x51, 0x6a
 
-hextable: 		db '0123456789ABCDEF'
+msg_uefi:		dw u('UEFI '), 0
+msg_OK:			dw u('OK '), 0
 msg_error:		dw u('Error'), 0
 msg_SigFail:		dw u('Bad Sig!'), 0
-msg_OK:			dw u('OK'), 0
+Hex:			db '0123456789ABCDEF'
+Num:			dw 0, 0
+newline:		dw 13, 10, 0
 
-align 16
-gdtr:					; Global Descriptors Table Register
-dw gdt_end - gdt - 1			; limit of GDT (size minus one)
-dq gdt					; linear address of GDT
-
-align 16
-gdt:
-SYS64_NULL_SEL equ $-gdt		; Null Segment
-dq 0x0000000000000000
-SYS32_CODE_SEL equ $-gdt		; 32-bit code descriptor
-dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS32_DATA_SEL equ $-gdt		; 32-bit data descriptor
-dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
-SYS64_CODE_SEL equ $-gdt		; 64-bit code segment, read/execute, nonconforming
-dq 0x00209A0000000000			; 53 Long mode code, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS64_DATA_SEL equ $-gdt		; 64-bit data segment, read/write, expand down
-dq 0x0000920000000000			; 47 Present, 44 Code/Data, 41 Writable
-gdt_end:
 
 align 4096
 PAYLOAD:
 
-align 65536				; Pad out to 64K
+align 65536							; Pad out to 64K
 DATA_END:
 END:
 
@@ -462,7 +471,7 @@ EFI_NO_MEDIA						equ 12
 EFI_MEDIA_CHANGED					equ 13
 EFI_NOT_FOUND						equ 14
 
-EFI_SYSTEM_TABLE_CONOUT                         	equ 64
+EFI_SYSTEM_TABLE_CONOUT					equ 64
 EFI_SYSTEM_TABLE_RUNTIMESERVICES			equ 88
 EFI_SYSTEM_TABLE_BOOTSERVICES				equ 96
 EFI_SYSTEM_TABLE_NUMBEROFENTRIES			equ 104
