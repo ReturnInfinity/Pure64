@@ -317,9 +317,9 @@ get_memmap:
 	mov rax, [memmapdescver]
 	stosq							; EFI_MEMORY_DESCRIPTOR version
 
-	; Set screen to green before jumping to Pure64
+	; Set screen to black before jumping to Pure64
 	mov rdi, [FB]
-	mov eax, 0x0000FF00					; 0x00RRGGBB
+	mov eax, 0x00000000					; 0x00RRGGBB
 	mov rcx, [FBS]
 	shr rcx, 2						; Quick divide by 4 (32-bit colour)
 	rep stosd

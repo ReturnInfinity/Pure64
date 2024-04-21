@@ -186,6 +186,11 @@ start64:
 
 	mov [p_BootMode], bl
 
+; Debug
+	mov eax, 0x007F7F7F
+	mov ebx, 0
+	call debug_block
+
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
 ; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
@@ -336,12 +341,11 @@ pdpte_low_1GB:				; Create a 1GiB page
 	jnz pdpte_low_1GB
 
 skip1GB:
-	; Debug - Set screen to blue prior to loading GDT and PML4
-	mov rdi, [0x00005F00]		; Frame buffer base
-	mov rcx, [0x00005F08]		; Frame buffer size
-	shr rcx, 2			; Quick divide by 4
-	mov eax, 0x002020F0		; 0x00RRGGBB
-	rep stosd
+
+; Debug
+	mov eax, 0x00FFFFFF
+	mov ebx, 1
+	call debug_block
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -387,12 +391,10 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
-	; Debug - Set screen to purple after loading GDT and PML4
-	mov rdi, [0x00005F00]		; Frame buffer base
-	mov rcx, [0x00005F08]		; Frame buffer size
-	shr rcx, 2			; Quick divide by 4
-	mov eax, 0x00F020F0		; 0x00RRGGBB
-	rep stosd
+; Debug
+	mov eax, 0x007F7F7F
+	mov ebx, 2
+	call debug_block
 
 ; Patch Pure64 AP code			; The AP's will be told to start execution at 0x8000
 	mov edi, start			; We need to remove the BSP Jump call to get the AP's
@@ -557,19 +559,38 @@ clearmapnext:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
-	mov rdi, [0x00005F00]		; Frame buffer base
-	mov rcx, [0x00005F08]		; Frame buffer size
-	shr rcx, 2			; Quick divide by 4
-	mov eax, 0x00206020		; 0x00RRGGBB
-	rep stosd
+; Debug
+	mov eax, 0x00FFFFFF
+	mov ebx, 3
+	call debug_block
 
 	call init_acpi			; Find and process the ACPI tables
 
+; Debug
+	mov eax, 0x007F7F7F
+	mov ebx, 4
+	call debug_block
+
 	call init_cpu			; Configure the BSP CPU
+
+; Debug
+	mov eax, 0x00FFFFFF
+	mov ebx, 5
+	call debug_block
 
 	call init_pic			; Configure the PIC(s), also activate interrupts
 
+; Debug
+	mov eax, 0x007F7F7F
+	mov ebx, 6
+	call debug_block
+
 	call init_smp			; Init of SMP
+
+; Debug
+	mov eax, 0x00FFFFFF
+	mov ebx, 7
+	call debug_block
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
@@ -614,14 +635,10 @@ clearmapnext:
 	mov rax, [p_LocalAPICAddress]
 	stosq
 
-	; TODO - Copy the data we received from GOP
-	; FB
-	; FBS
-	; X
-	; Y
+	; Copy the data we received from UEFI/BIOS
 	mov di, 0x5080
-	mov eax, [0x00005F00]		; Base address of video memory 
-	stosd
+	mov rax, [0x00005F00]		; Base address of video memory 
+	stosq
 	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
 	mov al, 32			; Color depth
@@ -640,6 +657,11 @@ clearmapnext:
 ; Output message via serial port
 	mov rsi, message_ok		; Location of message
 	call debug_msg
+
+; Debug
+	mov eax, 0x0000FF00
+	mov ebx, 99
+	call debug_block
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
@@ -666,6 +688,42 @@ clearmapnext:
 %include "init/smp.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
+
+
+; -----------------------------------------------------------------------------
+; debug_block - Create a block of colour on the screen
+; IN:	EAX = Colour
+;	EBX = Index #
+debug_block:
+	push rax
+	push rbx
+	push rcx
+	push rdx
+	push rdi
+
+	mov rdi, [0x00005F00]		; Frame buffer base
+	xor edx, edx
+	mov dx, [0x00005F00 + 0x10]	; X res
+	shl ebx, 5
+	add rdi, rbx
+	shl edx, 2			; Quick multiply by 4 for line offset
+
+	mov ebx, 8			; 8 pixels tall
+nextline:
+	mov ecx, 8			; 8 pixels wide
+	rep stosd
+	add rdi, rdx			; Add line offset
+	sub rdi, 8*4
+	dec ebx
+	jnz nextline
+
+	pop rdi
+	pop rdx
+	pop rcx
+	pop rbx
+	pop rax
+	ret
+; -----------------------------------------------------------------------------
 
 
 ; -----------------------------------------------------------------------------
