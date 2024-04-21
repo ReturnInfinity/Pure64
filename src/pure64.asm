@@ -73,17 +73,26 @@ bootmode:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
-	; Save the frame buffer address, 
-	mov esi, 0x5F00
+	; Save the frame buffer address, size (after its calculated), and the screen x,y
+	mov bx, [0x5F00 + 20]
+	push ebx
+	mov ax, [0x5F00 + 18]
+	push eax
+	mul ebx
+	mov ecx, eax
+	shl ecx, 2			; Quick multiply by 4
+	mov edi, 0x5F00
 	mov eax, [0x5F00 + 40]
 	stosd				; 64-bit Frame Buffer Base (low)
 	xor eax, eax
 	stosd				; 64-bit Frame Buffer Base (high)
+	mov eax, ecx
 	stosd				; 64-bit Frame Buffer Size in bytes (low)
+	xor eax, eax
 	stosd				; 64-bit Frame Buffer Size in bytes (high)
-	mov eax, [0x5F00 + 18]
+	pop eax
 	stosw				; 16-bit Screen X
-	mov eax, [0x5F00 + 20]
+	pop eax
 	stosw				; 16-bit Screen y
 
 	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
@@ -174,6 +183,9 @@ start64:
 	xor eax, eax
 	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
 	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
+
+	mov al, [0x5FFF]
+	mov [p_BootMode], al
 
 ; Set up RTC
 ; Port 0x70 is RTC Address, and 0x71 is RTC Data
