@@ -96,7 +96,7 @@ SECTION_DATA:
 
 HEADER_END:
 
-times 1024-($-PE) db 0
+align 16
 
 CODE:	; The code begins here with the entry point
 EntryPoint:
@@ -242,6 +242,8 @@ skip_set_video:
 	mov [HR], rax						; Save the Horizontal Resolution
 	mov eax, [rcx+8]					; RAX holds the Vertical Resolution
 	mov [VR], rax						; Save the Vertical Resolution
+	mov eax, [rcx+32]					; RAX holds the PixelsPerScanLine
+	mov [PPSL], rax						; Save the PixelsPerScanLine
 
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD
@@ -417,6 +419,7 @@ FB:			dq 0					; Frame buffer base address
 FBS:			dq 0					; Frame buffer size
 HR:			dq 0					; Horizontal Resolution
 VR:			dq 0					; Vertical Resolution
+PPSL:			dq 0					; PixelsPerScanLine
 memmap:			dq 0x200000				; Store the Memory Map from UEFI here
 memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
