@@ -306,8 +306,8 @@ get_memmap:
 	stosw							; 16-bit Screen X
 	mov rax, [VR]
 	stosw							; 16-bit Screen Y
-	xor eax, eax
-	stosd							; Padding
+	mov rax, [PPSL]
+	stosd							; 32-bit PixelsPerScanLine
 	mov rax, [memmap]
 	stosq							; Memory Map Base
 	mov rax, [memmapsize]

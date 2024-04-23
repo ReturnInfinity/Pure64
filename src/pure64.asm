@@ -89,9 +89,12 @@ bootmode:
 	xor eax, eax
 	stosd				; 64-bit Frame Buffer Size in bytes (high)
 	pop eax
+	mov ecx, eax			; Save Screen X
 	stosw				; 16-bit Screen X
 	pop eax
-	stosw				; 16-bit Screen y
+	stosw				; 16-bit Screen Y
+	mov eax, ecx			; Restore Screen X
+	stosd				; PixelsPerScanLine
 
 	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00210000
@@ -703,7 +706,7 @@ debug_block:
 
 	mov rdi, [0x00005F00]		; Frame buffer base
 	xor edx, edx
-	mov dx, [0x00005F00 + 0x10]	; X res
+	mov edx, [0x00005F00 + 0x14]	; PixelsPerScanLine
 	shl ebx, 5
 	add rdi, rbx
 	shl edx, 2			; Quick multiply by 4 for line offset
