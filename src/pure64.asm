@@ -72,9 +72,13 @@ bootmode:
 	mov esp, 0x8000			; Set a known free location for the stack
 
 	; Save the frame buffer address, size (after its calculated), and the screen x,y
-	mov bx, [0x5F00 + 20]
+	xor eax, eax
+	xor ebx, ebx
+	mov ax, [0x5F00 + 16]		; BytesPerScanLine
+	push eax
+	mov bx, [0x5F00 + 20]		; YResolution
 	push ebx
-	mov ax, [0x5F00 + 18]
+	mov ax, [0x5F00 + 18]		; XResolution
 	push eax
 	mul ebx
 	mov ecx, eax
@@ -89,11 +93,11 @@ bootmode:
 	xor eax, eax
 	stosd				; 64-bit Frame Buffer Size in bytes (high)
 	pop eax
-	mov ecx, eax			; Save Screen X
 	stosw				; 16-bit Screen X
 	pop eax
 	stosw				; 16-bit Screen Y
-	mov eax, ecx			; Restore Screen X
+	pop eax
+	shr eax, 2			; Quick divide by 4
 	stosd				; PixelsPerScanLine
 
 	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
@@ -644,8 +648,8 @@ clearmapnext:
 	stosq
 	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
-	mov al, 32			; Color depth
-	stosb
+	mov eax, [0x00005F00 + 0x14]	; Pixels per scan line
+	stosd
 
 	mov di, 0x5090
 	mov ax, [p_PCIECount]
