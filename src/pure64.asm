@@ -198,49 +198,6 @@ start64:
 	mov ebx, 0
 	call debug_block
 
-; Set up RTC
-; Port 0x70 is RTC Address, and 0x71 is RTC Data
-; http://www.nondot.org/sabre/os/files/MiscHW/RealtimeClockFAQ.txt
-rtc_poll:
-	mov al, 0x0A			; Status Register A
-	out 0x70, al			; Select the address
-	in al, 0x71			; Read the data
-	test al, 0x80			; Is there an update in process?
-	jne rtc_poll			; If so then keep polling
-	mov al, 0x0A			; Status Register A
-	out 0x70, al			; Select the address
-	mov al, 00100110b		; UIP (0), RTC@32.768KHz (010), Rate@1024Hz (0110)
-	out 0x71, al			; Write the data
-	mov al, 0x0B			; Status Register B
-	out 0x70, al			; Select the address
-	mov al, 01000000b		; Set Periodic Interrupt Enable (bit 6)
-	out 0x71, al			; Write the data
-	mov al, 0x0C			; Status Register B
-	out 0x70, al			; Select the address
-	in al, 0x71			; Read the value to clear any existing interrupt value
-
-; Remap PIC IRQ's
-	mov al, 00010001b		; begin PIC 1 initialization
-	out 0x20, al
-	mov al, 00010001b		; begin PIC 2 initialization
-	out 0xA0, al
-	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
-	out 0x21, al
-	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
-	out 0xA1, al
-	mov al, 4
-	out 0x21, al
-	mov al, 2
-	out 0xA1, al
-	mov al, 1
-	out 0x21, al
-	out 0xA1, al
-
-; Mask all PIC interrupts
-	mov al, 0xFF
-	out 0x21, al
-	out 0xA1, al
-
 ; Configure serial port @ 0x03F8 as 115200 8N1
 	mov dx, 0x03F8 + 1		; Interrupt Enable
 	mov al, 0x00			; Disable all interrupts
@@ -410,6 +367,10 @@ clearcs64:
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
 ; Parse the Memory Map at 0x200000
+	cmp byte [p_BootMode], 'U'
+	jne bios_memmap
+
+; Parse the memory map provided by UEFI
 uefi_memmap:
 	xor ebx, ebx			; Running counter of 4K pages
 	mov esi, 0x200000
@@ -429,6 +390,53 @@ uefi_memmap_conventional:
 uefi_memmap_end:
 	shr rbx, 8
 	mov dword [p_mem_amount], ebx
+	jmp memmap_end
+
+; Parse the memory map provided by BIOS
+bios_memmap:
+; Process the E820 memory map to find all possible 2MiB pages that are free to use
+; Build a map at 0x400000
+	xor ecx, ecx
+	xor ebx, ebx			; Counter for pages found
+	mov esi, 0x00006000		; E820 Map location
+bios_memmap_nextentry:
+	add esi, 16			; Skip ESI to type marker
+	mov eax, [esi]			; Load the 32-bit type marker
+	cmp eax, 0			; End of the list?
+	je bios_memmap_end820
+	cmp eax, 1			; Is it marked as free?
+	je bios_memmap_processfree
+	add esi, 16			; Skip ESI to start of next entry
+	jmp bios_memmap_nextentry
+
+bios_memmap_processfree:
+	sub esi, 16
+	mov rax, [rsi]			; Physical start address
+	add esi, 8
+	mov rcx, [rsi]			; Physical length
+	add esi, 24
+	shr rcx, 21			; Convert bytes to # of 2 MiB pages
+	cmp rcx, 0			; Do we have at least 1 page?
+	je bios_memmap_nextentry
+	shl rax, 1
+	mov edx, 0x1FFFFF
+	not rdx				; Clear bits 20 - 0
+	and rax, rdx
+	; At this point RAX points to the start and RCX has the # of pages
+	shr rax, 21			; page # to start on
+	mov rdi, 0x400000		; 4 MiB into physical memory
+	add rdi, rax
+	mov al, 1
+	add ebx, ecx
+	rep stosb
+	jmp bios_memmap_nextentry
+
+bios_memmap_end820:
+	shl ebx, 1
+	mov dword [p_mem_amount], ebx
+	shr ebx, 1
+
+memmap_end:
 
 ; FIXME - Don't hardcode the RAM to 64MiB
 	mov eax, 64
