@@ -24,6 +24,22 @@ interrupt_gate:				; handler for all other interrupts
 
 
 ; -----------------------------------------------------------------------------
+; Timer interrupt. IRQ 0x00, INT 0x20
+align 16
+timer:
+	push rax
+
+	add qword [p_Counter_Timer], 1	; 64-bit counter started at boot up
+
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
+
+	pop rax
+	iretq
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
 ; Keyboard interrupt. IRQ 0x01, INT 0x21
 ; This IRQ runs whenever there is input on the keyboard
 align 16

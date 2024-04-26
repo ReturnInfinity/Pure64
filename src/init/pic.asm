@@ -7,16 +7,27 @@
 
 
 init_pic:
-	; Mask all PIC interrupts
-	mov al, 0xFF
+	; Initialize and remap PIC IRQ's
+	; ICW1
+	mov al, 0x11;			; Initialize PIC 1, init (bit 4) and ICW4 (bit 0)
+	out 0x20, al
+	mov al, 0x11;			; Initialize PIC 2, init (bit 4) and ICW4 (bit 0)
+	out 0xA0, al
+	; ICW2
+	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
 	out 0x21, al
+	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
 	out 0xA1, al
-
-	; Disable NMIs
-	in al, 0x70
-	or al, 0x80
-	out 0x70, al
-	in al, 0x71
+	; ICW3
+	mov al, 4
+	out 0x21, al
+	mov al, 2
+	out 0xA1, al
+	; ICW4
+	mov al, 1
+	out 0x21, al
+	mov al, 1
+	out 0xA1, al
 
 ; Set up RTC
 rtc_poll:
@@ -39,23 +50,6 @@ rtc_poll:
 	bts ax, 6			; Set Periodic Interrupt Enable (bit 6)
 	out 0x71, al			; Write the new settings
 
-	; Remap PIC IRQ's
-	mov al, 00010001b		; begin PIC 1 initialization
-	out 0x20, al
-	mov al, 00010001b		; begin PIC 2 initialization
-	out 0xA0, al
-	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
-	out 0x21, al
-	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
-	out 0xA1, al
-	mov al, 4
-	out 0x21, al
-	mov al, 2
-	out 0xA1, al
-	mov al, 1
-	out 0x21, al
-	out 0xA1, al
-
 	; Enable specific interrupts
 	in al, 0x21
 	mov al, 11111001b		; Enable Cascade, Keyboard
@@ -64,12 +58,24 @@ rtc_poll:
 	mov al, 11111110b		; Enable RTC
 	out 0xA1, al
 
+	sti				; Enable interrupts
+
 	; Acknowledge the RTC
 	mov al, 0x0C			; Status Register C
 	out 0x70, al			; Select the address
 	in al, 0x71			; Read the value to clear any existing interrupt value
 
-	sti				; Enable interrupts
+	; Enable PIT
+	; Base rate is 1193182 Hz
+	mov al, 0x36			; Channel 0 (7:6), Access Mode lo/hi (5:4), Mode 3 (3:1), Binary (0)
+	out 0x43, al
+	mov al, 0x3C			; 60
+	out 0x40, al			; Set low byte of PIT reload value
+	mov al, 0x00
+	out 0x40, al			; Set high byte of PIT reload value
+	; New rate is 19866 Hz (1193182 / 60)
+	; 0.050286633812733 milliseconds (ms)
+	; 50.28663381273300814 microseconds (us)
 
 	ret
 

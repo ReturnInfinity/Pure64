@@ -48,6 +48,7 @@ smp_send_INIT_skipcore:
 
 smp_send_INIT_done:
 
+	; Wait 200 microseconds (.2 milliseconds)
 	mov rax, [p_Counter_RTC]
 	add rax, 10
 smp_wait1:
@@ -83,6 +84,7 @@ smp_send_SIPI_skipcore:
 
 smp_send_SIPI_done:
 
+; Wait 400 microseconds (.4 milliseconds)
 ; Let things settle (Give the AP's some time to finish)
 	mov rax, [p_Counter_RTC]
 	add rax, 20
@@ -121,6 +123,12 @@ speedtest:
 	mov [p_cpu_speed], ax
 
 	cli				; Disable Interrupts
+
+	; Disable PIT
+	mov al, 0x30			; Channel 0 (7:6), Access Mode lo/hi (5:4), Mode 0 (3:1), Binary (0)
+	out 0x43, al
+	mov al, 0x00
+	out 0x40, al
 
 	ret
 

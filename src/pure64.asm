@@ -193,6 +193,23 @@ start64:
 
 	mov [p_BootMode], bl
 
+	; Mask all PIC interrupts
+	mov al, 0xFF
+	out 0x21, al
+	out 0xA1, al
+
+	; Disable NMIs
+	in al, 0x70
+	or al, 0x80
+	out 0x70, al
+	in al, 0x71
+
+	; Disable PIT
+	mov al, 0x30			; Channel 0 (7:6), Access Mode lo/hi (5:4), Mode 0 (3:1), Binary (0)
+	out 0x43, al
+	mov al, 0x00
+	out 0x40, al
+
 ; Debug
 	mov eax, 0x007F7F7F
 	mov ebx, 0
@@ -537,6 +554,9 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov word [0x12*16], exception_gate_18
 	mov word [0x13*16], exception_gate_19
 
+	mov edi, 0x20			; Set up Timer handler
+	mov eax, timer
+	call create_gate
 	mov edi, 0x21			; Set up Keyboard handler
 	mov eax, keyboard
 	call create_gate
