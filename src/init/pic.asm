@@ -77,6 +77,14 @@ rtc_poll:
 	; 0.050286633812733 milliseconds (ms)
 	; 50.28663381273300814 microseconds (us)
 
+	; Test to make sure interrupts are running
+	mov rbx, [p_Counter_RTC]	; Save the current RTC counter to RBX
+	add rbx, 2
+check:
+	mov rax, [p_Counter_RTC]	; Read the counter again
+	cmp rax, rbx			; Compare it to the first read
+	je check			; Stay in the loop until the values are not equal
+
 	ret
 
 

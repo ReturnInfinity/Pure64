@@ -613,14 +613,14 @@ clearmapnext:
 	mov ebx, 5
 	call debug_block
 
-	call init_pic			; Configure the PIC(s), also activate interrupts
+	call init_pic			; Configure the PIC(s), activate interrupts
 
 ; Debug
 	mov eax, 0x007F7F7F
 	mov ebx, 6
 	call debug_block
 
-	call init_smp			; Init of SMP
+	call init_smp			; Init of SMP, deactivate interrupts
 
 ; Debug
 	mov eax, 0x00FFFFFF

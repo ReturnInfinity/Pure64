@@ -9,6 +9,7 @@
 BITS 16
 
 init_smp_ap:
+	cli
 	jmp 0x0000:clearcs_ap
 
 clearcs_ap:
@@ -57,7 +58,7 @@ startap32:
 	xor esi, esi
 	xor edi, edi
 	xor ebp, ebp
-	mov esp, 0x8000			; Set a known free location for the stack
+	mov esp, 0x7000			; Set a known free location for the temporary stack (shared by all APs)
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -123,7 +124,7 @@ startap64:
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
 	shl rax, 10			; shift left 10 bits for a 1024byte stack
-	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
+	add rax, 0x0000000000090000	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
 	lgdt [GDTR64]			; Load the GDT
