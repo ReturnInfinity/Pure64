@@ -143,12 +143,11 @@ check_A20:
 	mov cx, 0x4000 - 1		; Start looking from here
 VBESearch:
 	inc cx
+	mov bx, cx			; Mode is saved to BX for the set command later
 	cmp cx, 0x5000
 	je halt
 	mov edi, VBEModeInfoBlock	; VBE data will be stored at this address
-	mov ax, 0x4F01			; GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
-
-	mov bx, cx			; Mode is saved to BX for the set command later
+	mov ax, 0x4F01			; VESA SuperVGA BIOS - GET SuperVGA MODE INFORMATION - http://www.ctyme.com/intr/rb-0274.htm
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
 	jne VBESearch			; Try next mode
@@ -158,9 +157,8 @@ VBESearch:
 	jne VBESearch
 	cmp word [VBEModeInfoBlock.YResolution], Vertical_Resolution ; Desired YRes here
 	jne VBESearch
-
 	or bx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
-	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
+	mov ax, 0x4F02			; VESA SuperVGA BIOS - SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm
 	int 0x10
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if supported and successful
 	jne halt
