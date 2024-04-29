@@ -42,7 +42,8 @@ BITS 16
 	mov ss, ax
 	mov fs, ax
 	mov gs, ax
-	mov esp, 0x8000			; Set a known free location for the stack
+	mov esp, 0x7000			; Set a known free location for the stack
+	jmp 0x0000:init_smp_ap
 
 %include "init/smp_ap.asm"		; AP's will start execution at 0x8000 and fall through to this code
 
@@ -215,28 +216,8 @@ start64:
 	mov ebx, 0
 	call debug_block
 
-; Configure serial port @ 0x03F8 as 115200 8N1
-	mov dx, 0x03F8 + 1		; Interrupt Enable
-	mov al, 0x00			; Disable all interrupts
-	out dx, al
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 80			; Enable DLAB
-	out dx, al
-	mov dx, 0x03F8 + 0		; Divisor Latch Low
-	mov al, 1			; 1 = 115200 baud
-	out dx, al
-	mov dx, 0x03F8 + 1		; Divisor Latch High
-	mov al, 0
-	out dx, al
-	mov dx, 0x03F8 + 3		; Line Control
-	mov al, 3			; 8 data bits (0-1 set), one stop bit (2 set), no parity (3-5 clear), DLB (7 clear)
-	out dx, al
-	mov dx, 0x03F8 + 2		; Interrupt Identification and FIFO Control
-	mov al, 0xC7			; Enable FIFO, clear them, with 14-byte threshold
-	out dx, al
-	mov dx, 0x03F8 + 4		; Modem Control
-	mov al, 0			; No flow control, no interrupts
-	out dx, al
+	; Configure serial port @ 0x03F8 as 115200 8N1
+	call init_serial
 
 	mov rsi, message_pure64		; Location of message
 	call debug_msg
@@ -720,6 +701,7 @@ clearmapnext:
 %include "init/acpi.asm"
 %include "init/cpu.asm"
 %include "init/pic.asm"
+%include "init/serial.asm"
 %include "init/smp.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"

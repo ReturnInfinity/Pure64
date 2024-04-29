@@ -9,10 +9,6 @@
 BITS 16
 
 init_smp_ap:
-	cli
-	jmp 0x0000:clearcs_ap
-
-clearcs_ap:
 
 ; Enable the A20 gate
 set_A20_ap:
