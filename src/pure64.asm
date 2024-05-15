@@ -646,6 +646,9 @@ clearmapnext:
 	mov di, 0x5040
 	mov rax, [p_HPETAddress]
 	stosq
+	mov di, 0x5050
+	mov ax, [p_HPETCounterMin]
+	stosw
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]

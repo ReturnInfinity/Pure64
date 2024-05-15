@@ -300,13 +300,17 @@ parseHPETTable:
 	lodsd				; OEM Revision
 	lodsd				; Creator ID
 	lodsd				; Creator Revision
-	lodsd				; Event Timer Block ID
-	lodsd				; Base Address Settings
+
+	lodsb				; Hardware Revision ID
+	lodsb				; # of Comparators (5:0), COUNT_SIZE_CAP (6), Legacy IRQ (7)
+	lodsw				; PCI Vendor ID
+	lodsd				; Generic Address Structure
 	lodsq				; Base Address Value
 	mov [p_HPETAddress], rax	; Save the Address of the HPET
 	lodsb				; HPET Number
 	lodsw				; Main Counter Minimum
-	lodsw				; Page Protection And OEM Attribute
+	mov [p_HPETCounterMin], ax	; Save the Counter Minimum
+	lodsb				; Page Protection And OEM Attribute
 	ret
 ; -----------------------------------------------------------------------------
 

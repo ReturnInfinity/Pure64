@@ -179,7 +179,9 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5031</td><td>8-bit</td><td>IOAPIC_INTSOURCE_COUNT</td><td>Number of I/O APIC Interrupt Source Override</td></tr>
 <tr><td>0x5032 - 0x503F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5040</td><td>64-bit</td><td>HPET</td><td>Base memory address for the High Precision Event Timer</td></tr>
-<tr><td>0x5048 - 0x505F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5048 - 0x504F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5050</td><td>16-bit</td><td>HPET Counter Minumum</td><td>Minimum Counter for the High Precision Event Timer</td></tr>
+<tr><td>0x5052 - 0x505F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5060</td><td>64-bit</td><td>LAPIC</td><td>Local APIC address</td></tr>
 <tr><td>0x5068 - 0x507F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5080</td><td>32-bit</td><td>VIDEO_BASE</td><td>Base memory for video (if graphics mode set)</td></tr>
