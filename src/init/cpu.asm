@@ -18,17 +18,17 @@ init_cpu:
 	wbinvd
 
 ; Disable Paging Global Extensions
-	mov rax, cr4
-	btr rax, 7			; Clear Paging Global Extensions (Bit 7)
-	mov cr4, rax
-	mov rax, cr3
-	mov cr3, rax
+;	mov rax, cr4
+;	btr rax, 7			; Clear Paging Global Extensions (Bit 7)
+;	mov cr4, rax
+;	mov rax, cr3
+;	mov cr3, rax
 
 ; Disable MTRRs and Configure default memory type to UC
-	mov ecx, 0x000002FF
-	rdmsr
-	and eax, 0xFFFFF300		; Clear MTRR Enable (Bit 11), Fixed Range MTRR Enable (Bit 10), and Default Memory Type (Bits 7:0) to UC (0x00)
-	wrmsr
+;	mov ecx, 0x000002FF
+;	rdmsr
+;	and eax, 0xFFFFF300		; Clear MTRR Enable (Bit 11), Fixed Range MTRR Enable (Bit 10), and Default Memory Type (Bits 7:0) to UC (0x00)
+;	wrmsr
 
 ; Setup variable-size address ranges
 ; Cache 0-64 MiB as type 6 (WB) cache
@@ -53,10 +53,10 @@ init_cpu:
 ; Mask 0x0000000FFC000000 = 64 MiB,   0xFFFFFFFFF - FFC000000 =  3FFFFFF =   67108863 (~64 MiB)
 
 ; Enable MTRRs
-	mov ecx, 0x000002FF
-	rdmsr
-	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
-	wrmsr
+;	mov ecx, 0x000002FF
+;	rdmsr
+;	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
+;	wrmsr
 
 ; Flush Cache
 	wbinvd
