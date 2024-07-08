@@ -561,7 +561,7 @@ clearmapnext:
 	jne clearmapnext
 
 ; Read APIC Address from MSR
-	mov ecx, 0x0000001B		; APIC_BASE
+	mov ecx, IA32_APIC_BASE
 	rdmsr				; Returns APIC in EDX:EAX
 	and eax, 0xFFFFF000		; Clear lower 12 bits
 	shl rdx, 32			; Shift lower 32 bits to upper 32 bits

@@ -17,46 +17,80 @@ init_cpu:
 ; Flush Cache
 	wbinvd
 
-; Disable Paging Global Extensions
-;	mov rax, cr4
-;	btr rax, 7			; Clear Paging Global Extensions (Bit 7)
-;	mov cr4, rax
-;	mov rax, cr3
-;	mov cr3, rax
+; Flush TLB
+	mov rax, cr3
+	mov cr3, rax
 
-; Disable MTRRs and Configure default memory type to UC
-;	mov ecx, 0x000002FF
-;	rdmsr
-;	and eax, 0xFFFFF300		; Clear MTRR Enable (Bit 11), Fixed Range MTRR Enable (Bit 10), and Default Memory Type (Bits 7:0) to UC (0x00)
-;	wrmsr
+; Read the MTRR Cap (IA32_MTRRCAP) Register - 64-bit
+; SMRR (bit 11) — SMRR interface supported
+; WC (bit 10) — Write-combining memory type supported
+; FIX (bit 8) — Fixed range registers supported
+; VCNT (bits 7:0)— Number of variable range registers
+	mov ecx, 0x000000FE		; IA32_MTRRCAP
+	rdmsr				; Returns the 64-bit value in RDX:RAX
+
+; Read/write the MTRR Default Type (IA32_MTRR_DEF_TYPE) Register - 64-bit
+; E (bit 11) — MTRR enable/disable
+; FE (bit 10) — Fixed-range MTRRs enable/disable
+; Type (bits 7:0)— Default memory type
+	mov ecx, 0x000002FF		; IA32_MTRR_DEF_TYPE
+	rdmsr
+	btc eax, 11			; Disable MTRR
+	btc eax, 10			; Disable Fixed-range MTRRs
+	wrmsr
 
 ; Setup variable-size address ranges
-; Cache 0-64 MiB as type 6 (WB) cache
-; See example in Intel Volume 3A. Example Base and Mask Calculations
+
+; IA32_MTRR_PHYSBASE Register - 64-bit
+; PhysBase (bits MAXPHYADDR-1:12)
+; Type (bits 7:0) — memory type
+;
+; IA32_MTRR_PHYSMASK Register - 64-bit
+; PhysBase (bits MAXPHYADDR-1:12)
+; Valid (bit 11)
+;
+; Cache 64 MiB as type 6 (WB) cache
 ;	mov ecx, 0x00000200		; MTRR_Phys_Base_MSR(0)
 ;	mov edx, 0x00000000		; Base is EDX:EAX, 0x0000000000000006
-;	mov eax, 0x00000006		; Type 6 (write-back cache)
+;	mov eax, 0x00000006		; Type 6 (Writeback)
 ;	wrmsr
 ;	mov ecx, 0x00000201		; MTRR_Phys_Mask_MSR(0)
-;;	mov edx, 0x00000000		; Mask is EDX:EAX, 0x0000000001000800 (Because bochs sucks)
-;;	mov eax, 0x01000800		; Bit 11 set for Valid
-;	mov edx, 0x0000000F		; Mask is EDX:EAX, 0x0000000F80000800 (2 GiB)
-;	mov eax, 0x80000800		; Bit 11 set for Valid
+;	mov edx, 0x0000000F		; Mask is EDX:EAX, 0x0000000FFF800800 (64 MiB)
+;	mov eax, 0xFF800800		; Bit 11 set for Valid
 ;	wrmsr
-
-; MTRR notes:
-; Base 0x0000000000000000 = 0 MiB
-; Base 0x0000000080000000 = 2048 MiB, 2048 is 0x800
-; Base 0x0000000100000000 = 4096 MiB, 4096 is 0x1000
-; Mask 0x0000000F80000000 = 2048 MiB, 0xFFFFFFFFF - F80000000 = 7FFFFFFF = 2147483647 (~2 GiB)
-; Mask 0x0000000FC0000000 = 1024 MiB, 0xFFFFFFFFF - FC0000000 = 3FFFFFFF = 1073741823 (~1 GiB)
-; Mask 0x0000000FFC000000 = 64 MiB,   0xFFFFFFFFF - FFC000000 =  3FFFFFF =   67108863 (~64 MiB)
+;
+; MTRR Example (From Example 12-2):
+; 64 MiB of System Memory, 8MiB Graphics at 0xA0000000
+;  Cache 64 MByte starting at 0x0 as WB cache type
+;  IA32_MTRR_PHYSBASE0 = 0x0000000000000006
+;  IA32_MTRR_PHYSMASK0 = 0x0000000FFC000800
+;  Cache 0xA0000000-0xA0800000 as WC type
+;  IA32_MTRR_PHYSBASE1 = 0x00000000A0000001
+;  IA32_MTRR_PHYSMASK1 = 0x0000000FFF800800
+; Note the change for a 40-bit physical address size:
+;  Cache 64 MByte starting at 0x0 as WB cache type
+;  IA32_MTRR_PHYSBASE0 = 0x0000000000000006
+;  IA32_MTRR_PHYSMASK0 = 0x000000FFFC000800
+;  Cache 0xA0000000-0xA0800000 as WC type
+;  IA32_MTRR_PHYSBASE5 = 0x00000000A0000001
+;  IA32_MTRR_PHYSMASK5 = 0x000000FFFF800800
+;
+; MTRR Memory Types
+; 0x00 - Uncacheable (UC)
+; 0x01 - Write Combining (WC)
+; 0x04 - Write-through (WT)
+; 0x05 - Write-protected (WP)
+; 0x06 - Writeback (WB)
 
 ; Enable MTRRs
-;	mov ecx, 0x000002FF
-;	rdmsr
-;	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
-;	wrmsr
+	mov ecx, 0x000002FF
+	rdmsr
+	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
+	wrmsr
+
+; Flush TLB
+	mov rax, cr3
+	mov cr3, rax
 
 ; Flush Cache
 	wbinvd
@@ -66,11 +100,6 @@ init_cpu:
 	btr rax, 29			; Clear No Write Thru (Bit 29)
 	btr rax, 30			; Clear CD (Bit 30)
 	mov cr0, rax
-
-; Enable Paging Global Extensions
-;	mov rax, cr4
-;	bts rax, 7			; Set Paging Global Extensions (Bit 7)
-;	mov cr4, rax
 
 ; Enable Floating Point
 	mov rax, cr0
@@ -174,7 +203,7 @@ apic_write:
 ; -----------------------------------------------------------------------------
 
 
-; Register list
+; APIC Register list
 ; 0x000 - 0x010 are Reserved
 APIC_ID		equ 0x020		; ID Register
 APIC_VER	equ 0x030		; Version Register
@@ -205,6 +234,17 @@ APIC_TMRCURRCNT	equ 0x390		; Current Count Register (for Timer)
 ; 0x3A0 - 0x3D0 are Reserved
 APIC_TMRDIV	equ 0x3E0		; Divide Configuration Register (for Timer)
 ; 0x3F0 is Reserved
+
+
+; MSR List
+IA32_APIC_BASE		equ 0x01B
+IA32_MTRRCAP		equ 0x0FE
+IA32_MISC_ENABLE	equ 0x1A0
+IA32_MTRR_PHYSBASE0	equ 0x200
+IA32_MTRR_PHYSMASK0	equ 0x201
+IA32_MTRR_PHYSBASE1	equ 0x202
+IA32_MTRR_PHYSMASK1	equ 0x203
+IA32_MTRR_DEF_TYPE	equ 0x2FF
 
 
 ; =============================================================================
