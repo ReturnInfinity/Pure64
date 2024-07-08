@@ -26,14 +26,14 @@ init_cpu:
 ; WC (bit 10) — Write-combining memory type supported
 ; FIX (bit 8) — Fixed range registers supported
 ; VCNT (bits 7:0)— Number of variable range registers
-	mov ecx, 0x000000FE		; IA32_MTRRCAP
+	mov ecx, IA32_MTRRCAP
 	rdmsr				; Returns the 64-bit value in RDX:RAX
 
 ; Read/write the MTRR Default Type (IA32_MTRR_DEF_TYPE) Register - 64-bit
 ; E (bit 11) — MTRR enable/disable
 ; FE (bit 10) — Fixed-range MTRRs enable/disable
 ; Type (bits 7:0)— Default memory type
-	mov ecx, 0x000002FF		; IA32_MTRR_DEF_TYPE
+	mov ecx, IA32_MTRR_DEF_TYPE
 	rdmsr
 	btc eax, 11			; Disable MTRR
 	btc eax, 10			; Disable Fixed-range MTRRs
@@ -83,7 +83,7 @@ init_cpu:
 ; 0x06 - Writeback (WB)
 
 ; Enable MTRRs
-	mov ecx, 0x000002FF
+	mov ecx, IA32_MTRR_DEF_TYPE
 	rdmsr
 	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
 	wrmsr
@@ -134,6 +134,14 @@ avx_supported:
 avx_not_supported:
 
 ; Enable and Configure Local APIC
+;	mov ecx, IA32_APIC_BASE
+;	rdmsr
+;	bts eax, 11			; APIC Global Enable
+;	cmp byte [p_x2APIC], 1
+;	jne skip_x2APIC_enable
+;	bts eax, 10			; Enable x2APIC mode
+;skip_x2APIC_enable:
+;	wrmsr
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020
 	call apic_write			; Disable softint delivery
