@@ -55,7 +55,7 @@ init_cpu:
 ;	mov eax, 0x00000006		; Type 6 (Writeback)
 ;	wrmsr
 ;	mov ecx, 0x00000201		; MTRR_Phys_Mask_MSR(0)
-;	mov edx, 0x0000000F		; Mask is EDX:EAX, 0x0000000FFF800800 (64 MiB)
+;	mov edx, 0x0000000F		; Mask is EDX:EAX, 0x0000000FFC000800 (64 MiB)
 ;	mov eax, 0xFF800800		; Bit 11 set for Valid
 ;	wrmsr
 ;
