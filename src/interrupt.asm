@@ -191,7 +191,7 @@ exception_gate_19:
 
 exception_gate_main:
 	; Output message via serial port
-	mov rsi, message_error		; Location of message
+	mov rsi, msg_error		; Location of message
 	call debug_msg
 	; Set screen to Red
 	mov rdi, [0x00005F00]		; Frame buffer base

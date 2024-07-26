@@ -244,3 +244,11 @@ A copy of the UEFI System Memory Map is stored at memory address `0x000000000000
 <tr><td>Padding</td><td>64-bit</td><td>Padding</td></tr>
 </table>
 For more information on the UEFI Memory Map: <a href="https://uefi.org/specs/UEFI/2.9_A/07_Services_Boot_Services.html#efi-boot-services-getmemorymap">UEFI Specs</a>
+
+
+## Debugging
+
+Pure64 initializes the serial port `COM1` at 115200bps, 8 data bytes, 1 stop bit, no parity, and no flow control. It will display messages on boot-up.
+
+
+// EOF

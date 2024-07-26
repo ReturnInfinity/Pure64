@@ -19,7 +19,7 @@
 
 BITS 64
 ORG 0x00008000
-PURE64SIZE equ 4096			; Pad Pure64 to this length
+PURE64SIZE equ 8192			; Pad Pure64 to this length
 
 start:
 	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started
@@ -218,12 +218,21 @@ start64:
 
 	; Configure serial port @ 0x03F8 as 115200 8N1
 	call init_serial
-
-	mov rsi, message_pure64		; Location of message
+	mov rsi, msg_pure64
 	call debug_msg
 
-;	mov al, 'a'			; Newline
-;	call debug_msg_char
+	; Output boot method
+	mov rsi, msg_boot
+	call debug_msg
+	cmp byte [p_BootMode], 'U'
+	je boot_uefi
+	mov rsi, msg_bios
+	call debug_msg
+	jmp msg_boot_done
+boot_uefi:
+	mov rsi, msg_uefi
+	call debug_msg
+msg_boot_done:
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
@@ -352,6 +361,9 @@ skip1GB:
 clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
+
+	mov rsi, msg_pml4
+	call debug_msg
 
 ; Debug
 	mov eax, 0x007F7F7F
@@ -560,9 +572,11 @@ clearmapnext:
 	cmp ecx, 0
 	jne clearmapnext
 
-; Read APIC Address from MSR
+; Read APIC Address from MSR and enable it (if not done so already)
 	mov ecx, IA32_APIC_BASE
 	rdmsr				; Returns APIC in EDX:EAX
+	bts eax, 11			; APIC Global Enable
+	wrmsr
 	and eax, 0xFFFFF000		; Clear lower 12 bits
 	shl rdx, 32			; Shift lower 32 bits to upper 32 bits
 	add rax, rdx
@@ -579,6 +593,8 @@ clearmapnext:
 	mov eax, 0x00FFFFFF
 	mov ebx, 3
 	call debug_block
+	mov rsi, msg_acpi
+	call debug_msg
 
 	call init_acpi			; Find and process the ACPI tables
 
@@ -586,6 +602,8 @@ clearmapnext:
 	mov eax, 0x007F7F7F
 	mov ebx, 4
 	call debug_block
+	mov rsi, msg_bsp
+	call debug_msg
 
 	call init_cpu			; Configure the BSP CPU
 
@@ -593,6 +611,8 @@ clearmapnext:
 	mov eax, 0x00FFFFFF
 	mov ebx, 5
 	call debug_block
+	mov rsi, msg_pic
+	call debug_msg
 
 	call init_pic			; Configure the PIC(s), activate interrupts
 
@@ -600,6 +620,8 @@ clearmapnext:
 	mov eax, 0x007F7F7F
 	mov ebx, 6
 	call debug_block
+	mov rsi, msg_smp
+	call debug_msg
 
 	call init_smp			; Init of SMP, deactivate interrupts
 
@@ -674,13 +696,15 @@ clearmapnext:
 	rep movsq			; Copy 8 bytes at a time
 
 ; Output message via serial port
-	mov rsi, message_ok		; Location of message
-	call debug_msg
+;	mov rsi, message_ok		; Location of message
+;	call debug_msg
 
 ; Debug
 	mov eax, 0x0000FF00
-	mov ebx, 99
+	mov ebx, 8
 	call debug_block
+	mov rsi, msg_kernel
+	call debug_msg
 
 ; Clear all registers (skip the stack pointer)
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
