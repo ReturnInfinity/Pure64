@@ -19,7 +19,7 @@
 
 BITS 64
 ORG 0x00008000
-PURE64SIZE equ 8192			; Pad Pure64 to this length
+PURE64SIZE equ 6144			; Pad Pure64 to this length
 
 start:
 	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started
@@ -561,16 +561,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call create_gate
 
 	lidt [IDTR64]			; load IDT register
-
-; Clear memory 0xf000 - 0xf7ff for the InfoMap (2048 bytes)
-	xor eax, eax
-	mov ecx, 256
-	mov edi, 0x0000F000
-clearmapnext:
-	stosq
-	dec ecx
-	cmp ecx, 0
-	jne clearmapnext
 
 ; Read APIC Address from MSR and enable it (if not done so already)
 	mov ecx, IA32_APIC_BASE
