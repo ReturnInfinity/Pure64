@@ -7,18 +7,18 @@
 
 
 ; Messages
-msg_pure64:		db 13, 10, 'Pure64 ', 0
-msg_ok:			db 'OK', 13, 10, 0
-msg_error:		db 'Error', 13, 10, 0
-msg_pml4:		db 13, 10, '- PML4 @ 0x0000000000002000', 0
-msg_boot:		db 13, 10, '- System booted via ', 0
+msg_pure64:		db 13, 10, 13, 10, '[ Pure64 ]', 0
+msg_ok:			db 'ok', 0
+msg_error:		db 'ERROR', 0
+msg_pml4:		db 13, 10, 'pml4 ', 0
+msg_boot:		db 13, 10, 'boot via ', 0
 msg_bios:		db 'BIOS', 0
 msg_uefi:		db 'UEFI', 0
-msg_acpi:		db 13, 10, '- Processing ACPI data', 0
-msg_bsp:		db 13, 10, '- Configuring BSP', 0
-msg_pic:		db 13, 10, '- Initializing PIC', 0
-msg_smp:		db 13, 10, '- Starting SMP', 0
-msg_kernel:		db 13, 10, '- Starting kernel...', 13, 10, 0
+msg_acpi:		db 13, 10, 'acpi ', 0
+msg_bsp:		db 13, 10, 'bsp ', 0
+msg_pic:		db 13, 10, 'pic ', 0
+msg_smp:		db 13, 10, 'smp ', 0
+msg_kernel:		db 13, 10, 'starting kernel...', 13, 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.

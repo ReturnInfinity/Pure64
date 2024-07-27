@@ -218,6 +218,8 @@ start64:
 
 	; Configure serial port @ 0x03F8 as 115200 8N1
 	call init_serial
+
+; Debug
 	mov rsi, msg_pure64
 	call debug_msg
 
@@ -317,6 +319,8 @@ skip1GB:
 	mov eax, 0x00FFFFFF
 	mov ebx, 1
 	call debug_block
+	mov rsi, msg_pml4
+	call debug_msg
 
 ; Load the GDT
 	lgdt [GDTR64]
@@ -362,7 +366,8 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
-	mov rsi, msg_pml4
+; Debug
+	mov rsi, msg_ok
 	call debug_msg
 
 ; Debug
@@ -589,6 +594,10 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call init_acpi			; Find and process the ACPI tables
 
 ; Debug
+	mov rsi, msg_ok
+	call debug_msg
+
+; Debug
 	mov eax, 0x007F7F7F
 	mov ebx, 4
 	call debug_block
@@ -596,6 +605,10 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call debug_msg
 
 	call init_cpu			; Configure the BSP CPU
+
+; Debug
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Debug
 	mov eax, 0x00FFFFFF
@@ -607,6 +620,10 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call init_pic			; Configure the PIC(s), activate interrupts
 
 ; Debug
+	mov rsi, msg_ok
+	call debug_msg
+
+; Debug
 	mov eax, 0x007F7F7F
 	mov ebx, 6
 	call debug_block
@@ -614,6 +631,10 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call debug_msg
 
 	call init_smp			; Init of SMP, deactivate interrupts
+
+; Debug
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Debug
 	mov eax, 0x00FFFFFF
@@ -690,7 +711,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 ;	call debug_msg
 
 ; Debug
-	mov eax, 0x0000FF00
+	mov eax, 0x0000FF00		; Green
 	mov ebx, 8
 	call debug_block
 	mov rsi, msg_kernel
