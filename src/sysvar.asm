@@ -11,14 +11,14 @@ msg_pure64:		db 13, 10, 13, 10, '[ Pure64 ]', 0
 msg_ok:			db 'ok', 0
 msg_error:		db 'ERROR', 0
 msg_pml4:		db 13, 10, 'pml4 ', 0
-msg_boot:		db 13, 10, 'boot via ', 0
-msg_bios:		db 'BIOS', 0
-msg_uefi:		db 'UEFI', 0
+msg_boot:		db 13, 10, 'boot ', 0
+msg_bios:		db 'bios', 0
+msg_uefi:		db 'uefi', 0
 msg_acpi:		db 13, 10, 'acpi ', 0
 msg_bsp:		db 13, 10, 'bsp ', 0
 msg_pic:		db 13, 10, 'pic ', 0
 msg_smp:		db 13, 10, 'smp ', 0
-msg_kernel:		db 13, 10, 'starting kernel...', 13, 10, 0
+msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
