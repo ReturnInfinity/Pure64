@@ -11,6 +11,10 @@
 ; dd if=PAYLOAD of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
 ; =============================================================================
 
+; Set the desired screen resolution values below
+Horizontal_Resolution		equ 1024
+Vertical_Resolution		equ 768
+
 BITS 64
 ORG 0x00400000
 %define u(x) __utf16__(x)
@@ -172,6 +176,51 @@ nextentry:
 	; 16 UINTN - SizeOfInfo
 	; 24 EFI_PHYSICAL_ADDRESS - FrameBufferBase
 	; 32 UINTN - FrameBufferSize
+	mov rax, [VIDEO]
+	add rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
+	mov rcx, [rcx]						; RCX holds the address of the Mode structure
+	mov eax, [rcx]						; EAX holds UINT32 MaxMode
+	mov [vid_max], rax					; The maximum video modes we can check
+	jmp vid_query
+
+next_video_mode:
+	mov rax, [vid_index]
+	add rax, 1						; Increment the mode # to check
+	mov [vid_index], rax
+	mov rdx, [vid_max]
+	cmp rax, rdx
+	je skip_set_video					; If we have reached the max then bail out
+
+vid_query:
+	; Query a video mode
+	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
+	mov rdx, [vid_index]					; IN UINT32 ModeNumber
+	lea r8, [vid_size]					; OUT UINTN *SizeOfInfo
+	lea r9, [vid_info]					; OUT EFI_GRAPHICS_OUTPUT_MODE_INFORMATION **Info
+	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_QUERY_MODE]
+
+	; Check mode settings
+	mov rsi, [vid_info]
+	lodsd							; UINT32 - Version
+	lodsd							; UINT32 - HorizontalResolution
+	cmp eax, Horizontal_Resolution
+	jne next_video_mode
+	lodsd							; UINT32 - VerticalResolution
+	cmp eax, Vertical_Resolution
+	jne next_video_mode
+	lodsd							; EFI_GRAPHICS_PIXEL_FORMAT - PixelFormat (UINT32)
+	bt eax, 0						; Bit 0 is set for 32-bit colour mode
+	jnc next_video_mode
+
+	; Set the video mode
+	mov rcx, [VIDEO]					; IN EFI_GRAPHICS_OUTPUT_PROTOCOL *This
+	mov rdx, [vid_index]					; IN UINT32 ModeNumber
+	call [rcx + EFI_GRAPHICS_OUTPUT_PROTOCOL_SET_MODE]
+	cmp rax, EFI_SUCCESS
+	jne next_video_mode
+skip_set_video:
+
+	; Gather video mode details
 	mov rcx, [VIDEO]
 	add rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE
 	mov rcx, [rcx]						; RCX holds the address of the Mode structure
@@ -377,7 +426,7 @@ memmapkey:		dq 0
 memmapdescsize:		dq 0
 memmapdescver:		dq 0
 vid_orig:		dq 0
-vid_current:		dq 0
+vid_index:		dq 0
 vid_max:		dq 0
 vid_size:		dq 0
 vid_info:		dq 0

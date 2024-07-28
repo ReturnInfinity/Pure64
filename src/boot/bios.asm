@@ -18,8 +18,8 @@
 %define DAP_SEGMENT 0x0000
 
 ; Set the desired screen resolution values below
-Horizontal_Resolution		equ 800
-Vertical_Resolution		equ 600
+Horizontal_Resolution		equ 1024
+Vertical_Resolution		equ 768
 
 BITS 16
 org 0x7C00
