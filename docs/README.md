@@ -149,7 +149,7 @@ This memory map shows how physical memory looks after Pure64 is finished.
 <tr><td>0x0000000000010000</td><td>0x000000000001FFFF</td><td>64 KiB</td><td>PD Low - Entries are 8 bytes per 2MiB page</td></tr>
 <tr><td>0x0000000000020000</td><td>0x000000000005FFFF</td><td>256 KiB</td><td>PD High - Entries are 8 bytes per 2MiB page</td></tr>
 <tr><td>0x0000000000060000</td><td>0x000000000009FFFF</td><td>256 KiB</td><td>Free</td></tr>
-<tr><td>0x00000000000A0000</td><td>0x00000000000FFFFF</td><td>384 KiB</td><td>ROM Area</td></tr>
+<tr><td>0x00000000000A0000</td><td>0x00000000000FFFFF</td><td>384 KiB</td><td>BIOS ROM Area</td></tr>
 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>VGA mem at 0xA0000 (128 KiB) Color text starts at 0xB8000</td></tr>
 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>Video BIOS at 0xC0000 (64 KiB)</td></tr>
 <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>Motherboard BIOS at F0000 (64 KiB)</td></tr>
@@ -243,3 +243,11 @@ A copy of the UEFI System Memory Map is stored at memory address `0x000000000000
 <tr><td>Padding</td><td>64-bit</td><td>Padding</td></tr>
 </table>
 For more information on the UEFI Memory Map: <a href="https://uefi.org/specs/UEFI/2.9_A/07_Services_Boot_Services.html#efi-boot-services-getmemorymap">UEFI Specs</a>
+
+
+## Debugging
+
+Pure64 initializes the serial port `COM1` at 115200bps, 8 data bytes, 1 stop bit, no parity, and no flow control. It will display messages on boot-up.
+
+
+// EOF

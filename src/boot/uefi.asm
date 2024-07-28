@@ -267,6 +267,8 @@ get_memmap:
 	stosq							; EFI_MEMORY_DESCRIPTOR size in bytes
 	mov rax, [memmapdescver]
 	stosq							; EFI_MEMORY_DESCRIPTOR version
+	mov rax, [ACPI]
+	stosq							; ACPI Table Address
 
 	; Set screen to black before jumping to Pure64
 	mov rdi, [FB]

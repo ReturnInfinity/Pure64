@@ -6,9 +6,19 @@
 ; =============================================================================
 
 
-message_pure64:		db 10, 'Pure64 ', 0
-message_ok:		db 'OK', 10, 0
-message_error:		db 'Error', 10, 0
+; Messages
+msg_pure64:		db 13, 10, 13, 10, '[ Pure64 ]', 0
+msg_ok:			db 'ok', 0
+msg_error:		db 'ERROR', 0
+msg_pml4:		db 13, 10, 'pml4 ', 0
+msg_boot:		db 13, 10, 'boot ', 0
+msg_bios:		db 'bios', 0
+msg_uefi:		db 'uefi', 0
+msg_acpi:		db 13, 10, 'acpi ', 0
+msg_bsp:		db 13, 10, 'bsp ', 0
+msg_pic:		db 13, 10, 'pic ', 0
+msg_smp:		db 13, 10, 'smp ', 0
+msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
@@ -52,11 +62,12 @@ dq gdt32				; linear address of GDT
 
 align 16
 gdt32:
-dq 0x0000000000000000			; Null descriptor
-dq 0x00CF9A000000FFFF			; 32-bit code descriptor
-					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-dq 0x00CF92000000FFFF			; 32-bit data descriptor
-					; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
+SYS32_NULL_SEL equ $-gdt32		; Null Segment
+dq 0x0000000000000000
+SYS32_CODE_SEL equ $-gdt32		; 32-bit code descriptor
+dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
+SYS32_DATA_SEL equ $-gdt32		; 32-bit data descriptor		
+dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 gdt32_end:
 
 align 16
