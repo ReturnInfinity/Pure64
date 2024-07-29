@@ -277,8 +277,9 @@ get_memmap:
 	jne exitfailure
 	; Output at 0x6000 is as follows:
 	; 0  UINT32 - Type
-	; 8  EFI_PHYSICAL_ADDRESS - PhysicalStart
-	; 16 EFI_VIRTUAL_ADDRESS - VirtualStart
+	; 4  UNIT32 - Padding
+	; 8  EFI_PHYSICAL_ADDRESS (UINT64) - PhysicalStart
+	; 16 EFI_VIRTUAL_ADDRESS (UINT64) - VirtualStart
 	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank

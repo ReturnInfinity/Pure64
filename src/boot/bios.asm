@@ -72,9 +72,16 @@ bootcode:
 	mov [DriveNumber], dl		; BIOS passes drive number in DL
 
 ; Get the BIOS E820 Memory Map
-; use the INT 0x15, eax= 0xE820 BIOS function to get a memory map
+; https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820
+; The code below is from https://wiki.osdev.org/Detecting_Memory_(x86)#Getting_an_E820_Memory_Map
 ; inputs: es:di -> destination buffer for 24 byte entries
 ; outputs: bp = entry count, trashes all registers except esi
+; The function below creates a memory map at address 0x6000 and the records are:
+; 64-bit Base
+; 64-bit Length
+; 32-bit Type (1 = normal, 2 reserved, ACPI reclaimable)
+; 32-bit ACPI
+; 64-bit Padding
 do_e820:
 	mov edi, 0x00006000		; location that memory map will be stored to
 	xor ebx, ebx			; ebx must be 0 to start
@@ -112,7 +119,7 @@ notext:
 	jecxz skipent			; if length qword is 0, skip entry
 goodent:
 	inc bp				; got a good entry: ++count, move to next storage spot
-	add di, 32
+	add di, 32			; Pad to 32 bytes for each record
 skipent:
 	test ebx, ebx			; if ebx resets to 0, list is complete
 	jne e820lp

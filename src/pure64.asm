@@ -391,7 +391,7 @@ uefi_memmap:
 	mov esi, 0x200000
 uefi_memmap_next:
 	mov rax, [rsi]
-	cmp rax, 7
+	cmp rax, 7			; EfiConventionalMemory (Free)
 	je uefi_memmap_conventional
 	cmp rax, 0
 	je uefi_memmap_end
@@ -405,6 +405,11 @@ uefi_memmap_conventional:
 uefi_memmap_end:
 	shr rbx, 8
 	mov dword [p_mem_amount], ebx
+
+	; FIXME - Don't hardcode the RAM to 64MiB
+	mov eax, 64
+	mov dword [p_mem_amount], eax
+
 	jmp memmap_end
 
 ; Parse the memory map provided by BIOS
@@ -448,14 +453,11 @@ bios_memmap_processfree:
 
 bios_memmap_end820:
 	shl ebx, 1
+	sub ebx, 2			; Subtract 2MiB for the CPU stacks
 	mov dword [p_mem_amount], ebx
-	shr ebx, 1
 
 memmap_end:
 
-; FIXME - Don't hardcode the RAM to 64MiB
-	mov eax, 64
-	mov dword [p_mem_amount], eax
 
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
@@ -476,11 +478,11 @@ create_pdpe_high:
 ; Create the High Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
-; FIXME - Map more than 64MiB depending on the amount of RAM in the system
 	mov edi, 0x00020000		; Location of first PDE
 	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	add rax, 0x00400000		; Start at 4MiB in
-	mov ecx, 32			; Create 32 2MiB page maps
+	add rax, 0x00400000		; Start at 4MiB in (0-2MiB for system, 2MiB-4MiB for stacks)
+	mov ecx, [p_mem_amount]
+	shr ecx, 1
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
