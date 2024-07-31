@@ -607,6 +607,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call debug_msg
 
 	call init_cpu			; Configure the BSP CPU
+	call init_hpet
 
 ; Debug
 	mov rsi, msg_ok
@@ -679,10 +680,11 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	stosb
 
 	mov di, 0x5040
-	mov rax, [p_HPETAddress]
+	mov rax, [p_HPET_Address]
 	stosq
-	mov di, 0x5050
-	mov ax, [p_HPETCounterMin]
+	mov eax, [p_HPET_Frequency]
+	stosd
+	mov ax, [p_HPET_CounterMin]
 	stosw
 
 	mov di, 0x5060
@@ -742,6 +744,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 %include "init/cpu.asm"
 %include "init/pic.asm"
 %include "init/serial.asm"
+%include "init/hpet.asm"
 %include "init/smp.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"

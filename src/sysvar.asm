@@ -36,18 +36,19 @@ p_ACPITableAddress:	equ SystemVariables + 0x00
 p_LocalAPICAddress:	equ SystemVariables + 0x10
 p_Counter_Timer:	equ SystemVariables + 0x18
 p_Counter_RTC:		equ SystemVariables + 0x20
-p_HPETAddress:		equ SystemVariables + 0x28
+p_HPET_Address:		equ SystemVariables + 0x28
 
 ; DD - Starting at offset 0x80, increments by 4
 p_BSP:			equ SystemVariables + 0x80
 p_mem_amount:		equ SystemVariables + 0x84	; in MiB
+p_HPET_Frequency:	equ SystemVariables + 0x88
 
 ; DW - Starting at offset 0x100, increments by 2
 p_cpu_speed:		equ SystemVariables + 0x100
 p_cpu_activated:	equ SystemVariables + 0x102
 p_cpu_detected:		equ SystemVariables + 0x104
 p_PCIECount:		equ SystemVariables + 0x106
-p_HPETCounterMin:	equ SystemVariables + 0x108
+p_HPET_CounterMin:	equ SystemVariables + 0x108
 
 ; DB - Starting at offset 0x180, increments by 1
 p_IOAPICCount:		equ SystemVariables + 0x180

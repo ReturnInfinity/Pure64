@@ -306,10 +306,10 @@ parseHPETTable:
 	lodsw				; PCI Vendor ID
 	lodsd				; Generic Address Structure
 	lodsq				; Base Address Value
-	mov [p_HPETAddress], rax	; Save the Address of the HPET
+	mov [p_HPET_Address], rax	; Save the Address of the HPET
 	lodsb				; HPET Number
 	lodsw				; Main Counter Minimum
-	mov [p_HPETCounterMin], ax	; Save the Counter Minimum
+	mov [p_HPET_CounterMin], ax	; Save the Counter Minimum
 	lodsb				; Page Protection And OEM Attribute
 	ret
 ; -----------------------------------------------------------------------------
