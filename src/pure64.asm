@@ -275,8 +275,8 @@ msg_boot_done:
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
 ; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
-; 4 entries are created to map the first 4GiB of RAM
-	mov ecx, 4			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+; FIXME - This willy completely fill the 64K set for the low PDE (only 16GiB identity mapped)
+	mov ecx, 16			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
 	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
 pdpte_low:
@@ -290,7 +290,7 @@ pdpte_low:
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00010000		; Location of first PDE
 	mov eax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), and 7 (PS) set
-	mov ecx, 2048			; Create 2048 2MiB page maps
+	mov ecx, 8192			; Create 8192 2MiB page maps
 pde_low:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
@@ -415,10 +415,11 @@ uefi_memmap_end:
 ; Parse the memory map provided by BIOS
 bios_memmap:
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
-; Build a map at 0x400000
+; Build a map at 0x200000
 	xor ecx, ecx
 	xor ebx, ebx			; Counter for pages found
 	mov esi, 0x00006000		; E820 Map location
+	mov edi, 0x00200000		; 2MiB
 bios_memmap_nextentry:
 	add esi, 16			; Skip ESI to type marker
 	mov eax, [esi]			; Load the 32-bit type marker
@@ -430,42 +431,34 @@ bios_memmap_nextentry:
 	jmp bios_memmap_nextentry
 
 bios_memmap_processfree:
+	; TODO Check ACPI 3.0 Extended Attributes - Bit 0 should be set
 	sub esi, 16
 	mov rax, [rsi]			; Physical start address
 	add esi, 8
 	mov rcx, [rsi]			; Physical length
 	add esi, 24
-	shr rcx, 21			; Convert bytes to # of 2 MiB pages
+	shr rcx, 20			; Convert bytes to MiB
 	cmp rcx, 0			; Do we have at least 1 page?
 	je bios_memmap_nextentry
-	shl rax, 1
-	mov edx, 0x1FFFFF
-	not rdx				; Clear bits 20 - 0
-	and rax, rdx
-	; At this point RAX points to the start and RCX has the # of pages
-	shr rax, 21			; page # to start on
-	mov rdi, 0x400000		; 4 MiB into physical memory
-	add rdi, rax
-	mov al, 1
+	stosq
+	mov rax, rcx
+	stosq
 	add ebx, ecx
-	rep stosb
 	jmp bios_memmap_nextentry
 
 bios_memmap_end820:
-	shl ebx, 1
 	sub ebx, 2			; Subtract 2MiB for the CPU stacks
 	mov dword [p_mem_amount], ebx
 
 memmap_end:
 
-
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
 ; A single PDPTE can map 1GiB with 2MiB pages
 ; A single PDPTE is 8 bytes in length
-; 1 entry is created to map the first 1GiB of physical RAM to 0xFFFF800000000000
-; FIXME - Create more than just one PDPE depending on the amount of RAM in the system
-	add rcx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov ecx, dword [p_mem_amount]
+	shr ecx, 10			; MBs -> GBs
+	add rcx, 1			; Add 1. This is the number of PDPE's to make
 	mov edi, 0x00004000		; location of high PDPE
 	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
 create_pdpe_high:
@@ -478,17 +471,31 @@ create_pdpe_high:
 ; Create the High Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
+	mov esi, 0x00200000		; Location of the available memory map
 	mov edi, 0x00020000		; Location of first PDE
-	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	add rax, 0x00400000		; Start at 4MiB in (0-2MiB for system, 2MiB-4MiB for stacks)
-	mov ecx, [p_mem_amount]
-	shr ecx, 1
+pde_next_range:
+	lodsq				; Load the base
+	xchg rax, rcx
+	lodsq				; Load the length
+	xchg rax, rcx
+	cmp rax, 0			; Check if at end of records
+	je pde_end			; Bail out if so
+	cmp rax, 0x00100000
+	jg skipfirst4mb
+	add rax, 0x00300000		; Add 3 MiB to the base
+	sub rcx, 3			; Subtract 3 MiB from the length
+skipfirst4mb:
+	shr ecx, 1			; Quick divide by 2 for 2 MB pages
+	add rax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
 	dec ecx
 	cmp ecx, 0
 	jne pde_high
+	jmp pde_next_range
+	
+pde_end:
 
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
