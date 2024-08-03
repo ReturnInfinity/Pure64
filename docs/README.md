@@ -242,7 +242,7 @@ A copy of the BIOS System Memory Map is stored at memory address `0x000000000000
 </table>
 For more information on the BIOS Memory Map: <a href="https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820">BIOS Specs</a>
 
-A copy of the UEFI System Memory Map is stored at memory address `0x0000000000200000`. Each UEFI record is 48 bytes in length and the memory map is terminated by a blank record.
+A copy of the UEFI System Memory Map is stored at memory address `0x0000000000220000`. Each UEFI record is 48 bytes in length and the memory map is terminated by a blank record.
 <table border="1" cellpadding="2" cellspacing="0">
 <tr><th>Variable</th><th>Variable Size</th><th>Description</th></tr>
 <tr><td>Type</td><td>64-bit</td><td>The type of the memory region</td></tr>

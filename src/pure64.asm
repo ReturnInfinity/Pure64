@@ -387,8 +387,9 @@ clearcs64:
 
 ; Parse the memory map provided by UEFI
 uefi_memmap:
-	xor ebx, ebx			; Running counter of 4K pages
-	mov esi, 0x200000
+	xor ebx, ebx			; Running counter of MiBs
+	mov esi, 0x00220000
+	mov edi, 0x00200000		; 2MiB
 uefi_memmap_next:
 	mov rax, [rsi]
 	cmp rax, 7			; EfiConventionalMemory (Free)
@@ -399,17 +400,18 @@ uefi_memmap_skip:
 	add esi, 48
 	jmp uefi_memmap_next
 uefi_memmap_conventional:
-	mov rax, [rsi + 24]
+	mov rax, [rsi+8]		; Physical Address
+	stosq
+	mov rax, [rsi + 24]		; Number of 4 KiB pages
+	shr rax, 8			; Convert to MiB
+	stosq
+	cmp rax, 0
+	jne uefi_memmap_keeprecord
+	sub rdi, 16
+uefi_memmap_keeprecord:
 	add rbx, rax
 	jmp uefi_memmap_skip
 uefi_memmap_end:
-	shr rbx, 8
-	mov dword [p_mem_amount], ebx
-
-	; FIXME - Don't hardcode the RAM to 64MiB
-	mov eax, 64
-	mov dword [p_mem_amount], eax
-
 	jmp memmap_end
 
 ; Parse the memory map provided by BIOS
@@ -447,10 +449,13 @@ bios_memmap_processfree:
 	jmp bios_memmap_nextentry
 
 bios_memmap_end820:
-	sub ebx, 2			; Subtract 2MiB for the CPU stacks
-	mov dword [p_mem_amount], ebx
 
 memmap_end:
+	sub ebx, 2			; Subtract 2MiB for the CPU stacks
+	mov dword [p_mem_amount], ebx
+	xor eax, eax
+	stosq
+	stosq
 
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
@@ -490,11 +495,12 @@ skipfirst4mb:
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
+	cmp ecx, 0
+	je pde_next_range
 	dec ecx
 	cmp ecx, 0
 	jne pde_high
 	jmp pde_next_range
-	
 pde_end:
 
 ; Build the IDT
