@@ -381,28 +381,31 @@ clearcs64:
 	stosd
 	stosd				; Write 8 bytes in total to overwrite the 'far jump' and marker
 
-; Parse the Memory Map at 0x200000
+; Parse the Memory Map from BIOS/UEFI
 	cmp byte [p_BootMode], 'U'
 	jne bios_memmap
 
 ; Parse the memory map provided by UEFI
 uefi_memmap:
-	xor ebx, ebx			; Running counter of MiBs
+; Process the UEFI memory map to find all possible 2MiB pages that are free to use
+; Build an available memory map at 0x200000
+	xor ebx, ebx			; Running counter of available MiBs
 	mov esi, 0x00220000
 	mov edi, 0x00200000		; 2MiB
+	sub esi, 48
 uefi_memmap_next:
+	add esi, 48
 	mov rax, [rsi]
 	cmp rax, 7			; EfiConventionalMemory (Free)
 	je uefi_memmap_conventional
+	mov rax, [rsi+24]
 	cmp rax, 0
 	je uefi_memmap_end
-uefi_memmap_skip:
-	add esi, 48
 	jmp uefi_memmap_next
 uefi_memmap_conventional:
 	mov rax, [rsi+8]		; Physical Address
 	stosq
-	mov rax, [rsi + 24]		; Number of 4 KiB pages
+	mov rax, [rsi+24]		; Number of 4 KiB pages
 	shr rax, 8			; Convert to MiB
 	stosq
 	cmp rax, 0
@@ -410,16 +413,16 @@ uefi_memmap_conventional:
 	sub rdi, 16
 uefi_memmap_keeprecord:
 	add rbx, rax
-	jmp uefi_memmap_skip
+	jmp uefi_memmap_next
 uefi_memmap_end:
 	jmp memmap_end
 
 ; Parse the memory map provided by BIOS
 bios_memmap:
 ; Process the E820 memory map to find all possible 2MiB pages that are free to use
-; Build a map at 0x200000
+; Build an available memory map at 0x200000
 	xor ecx, ecx
-	xor ebx, ebx			; Counter for pages found
+	xor ebx, ebx			; Running counter of available MiBs
 	mov esi, 0x00006000		; E820 Map location
 	mov edi, 0x00200000		; 2MiB
 bios_memmap_nextentry:
@@ -456,6 +459,10 @@ memmap_end:
 	xor eax, eax
 	stosq
 	stosq
+
+; UEFI HACKIN'
+;	cmp byte [p_BootMode], 'U'
+;	je hack
 
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
@@ -502,6 +509,36 @@ pde_high:				; Create a 2MiB page
 	jne pde_high
 	jmp pde_next_range
 pde_end:
+	jmp idt
+
+; UEFI HACKIN' START
+
+hack:
+	mov rcx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
+	mov edi, 0x00004000		; location of high PDPE
+	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
+hack_create_pdpe_high:
+	stosq
+	add rax, 0x00001000		; 4K later (512 records x 8 bytes)
+	dec ecx
+	cmp ecx, 0
+	jne hack_create_pdpe_high
+
+	mov edi, 0x00020000		; Location of first PDE
+	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
+	add rax, 0x00400000		; Start at 4MiB in (0-2MiB for system, 2MiB-4MiB for stacks)
+	mov ecx, 64
+	shr ecx, 1
+hack_pde_high:				; Create a 2MiB page
+	stosq
+	add rax, 0x00200000		; Increment by 2MiB
+	dec ecx
+	cmp ecx, 0
+	jne hack_pde_high
+
+; UEFI HACKIN' END
+
+idt:
 
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
