@@ -421,7 +421,7 @@ FBS:			dq 0					; Frame buffer size
 HR:			dq 0					; Horizontal Resolution
 VR:			dq 0					; Vertical Resolution
 PPSL:			dq 0					; PixelsPerScanLine
-memmap:			dq 0x200000				; Store the Memory Map from UEFI here
+memmap:			dq 0x220000				; Store the Memory Map from UEFI here
 memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
 memmapdescsize:		dq 0
