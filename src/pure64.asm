@@ -434,7 +434,6 @@ bios_memmap_nextentry:
 	je bios_memmap_processfree
 	add esi, 16			; Skip ESI to start of next entry
 	jmp bios_memmap_nextentry
-
 bios_memmap_processfree:
 	; TODO Check ACPI 3.0 Extended Attributes - Bit 0 should be set
 	sub esi, 16
@@ -450,7 +449,6 @@ bios_memmap_processfree:
 	stosq
 	add ebx, ecx
 	jmp bios_memmap_nextentry
-
 bios_memmap_end820:
 
 memmap_end:
@@ -459,10 +457,6 @@ memmap_end:
 	xor eax, eax
 	stosq
 	stosq
-
-; UEFI HACKIN'
-;	cmp byte [p_BootMode], 'U'
-;	je hack
 
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
@@ -509,36 +503,6 @@ pde_high:				; Create a 2MiB page
 	jne pde_high
 	jmp pde_next_range
 pde_end:
-	jmp idt
-
-; UEFI HACKIN' START
-
-hack:
-	mov rcx, 1			; number of PDPE's to make.. each PDPE maps 1GB of physical memory
-	mov edi, 0x00004000		; location of high PDPE
-	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
-hack_create_pdpe_high:
-	stosq
-	add rax, 0x00001000		; 4K later (512 records x 8 bytes)
-	dec ecx
-	cmp ecx, 0
-	jne hack_create_pdpe_high
-
-	mov edi, 0x00020000		; Location of first PDE
-	mov eax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
-	add rax, 0x00400000		; Start at 4MiB in (0-2MiB for system, 2MiB-4MiB for stacks)
-	mov ecx, 64
-	shr ecx, 1
-hack_pde_high:				; Create a 2MiB page
-	stosq
-	add rax, 0x00200000		; Increment by 2MiB
-	dec ecx
-	cmp ecx, 0
-	jne hack_pde_high
-
-; UEFI HACKIN' END
-
-idt:
 
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
