@@ -102,23 +102,19 @@ noMP:
 	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 	mov [p_BSP], eax		; Store the BSP APIC ID
 
-; Calculate speed of CPU (At this point the RTC is firing at 1024Hz)
+; Calculate base speed of CPU
 	cpuid
 	xor edx, edx
 	xor eax, eax
-	mov rcx, [p_Counter_RTC]
-	add rcx, 10
 	rdtsc
 	push rax
-speedtest:
-	mov rbx, [p_Counter_RTC]
-	cmp rbx, rcx
-	jl speedtest
+	mov rax, 1024
+	call os_hpet_delay
 	rdtsc
 	pop rdx
 	sub rax, rdx
 	xor edx, edx
-	mov rcx, 10240
+	mov rcx, 1024
 	div rcx
 	mov [p_cpu_speed], ax
 

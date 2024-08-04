@@ -76,6 +76,48 @@ os_hpet_write:
 ; -----------------------------------------------------------------------------
 
 
+; -----------------------------------------------------------------------------
+; os_hpet_delay -- Delay by X microseconds
+; IN:	RAX = Time microseconds
+; OUT:	All registers preserved
+; Note:	There are 1,000,000 microseconds in a second
+;	There are 1,000 milliseconds in a second
+os_hpet_delay:
+	push rdx
+	push rcx
+	push rbx
+	push rax
+
+	mov rbx, rax			; Save delay to RBX
+	xor edx, edx
+	xor ecx, ecx
+	call os_hpet_read		; Get HPET General Capabilities and ID Register
+	shr rax, 32
+	mov rcx, rax			; RCX = RAX >> 32 (timer period in femtoseconds)
+	mov rax, 1000000000
+	div rcx				; Divide 10E9 (RDX:RAX) / RCX (converting from period in femtoseconds to frequency in MHz)
+	mul rbx				; RAX *= RBX, should get number of HPET cycles to wait, save result in RBX
+	mov rbx, rax
+	mov ecx, 0xF0
+	call os_hpet_read		; Get HPET counter in RAX
+	add rbx, rax			; RBX += RAX Until when to wait
+os_hpet_delay_loop:				; Stay in this loop until the HPET timer reaches the expected value
+	mov ecx, 0xF0
+	call os_hpet_read		; Get HPET counter in RAX
+	cmp rax, rbx			; If RAX >= RBX then jump to end, otherwise jump to loop
+	jae os_hpet_delay_end
+;	hlt
+	jmp os_hpet_delay_loop
+os_hpet_delay_end:
+
+	pop rax
+	pop rbx
+	pop rcx
+	pop rdx
+	ret
+; -----------------------------------------------------------------------------
+
+
 ; Register list (64-bits wide)
 HPET_GEN_CAP		equ 0x000 ; COUNTER_CLK_PERIOD (63:32), LEG_RT_CAP (15), COUNT_SIZE_CAP (13), NUM_TIM_CAP (12:8)
 ; 0x008 - 0x00F are Reserved
