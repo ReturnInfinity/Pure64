@@ -684,7 +684,8 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	stosw
 
 	mov di, 0x5020
-	mov ax, [p_mem_amount]
+	mov eax, [p_mem_amount]
+	and eax, 0xFFFFFFFE
 	stosd
 
 	mov di, 0x5030
