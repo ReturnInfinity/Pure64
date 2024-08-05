@@ -9,7 +9,7 @@
 ;
 ; Pure64 requires a payload for execution! The stand-alone pure64.sys file
 ; is not sufficient. You must append your kernel or software to the end of
-; the Pure64 binary. The maximum size of the kernel or software is 28KiB.
+; the Pure64 binary. The maximum size of the kernel or software is 26KiB.
 ;
 ; Windows - copy /b pure64.sys + kernel64.sys
 ; Unix - cat pure64.sys kernel64.sys > pure64.sys

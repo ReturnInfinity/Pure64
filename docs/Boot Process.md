@@ -23,5 +23,5 @@ Pure64 uses two different first stage loaders depending on the firmware of the s
 * PIC is activated
 * SMP is activated
 * An information table is built at `0x5000`
-* The (up to) 32 KiB of binary data directly after Pure64 is copied to `0x100000`
+* The (up to) 26 KiB of binary data directly after Pure64 is copied to `0x100000`
 * Jumps to `0x100000` to start the kernel
