@@ -701,6 +701,8 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	stosd
 	mov ax, [p_HPET_CounterMin]
 	stosw
+	mov al, [p_HPET_Timers]
+	stosb
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]

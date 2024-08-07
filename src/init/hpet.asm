@@ -14,6 +14,11 @@ init_hpet:
 	; Verify the capabilities of HPET
 	mov ecx, HPET_GEN_CAP
 	call os_hpet_read
+	mov rbx, rax			; Save results for # of timers
+	shr ebx, 8			; Bits 12:8 contain the # of timers
+	and ebx, 11111b			; Save only the lower 5 bits
+	inc bl				; Increment the number of timers by 1
+	mov [p_HPET_Timers], bl		; Save the # of HPET timers
 	bt rax, 13			; Check for 64-bit support
 	jnc os_hpet_init_error
 	shr rax, 32			; EAX contains the tick period in femtoseconds
@@ -30,6 +35,19 @@ init_hpet:
 	mov rax, 1000000000000000	; femotoseconds per second
 	div rbx				; RDX:RAX / RBX
 	mov [p_HPET_Frequency], eax	; Save the HPET frequency
+
+	; Disable interrupts on all timers
+	xor ebx, ebx
+	mov bl, [p_HPET_Timers]
+	mov ecx, 0xE0			; HPET_TIMER_0_CONF - 0x20
+os_hpet_init_disable_int:
+	add ecx, 0x20
+	call os_hpet_read
+	btc ax, 2
+	btc ax, 3
+	call os_hpet_write
+	dec bl
+	jnz os_hpet_init_disable_int
 
 	; Clear the main counter before it is enabled
 	mov ecx, HPET_MAIN_COUNTER
@@ -52,11 +70,8 @@ os_hpet_init_error:
 ; OUT:	RAX = Register value
 ;	All other registers preserved
 os_hpet_read:
-	push rsi
-	mov rsi, [p_HPET_Address]
-	add rsi, rcx			; Add offset
-	lodsq
-	pop rsi
+	mov rax, [p_HPET_Address]
+	mov rax, [rax + rcx]
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -67,11 +82,10 @@ os_hpet_read:
 ;	RAX = Value to write
 ; OUT:	All registers preserved
 os_hpet_write:
-	push rdi
-	mov rdi, [p_HPET_Address]
-	add rdi, rcx			; Add offset
-	stosq
-	pop rdi
+	push rcx
+	add rcx, [p_HPET_Address]
+	mov [rcx], rax
+	pop rcx
 	ret
 ; -----------------------------------------------------------------------------
 

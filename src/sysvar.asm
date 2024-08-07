@@ -55,6 +55,7 @@ p_IOAPICCount:		equ SystemVariables + 0x180
 p_BootMode:		equ SystemVariables + 0x181	; 'U' for UEFI, otherwise BIOS
 p_IOAPICIntSourceC:	equ SystemVariables + 0x182
 p_x2APIC:		equ SystemVariables + 0x183
+p_HPET_Timers:		equ SystemVariables + 0x184
 
 align 16
 GDTR32:					; Global Descriptors Table Register
