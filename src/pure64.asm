@@ -214,12 +214,13 @@ start64:
 	; Clear screen
 	xor eax, eax
 	xor ecx, ecx
+	xor edx, edx
 	mov ax, [0x00005F10]
 	mov cx, [0x00005F12]
 	mul ecx
 	mov ecx, eax
 	mov rdi, [0x00005F00]
-	mov eax, 0x00000000
+	mov eax, 0x0020202020
 	rep stosd
 
 ; Visual Debug (1/4)
