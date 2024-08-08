@@ -224,7 +224,6 @@ start64:
 	rep stosd
 
 ; Visual Debug (1/4)
-	mov eax, 0x00404040
 	mov ebx, 0
 	call debug_block
 
@@ -372,7 +371,6 @@ clearcs64:
 	call debug_msg
 
 ; Visual Debug (2/4)
-	mov eax, 0x00404040
 	mov ebx, 2
 	call debug_block
 
@@ -606,7 +604,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	call debug_msg
 
 ; Visual Debug (3/4)
-	mov eax, 0x00404040
 	mov ebx, 4
 	call debug_block
 
@@ -692,7 +689,6 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	rep movsq			; Copy 8 bytes at a time
 
 ; Visual Debug (4/4)
-	mov eax, 0x00404040
 	mov ebx, 6
 	call debug_block
 
@@ -730,8 +726,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 
 ; -----------------------------------------------------------------------------
 ; debug_block - Create a block of colour on the screen
-; IN:	EAX = Colour
-;	EBX = Index #
+; IN:	EBX = Index #
 debug_block:
 	push rax
 	push rbx
@@ -746,7 +741,7 @@ debug_block:
 	xor eax, eax
 	xor ebx, ebx
 	mov ax, [0x00005F00 + 0x12]	; Screen Y
-	sub ax, 8
+	sub ax, 16			; Upper row
 	shr ax, 1			; Quick divide by 2
 	mov bx, [0x00005F00 + 0x10]	; Screen X
 	shl ebx, 2			; Quick multiply by 4
@@ -768,6 +763,7 @@ debug_block:
 
 	; Draw the 8x8 pixel block
 	mov ebx, 8			; 8 pixels tall
+	mov eax, 0x00F7CA54		; Return Infinity Yellow/Orange
 nextline:
 	mov ecx, 8			; 8 pixels wide
 	rep stosd
