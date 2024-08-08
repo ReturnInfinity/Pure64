@@ -7,11 +7,11 @@
 
 
 init_smp:
-; Check if we want the AP's to be enabled.. if not then skip to end
+	; Check if we want the AP's to be enabled.. if not then skip to end
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
 
-; Start the AP's one by one
+	; Start the AP's one by one
 	xor eax, eax
 	xor edx, edx
 	mov rsi, [p_LocalAPICAddress]
@@ -48,13 +48,9 @@ smp_send_INIT_skipcore:
 
 smp_send_INIT_done:
 
-	; Wait 200 microseconds (.2 milliseconds)
-	mov rax, [p_Counter_RTC]
-	add rax, 10
-smp_wait1:
-	mov rbx, [p_Counter_RTC]
-	cmp rax, rbx
-	jg smp_wait1
+	; Wait 500 microseconds
+	mov eax, 500
+	call os_hpet_delay
 
 	mov esi, 0x00005100
 	xor ecx, ecx
@@ -84,17 +80,12 @@ smp_send_SIPI_skipcore:
 
 smp_send_SIPI_done:
 
-; Wait 400 microseconds (.4 milliseconds)
-; Let things settle (Give the AP's some time to finish)
-	mov rax, [p_Counter_RTC]
-	add rax, 20
-smp_wait2:
-	mov rbx, [p_Counter_RTC]
-	cmp rax, rbx
-	jg smp_wait2
+	; Wait 1000 microseconds for the AP's to finish
+	mov eax, 1000
+	call os_hpet_delay
 
-; Finish up
 noMP:
+	; Gather and store the APIC ID of the BSP
 	xor eax, eax
 	mov rsi, [p_LocalAPICAddress]
 	add rsi, 0x20			; Add the offset for the APIC ID location
@@ -102,7 +93,7 @@ noMP:
 	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 	mov [p_BSP], eax		; Store the BSP APIC ID
 
-; Calculate base speed of CPU
+	; Calculate base speed of CPU
 	cpuid
 	xor edx, edx
 	xor eax, eax

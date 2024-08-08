@@ -275,7 +275,7 @@ msg_boot_done:
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
 ; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
-; FIXME - This willy completely fill the 64K set for the low PDE (only 16GiB identity mapped)
+; FIXME - This will completely fill the 64K set for the low PDE (only 16GiB identity mapped)
 	mov ecx, 16			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
 	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
@@ -324,11 +324,6 @@ skip1GB:
 
 ; Load the GDT
 	lgdt [GDTR64]
-
-; Enable extended properties
-;	mov eax, cr4
-;	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
-;	mov cr4, eax
 
 ; Point cr3 at PML4
 	mov rax, 0x00002008		; Write-thru enabled (Bit 3)
@@ -568,17 +563,8 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov word [0x12*16], exception_gate_18
 	mov word [0x13*16], exception_gate_19
 
-	mov edi, 0x20			; Set up Timer handler
-	mov eax, timer
-	call create_gate
 	mov edi, 0x21			; Set up Keyboard handler
 	mov eax, keyboard
-	call create_gate
-	mov edi, 0x22			; Set up Cascade handler
-	mov eax, cascade
-	call create_gate
-	mov edi, 0x28			; Set up RTC handler
-	mov eax, rtc
 	call create_gate
 
 	lidt [IDTR64]			; load IDT register
@@ -852,6 +838,53 @@ debug_msg_done:
 	pop rax
 	pop rdx
 	popf
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; debug_dump_(rax|eax|ax|al) -- Dump content of RAX, EAX, AX, or AL
+;  IN:	RAX/EAX/AX/AL = content to dump
+; OUT:	Nothing, all registers preserved
+debug_dump_rax:
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 32
+debug_dump_eax:			; RAX is used here instead of EAX to preserve the upper 32-bits
+	rol rax, 40
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 16
+debug_dump_ax:
+	rol ax, 8
+	call debug_dump_al
+	rol ax, 8
+debug_dump_al:
+	push rax			; Save RAX
+	push ax				; Save AX for the low nibble
+	shr al, 4			; Shift the high 4 bits into the low 4, high bits cleared
+	or al, '0'			; Add "0"
+	cmp al, '9'+1			; Digit?
+	jl debug_dump_al_h		; Yes, store it
+	add al, 7			; Add offset for character "A"
+debug_dump_al_h:
+	call debug_msg_char
+	pop ax				; Restore AX
+	and al, 0x0F			; Keep only the low 4 bits
+	or al, '0'			; Add "0"
+	cmp al, '9'+1			; Digit?
+	jl debug_dump_al_l		; Yes, store it
+	add al, 7			; Add offset for character "A"
+debug_dump_al_l:
+	call debug_msg_char
+	pop rax				; Restore RAX
 	ret
 ; -----------------------------------------------------------------------------
 

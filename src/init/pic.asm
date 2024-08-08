@@ -52,11 +52,8 @@ rtc_poll:
 
 	; Enable specific interrupts
 	in al, 0x21
-	mov al, 11111001b		; Enable Cascade, Keyboard
+	mov al, 11111001b		; Enable Cascade (HPET Timer 0), Keyboard
 	out 0x21, al
-	in al, 0xA1
-	mov al, 11111110b		; Enable RTC
-	out 0xA1, al
 
 	sti				; Enable interrupts
 
@@ -76,14 +73,6 @@ rtc_poll:
 	; New rate is 19866 Hz (1193182 / 60)
 	; 0.050286633812733 milliseconds (ms)
 	; 50.28663381273300814 microseconds (us)
-
-	; Test to make sure interrupts are running
-	mov rbx, [p_Counter_RTC]	; Save the current RTC counter to RBX
-	add rbx, 2
-check:
-	mov rax, [p_Counter_RTC]	; Read the counter again
-	cmp rax, rbx			; Compare it to the first read
-	je check			; Stay in the loop until the values are not equal
 
 	ret
 

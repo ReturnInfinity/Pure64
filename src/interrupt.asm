@@ -24,22 +24,6 @@ interrupt_gate:				; handler for all other interrupts
 
 
 ; -----------------------------------------------------------------------------
-; Timer interrupt. IRQ 0x00, INT 0x20
-align 16
-timer:
-	push rax
-
-	add qword [p_Counter_Timer], 1	; 64-bit counter started at boot up
-
-	mov al, 0x20			; Acknowledge the IRQ
-	out 0x20, al
-
-	pop rax
-	iretq
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
 ; Keyboard interrupt. IRQ 0x01, INT 0x21
 ; This IRQ runs whenever there is input on the keyboard
 align 16
@@ -55,42 +39,6 @@ keyboard:
 
 keyboard_done:
 	mov al, 0x20			; Acknowledge the IRQ
-	out 0x20, al
-
-	pop rax
-	pop rdi
-	iretq
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; Cascade interrupt. IRQ 0x02, INT 0x22
-cascade:
-	push rax
-
-	mov al, 0x20			; Acknowledge the IRQ
-	out 0x20, al
-
-	pop rax
-	iretq
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; Real-time clock interrupt. IRQ 0x08, INT 0x28
-align 16
-rtc:
-	push rdi
-	push rax
-
-	add qword [p_Counter_RTC], 1	; 64-bit counter started at boot up
-
-	mov al, 0x0C			; Select RTC register C
-	out 0x70, al			; Port 0x70 is the RTC index, and 0x71 is the RTC data
-	in al, 0x71			; Read the value in register C
-
-	mov al, 0x20			; Acknowledge the IRQ
-	out 0xA0, al
 	out 0x20, al
 
 	pop rax

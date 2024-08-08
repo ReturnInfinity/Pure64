@@ -21,6 +21,8 @@ init_hpet:
 	mov [p_HPET_Timers], bl		; Save the # of HPET timers
 	bt rax, 13			; Check for 64-bit support
 	jnc os_hpet_init_error
+	bt rax, 15			; Check for legacy replacement mode
+	jnc os_hpet_init_error
 	shr rax, 32			; EAX contains the tick period in femtoseconds
 
 	; Verify the Counter Clock Period is valid
@@ -54,8 +56,8 @@ os_hpet_init_disable_int:
 	xor eax, eax
 	call os_hpet_write
 
-	; Enable HPET main counter (0) and set legacy replacement mapping (1)
-	mov eax, 0b01
+	; Enable HPET main counter (0) and enable legacy replacement mapping (1)
+	mov eax, 0b11
 	mov ecx, HPET_GEN_CONF
 	call os_hpet_write
 
@@ -109,18 +111,17 @@ os_hpet_delay:
 	shr rax, 32
 	mov rcx, rax			; RCX = RAX >> 32 (timer period in femtoseconds)
 	mov rax, 1000000000
-	div rcx				; Divide 10E9 (RDX:RAX) / RCX (converting from period in femtoseconds to frequency in MHz)
+	div rcx				; Divide 1000000000 (RDX:RAX) / RCX (converting from period in femtoseconds to frequency in MHz)
 	mul rbx				; RAX *= RBX, should get number of HPET cycles to wait, save result in RBX
 	mov rbx, rax
-	mov ecx, 0xF0
+	mov ecx, HPET_MAIN_COUNTER
 	call os_hpet_read		; Get HPET counter in RAX
 	add rbx, rax			; RBX += RAX Until when to wait
-os_hpet_delay_loop:				; Stay in this loop until the HPET timer reaches the expected value
-	mov ecx, 0xF0
+os_hpet_delay_loop:			; Stay in this loop until the HPET timer reaches the expected value
+	mov ecx, HPET_MAIN_COUNTER
 	call os_hpet_read		; Get HPET counter in RAX
 	cmp rax, rbx			; If RAX >= RBX then jump to end, otherwise jump to loop
 	jae os_hpet_delay_end
-;	hlt
 	jmp os_hpet_delay_loop
 os_hpet_delay_end:
 
