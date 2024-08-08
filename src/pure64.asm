@@ -211,16 +211,26 @@ start64:
 	mov al, 0x00
 	out 0x40, al
 
-; Debug
-	mov eax, 0x007F7F7F
+	; Clear screen
+	xor eax, eax
+	xor ecx, ecx
+	mov ax, [0x00005F10]
+	mov cx, [0x00005F12]
+	mul ecx
+	mov ecx, eax
+	mov rdi, [0x00005F00]
+	mov eax, 0x00000000
+	rep stosd
+
+; Visual Debug (1/4)
+	mov eax, 0x00404040
 	mov ebx, 0
 	call debug_block
 
 	; Configure serial port @ 0x03F8 as 115200 8N1
 	call init_serial
 
-; Debug
-	mov rsi, msg_pure64
+	mov rsi, msg_pure64		; Output "[ Pure64 ]"
 	call debug_msg
 
 	; Output boot method
@@ -315,10 +325,6 @@ pdpte_low_1GB:				; Create a 1GiB page
 
 skip1GB:
 
-; Debug
-	mov eax, 0x00FFFFFF
-	mov ebx, 1
-	call debug_block
 	mov rsi, msg_pml4
 	call debug_msg
 
@@ -361,12 +367,11 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
-; Debug
 	mov rsi, msg_ok
 	call debug_msg
 
-; Debug
-	mov eax, 0x007F7F7F
+; Visual Debug (2/4)
+	mov eax, 0x00404040
 	mov ebx, 2
 	call debug_block
 
@@ -586,63 +591,35 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
-; Debug
-	mov eax, 0x00FFFFFF
-	mov ebx, 3
-	call debug_block
 	mov rsi, msg_acpi
 	call debug_msg
-
 	call init_acpi			; Find and process the ACPI tables
-
-; Debug
 	mov rsi, msg_ok
 	call debug_msg
 
-; Debug
-	mov eax, 0x007F7F7F
-	mov ebx, 4
-	call debug_block
 	mov rsi, msg_bsp
 	call debug_msg
-
 	call init_cpu			; Configure the BSP CPU
-	call init_hpet
-
-; Debug
+	call init_hpet			; Configure the HPET
 	mov rsi, msg_ok
 	call debug_msg
 
-; Debug
-	mov eax, 0x00FFFFFF
-	mov ebx, 5
+; Visual Debug (3/4)
+	mov eax, 0x00404040
+	mov ebx, 4
 	call debug_block
+
 	mov rsi, msg_pic
 	call debug_msg
-
 	call init_pic			; Configure the PIC(s), activate interrupts
-
-; Debug
 	mov rsi, msg_ok
 	call debug_msg
 
-; Debug
-	mov eax, 0x007F7F7F
-	mov ebx, 6
-	call debug_block
 	mov rsi, msg_smp
 	call debug_msg
-
 	call init_smp			; Init of SMP, deactivate interrupts
-
-; Debug
 	mov rsi, msg_ok
 	call debug_msg
-
-; Debug
-	mov eax, 0x00FFFFFF
-	mov ebx, 7
-	call debug_block
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
@@ -713,14 +690,11 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov ecx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
-; Output message via serial port
-;	mov rsi, message_ok		; Location of message
-;	call debug_msg
-
-; Debug
-	mov eax, 0x0000FF00		; Green
-	mov ebx, 8
+; Visual Debug (4/4)
+	mov eax, 0x00404040
+	mov ebx, 6
 	call debug_block
+
 	mov rsi, msg_kernel
 	call debug_msg
 
@@ -764,19 +738,40 @@ debug_block:
 	push rdx
 	push rdi
 
-	mov rdi, [0x00005F00]		; Frame buffer base
+	; Calculate parameters
+	push rbx
+	push rax
 	xor edx, edx
-	mov edx, [0x00005F00 + 0x14]	; PixelsPerScanLine
-	shl ebx, 5
-	add rdi, rbx
+	xor eax, eax
+	xor ebx, ebx
+	mov ax, [0x00005F00 + 0x12]	; Screen Y
+	sub ax, 8
+	shr ax, 1			; Quick divide by 2
+	mov bx, [0x00005F00 + 0x10]	; Screen X
+	shl ebx, 2			; Quick multiply by 4
+	mul ebx				; Multiply EDX:EAX by EBX
+	mov rdi, [0x00005F00]		; Frame buffer base
+	add rdi, rax			; Offset is ((screeny - 8) / 2 + screenx * 4)
+	pop rax
+	pop rbx
+	xor edx, edx
+	mov dx, [0x00005F00 + 0x14]	; PixelsPerScanLine
 	shl edx, 2			; Quick multiply by 4 for line offset
+	xor ecx, ecx
+	mov cx, [0x00005F00 + 0x10]	; Screen X
+	shr cx, 4			; CX = total amount of 8-pixel wide blocks
+	sub cx, 4
+	add ebx, ecx
+	shl ebx, 5			; Quick multiply by 32 (8 pixels by 4 bytes each)
+	add rdi, rbx
 
+	; Draw the 8x8 pixel block
 	mov ebx, 8			; 8 pixels tall
 nextline:
 	mov ecx, 8			; 8 pixels wide
 	rep stosd
 	add rdi, rdx			; Add line offset
-	sub rdi, 8*4
+	sub rdi, 8*4			; 8 pixels by 4 bytes each
 	dec ebx
 	jnz nextline
 

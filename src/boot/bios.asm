@@ -25,7 +25,7 @@ BITS 16
 org 0x7C00
 
 entry:
-	jmp bootcode
+	jmp bootcode			; Jump past the BPB data
 	nop
 
 ; BPB (BIOS Parameter Block)
@@ -124,7 +124,6 @@ skipent:
 	test ebx, ebx			; if ebx resets to 0, list is complete
 	jne e820lp
 nomemmap:
-;	mov byte [cfg_e820], 0		; No memory map function
 memmapend:
 	xor eax, eax			; Create a blank record for termination (32 bytes)
 	mov ecx, 8
@@ -143,9 +142,6 @@ check_A20:
 	jnz check_A20
 	mov al, 0xDF
 	out 0x60, al
-
-;	mov si, msg_Load
-;	call print_string_16
 
 	mov cx, 0x4000 - 1		; Start looking from here
 VBESearch:
@@ -175,18 +171,9 @@ VBESearch:
 	mov dl, [DriveNumber]		; http://www.ctyme.com/intr/rb-0708.htm
 	mov si, DAP
 	int 0x13
-	jc read_fail
-
-	; Verify that the 2nd stage boot loader was read.
-;	mov ax, [0x8006]
-;	cmp ax, 0x3436			; Match against the Pure64 binary
-;	jne sig_fail
+	jc halt
 
 	mov bl, 'B'			; 'B' as we booted via BIOS
-;	mov [0x5FFF], al		; Store the boot marker
-
-;	mov si, msg_OK
-;	call print_string_16
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
@@ -196,36 +183,11 @@ VBESearch:
 	mov cr0, eax
 	jmp 8:0x8000			; Jump to 32-bit protected mode
 
-read_fail:
-;	mov si, msg_ReadFail
-;	call print_string_16
-;	jmp halt
-sig_fail:
-;	mov si, msg_SigFail
-;	call print_string_16
 halt:
 	hlt
 	jmp halt
 ;------------------------------------------------------------------------------
 
-
-;------------------------------------------------------------------------------
-; 16-bit function to output a string to the serial port
-; IN:	SI - Address of start of string
-;print_string_16:			; Output string in SI to screen
-;	pusha
-;	mov dx, 0			; Port 0
-;.repeat:
-;	mov ah, 0x01			; Serial - Write character to port
-;	lodsb				; Get char from string
-;	cmp al, 0
-;	je .done			; If char is zero, end of string
-;	int 0x14			; Output the character
-;	jmp short .repeat
-;.done:
-;	popa
-;	ret
-;------------------------------------------------------------------------------
 
 align 16
 GDTR32:					; Global Descriptors Table Register
@@ -251,19 +213,14 @@ dq DAP_STARTSECTOR
 
 DriveNumber db 0x00
 
-;msg_Load db 10, "MBR ", 0
-;msg_OK db "OK", 0
-;msg_SigFail db "- Bad Sig!", 0
-;msg_ReadFail db "Failed to read!", 0
-
 times 446-$+$$ db 0
 
 ; Partition entries (4x 16-bytes)
 
 times 510-$+$$ db 0
 
-; Boot signature
-sign dw 0xAA55
+dw 0xAA55				; Boot signature
+
 
 VBEModeInfoBlock: equ 0x5F00
 ; VESA
