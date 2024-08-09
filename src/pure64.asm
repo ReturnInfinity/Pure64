@@ -220,7 +220,7 @@ start64:
 	mul ecx
 	mov ecx, eax
 	mov rdi, [0x00005F00]
-	mov eax, 0x0020202020
+	mov eax, 0x00404040
 	rep stosd
 
 ; Visual Debug (1/4)
