@@ -395,17 +395,43 @@ uefi_memmap:
 uefi_memmap_next:
 	add esi, 48
 	mov rax, [rsi]
+	cmp rax, 0			; EfiReservedMemoryType (Not usable)
+	je uefi_memmem_reserved
 	cmp rax, 7			; EfiConventionalMemory (Free)
-	je uefi_memmap_conventional
+	jle uefi_memmap_free		; Memory types 0x1-0x7
+uefi_memmem_reserved:			; Memory type 0x0 and 0x8-0xF
+	mov rax, [rsi+24]		; Number of pages
+	cmp rax, 0			; Is it 0
+	je uefi_memmap_end		; If so, we are at the end
+	jmp uefi_memmap_next		; Otherwise process next entry
+uefi_memmap_free:
+	xor ecx, ecx
+	mov rax, [rsi+8]		; Physical Address
+	mov rdx, rax
+	cmp rax, 0x000100000		; Is it an entry for within the first MiB
+	jl uefi_memmap_next		; If so, ignore it and process next entry
+	mov rax, [rsi+24]		; Number of pages
+	cmp rax, 0			; Is it 0
+	je uefi_memmap_end		; If so, we are at the end
+	mov rcx, rax			; Save the pages
+uefi_memmap_free_next:
+	add esi, 48			; Next record
+	mov rax, [rsi]
+	cmp rax, 0
+	je uefi_memmap_free_next_isnt
+	cmp rax, 7
+	jg uefi_memmap_free_next_isnt
 	mov rax, [rsi+24]
 	cmp rax, 0
-	je uefi_memmap_end
-	jmp uefi_memmap_next
-uefi_memmap_conventional:
-	mov rax, [rsi+8]		; Physical Address
+	je uefi_memmap_free_next_isnt
+	add rcx, rax
+	jmp uefi_memmap_free_next
+uefi_memmap_free_next_isnt:
+	sub esi, 48
+	mov rax, rdx
 	stosq
-	mov rax, [rsi+24]		; Number of 4 KiB pages
-	shr rax, 8			; Convert to MiB
+	mov rax, rcx
+	shr rax, 8
 	stosq
 	cmp rax, 0
 	jne uefi_memmap_keeprecord
@@ -451,6 +477,25 @@ bios_memmap_processfree:
 bios_memmap_end820:
 
 memmap_end:
+; Sanitize the records
+	mov esi, 0x00200000
+memmap_sani:
+	mov rax, [rsi]
+	cmp rax, 0
+	je memmap_saniend
+	bt rax, 20
+	jc memmap_itsodd
+	add esi, 16
+	jmp memmap_sani
+memmap_itsodd:
+	add rax, 0x100000
+	mov [rsi], rax
+	mov rax, [rsi+8]
+	sub rax, 1
+	mov [rsi+8], rax
+	add esi, 16
+	jmp memmap_sani
+memmap_saniend:
 	sub ebx, 2			; Subtract 2MiB for the CPU stacks
 	mov dword [p_mem_amount], ebx
 	xor eax, eax
@@ -485,10 +530,10 @@ pde_next_range:
 	xchg rax, rcx
 	cmp rax, 0			; Check if at end of records
 	je pde_end			; Bail out if so
-	cmp rax, 0x00100000
+	cmp rax, 0x00200000
 	jg skipfirst4mb
-	add rax, 0x00300000		; Add 3 MiB to the base
-	sub rcx, 3			; Subtract 3 MiB from the length
+	add rax, 0x00200000		; Add 2 MiB to the base
+	sub rcx, 2			; Subtract 2 MiB from the length
 skipfirst4mb:
 	shr ecx, 1			; Quick divide by 2 for 2 MB pages
 	add rax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
