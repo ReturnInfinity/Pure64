@@ -275,7 +275,7 @@ get_memmap:
 	je get_memmap						; Attempt again as the memmapsize was updated by EFI
 	cmp rax, EFI_SUCCESS
 	jne exitfailure
-	; Output at 0x6000 is as follows:
+	; Each 48-byte record has the following format:
 	; 0  UINT32 - Type
 	; 4  UNIT32 - Padding
 	; 8  EFI_PHYSICAL_ADDRESS (UINT64) - PhysicalStart
@@ -283,6 +283,24 @@ get_memmap:
 	; 24 UINT64 - NumberOfPages - This is a number of 4K pages (must be a non-zero value)
 	; 32 UINT64 - Attribute
 	; 40 UINT64 - Blank
+	;
+	; UEFI Type:
+	; 0x0 = EfiReservedMemoryType - Not usable
+	; 0x1 = EfiLoaderCode - Usable after ExitBootSerivces
+	; 0x2 = EfiLoaderData - Usable after ExitBootSerivces
+	; 0x3 = EfiBootServicesCode - Usable after ExitBootSerivces
+	; 0x4 = EfiBootServicesData - Usable after ExitBootSerivces
+	; 0x5 = EfiRuntimeServicesCode
+	; 0x6 = EfiRuntimeServicesData
+	; 0x7 = EfiConventionalMemory - Usable after ExitBootSerivces
+	; 0x8 = EfiUnusableMemory - Not usable - errors detected
+	; 0x9 = EfiACPIReclaimMemory - Usable after ACPI is enabled
+	; 0xA = EfiACPIMemoryNVS
+	; 0xB = EfiMemoryMappedIO
+	; 0xC = EfiMemoryMappedIOPortSpace
+	; 0xD = EfiPalCode
+	; 0xE = EfiPersistentMemory
+	; 0xF = EfiMaxMemoryTyp
 
 	; Exit Boot services as UEFI is no longer needed
 	mov rcx, [EFI_IMAGE_HANDLE]				; IN EFI_HANDLE ImageHandle
