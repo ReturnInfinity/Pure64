@@ -431,15 +431,77 @@ uefi_memmap_free_next_isnt:
 	mov rax, rdx
 	stosq
 	mov rax, rcx
-	shr rax, 8
 	stosq
 	cmp rax, 0
 	jne uefi_memmap_keeprecord
 	sub rdi, 16
 uefi_memmap_keeprecord:
-	add rbx, rax
 	jmp uefi_memmap_next
 uefi_memmap_end:
+; UEFI memory records cleanup stage 1
+; Round up starting addresses (and remove end pages)
+; TODO - This code needs to be redone.
+	mov esi, 0x00200000		; Start at the beginning of the records
+	mov edi, 0x00200000
+uefi_clean1:
+	mov rax, [rsi]			; Load the starting address
+	cmp rax, 0			; Is it 0?
+	je uefi_clean1_end		; If so we are at the end, bail out
+	bt rax, 20			; Is the MiB value odd
+	jc uefi_clean1_itsodd		; If so, round up
+uefi_clean1_itsodd:
+	add rax, 0x100000		; Round up
+	stosq				; Store it back
+	mov rax, [rsi+8]		; Load the length in 4K pages
+	cmp rax, 0x100			; Is at least 1MiB
+	jle uefi_clean1_remove		; If not, remove the record
+	sub rax, 0x100			; 1 MiB of 4K pages
+	stosq				; Write it back
+	add esi, 16			; Next record
+	jmp uefi_clean1
+uefi_clean1_remove:
+	sub edi, 8
+	add esi, 16			; Next record
+	jmp uefi_clean1
+uefi_clean1_end:
+	xor eax, eax
+	stosq
+	stosq
+; UEFI memory records cleanup stage 2
+; Recalculate starting address and length if the starting address is not a 2MiB boundary
+	mov esi, 0x00200000		; Start at the beginning of the records
+	xor ebx, ebx			; Counter for MiB of RAM available
+uefi_clean2:
+	mov rax, [rsi]			; Load the starting address
+	cmp rax, 0			; Is it 0?
+	je uefi_clean2_end		; If so we are at the end, bail out
+	and rax, 0xFFFFF		; Check for a Megabyte boundary
+	cmp rax, 0			; Should be 0
+	jne uefi_clean2_boundary	; Clean the record
+	mov rax, [rsi+8]		; Load the length in 4K pages
+	shr rax, 8			; Convert 4K blocks to MiB
+	add rbx, rax			; Save to running total
+	mov [rsi+8], rax		; Write it back
+	add esi, 16			; Next record
+	jmp uefi_clean2
+uefi_clean2_boundary:
+	shr rax, 12			; Get the number of 4K pages
+	mov rcx, rax			; Save it to RCX
+	mov rax, [rsi]			; Load the starting address again
+	shr rax, 20
+	shl rax, 20			; Clear the lower 20 bits
+	mov [rsi], rax			; Store the updated starting address
+	mov rax, 0x100
+	sub rax, rcx			; 0x100 - # of 4K pages
+	mov rcx, rax
+	mov rax, [rsi+8]		; Load the length
+	sub rax, rcx			; Subtract the overflow 4KiB pages
+	shr rax, 8			; Convert 4K blocks to MiB
+	add rbx, rax			; Save to running total
+	mov [rsi+8], rax		; Write MiB to length
+	add esi, 16			; Next record
+	jmp uefi_clean2
+uefi_clean2_end:
 	jmp memmap_end
 
 ; Parse the memory map provided by BIOS
