@@ -598,7 +598,7 @@ pde_next_range:
 	sub rcx, 2			; Subtract 2 MiB from the length
 skipfirst4mb:
 	shr ecx, 1			; Quick divide by 2 for 2 MB pages
-	add rax, 0x0000008F		; Bits 0 (P), 1 (R/W), 2 (U/S), 3 (PWT), and 7 (PS) set
+	add rax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), and 7 (PS) set
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
