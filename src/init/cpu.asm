@@ -26,17 +26,37 @@ init_cpu:
 ; WC (bit 10) — Write-combining memory type supported
 ; FIX (bit 8) — Fixed range registers supported
 ; VCNT (bits 7:0)— Number of variable range registers
-	mov ecx, IA32_MTRRCAP
-	rdmsr				; Returns the 64-bit value in RDX:RAX
+;	mov ecx, IA32_MTRRCAP
+;	rdmsr				; Returns the 64-bit value in EDX:EAX
 
 ; Read/write the MTRR Default Type (IA32_MTRR_DEF_TYPE) Register - 64-bit
 ; E (bit 11) — MTRR enable/disable
 ; FE (bit 10) — Fixed-range MTRRs enable/disable
 ; Type (bits 7:0)— Default memory type
-	mov ecx, IA32_MTRR_DEF_TYPE
-	rdmsr
-	btc eax, 11			; Disable MTRR
-	btc eax, 10			; Disable Fixed-range MTRRs
+;	mov ecx, IA32_MTRR_DEF_TYPE
+;	rdmsr
+;	btc eax, 11			; Disable MTRR
+;	btc eax, 10			; Disable Fixed-range MTRRs
+;	wrmsr				; Write the 64-bit value from EDX:EAX
+
+; Configure Page Attribute Table (IA32_PAT)
+; On system power-up/reset the PAT is configured at WB, WT, UC-, UC, WB, WT, UC-, UC
+; PA0-3 are left at system default
+; PA4-7 are reconfigured to enable WP and WC
+; The following table is used to set a mapped page to a specific PAT
+; PAT = Bit 12, PCD = Bit 4, PWT = Bit 3
+;	PAT	PCD	PWT	PAT Entry
+;	0	0	0	PAT0
+;	0	0	1	PAT1
+;	0	1	0	PAT2
+;	0	1	1	PAT3
+;	1	0	0	PAT4
+;	1	0	1	PAT5
+;	1	1	0	PAT6
+;	1	1	1	PAT7
+	mov edx, 0x00000105		; PA7 UC (00), PA6 UC (00), PA5 WC (01), PA4 WP (05)
+	mov eax, 0x00070406		; PA3 UC (00), PA2 UC- (07), PA1 WT (04), PA0 WB (06)
+	mov ecx, IA32_PAT
 	wrmsr
 
 ; Setup variable-size address ranges
@@ -83,10 +103,10 @@ init_cpu:
 ; 0x06 - Writeback (WB)
 
 ; Enable MTRRs
-	mov ecx, IA32_MTRR_DEF_TYPE
-	rdmsr
-	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
-	wrmsr
+;	mov ecx, IA32_MTRR_DEF_TYPE
+;	rdmsr
+;	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
+;	wrmsr
 
 ; Flush TLB
 	mov rax, cr3
@@ -252,6 +272,7 @@ IA32_MTRR_PHYSBASE0	equ 0x200
 IA32_MTRR_PHYSMASK0	equ 0x201
 IA32_MTRR_PHYSBASE1	equ 0x202
 IA32_MTRR_PHYSMASK1	equ 0x203
+IA32_PAT		equ 0x277
 IA32_MTRR_DEF_TYPE	equ 0x2FF
 
 
