@@ -45,15 +45,15 @@ init_cpu:
 ; PA4-7 are reconfigured to enable WP and WC
 ; The following table is used to set a mapped page to a specific PAT
 ; PAT = Bit 12, PCD = Bit 4, PWT = Bit 3
-;	PAT	PCD	PWT	PAT Entry
-;	0	0	0	PAT0
-;	0	0	1	PAT1
-;	0	1	0	PAT2
-;	0	1	1	PAT3
-;	1	0	0	PAT4
-;	1	0	1	PAT5
-;	1	1	0	PAT6
-;	1	1	1	PAT7
+;	PAT	PCD	PWT	PAT Entry	Type
+;	0	0	0	PAT0		WB
+;	0	0	1	PAT1		WT
+;	0	1	0	PAT2		UC-
+;	0	1	1	PAT3		UC
+;	1	0	0	PAT4		WP
+;	1	0	1	PAT5		WC
+;	1	1	0	PAT6		UC
+;	1	1	1	PAT7		UC
 	mov edx, 0x00000105		; PA7 UC (00), PA6 UC (00), PA5 WC (01), PA4 WP (05)
 	mov eax, 0x00070406		; PA3 UC (00), PA2 UC- (07), PA1 WT (04), PA0 WB (06)
 	mov ecx, IA32_PAT
