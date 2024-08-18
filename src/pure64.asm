@@ -785,26 +785,42 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov eax, [0x00005F00 + 0x14]	; Pixels per scan line
 	stosd
 
-; Set the Linear Frame Buffer to WC
-; TODO - Allow this for 2MiB page maps as well
+; Set the Linear Frame Buffer to use write-combining
 	mov eax, 0x80000001
 	cpuid
 	bt edx, 26			; Page1GB
-	jnc no_wc
+	jnc lfb_wc_2MB
+; Set the 1GB page the frame buffer is in to WC
+lfb_wc_1GB:
 	mov rax, [0x00005F00]		; Base address of video memory
 	mov rbx, 0x100000000		; Compare to 4GB
 	cmp rax, rbx
-	jle no_wc			; If less, don't set WC
+	jle lfb_wc_end			; If less, don't set WC
 	shr rax, 27			; Quick divide
 	mov edi, 0x00003000		; Address of low PDPTEs 
 	add edi, eax			; Add the offset
 	mov eax, [edi]			; Load the 8-byte value
 	mov ax, 0x108F			; Change the lower 16-bits
 	mov [edi], eax			; Write it back
+	jmp lfb_wc_end
+; Set the relevant 2MB pages the frame buffer is in to WC
+lfb_wc_2MB:
+	mov ecx, 4			; 4 2MiB pages
+	mov edi, 0x00010000
+	mov rax, [0x00005F00]		; Base address of video memory
+	shr rax, 18
+	add rdi, rax
+lfb_wc_2MB_nextpage:
+	mov eax, [edi]			; Load the 8-byte value
+	mov ax, 0x108F			; Change the lower 16-bits
+	mov [edi], eax			; Write it back
+	add edi, 8
+	sub ecx, 1
+	jnz lfb_wc_2MB_nextpage
+lfb_wc_end:
 	mov rax, cr3			; Flush TLB
 	mov cr3, rax
 	wbinvd				; Flush Cache
-no_wc:
 
 ; Store the PCI(e) data
 	mov di, 0x5090
