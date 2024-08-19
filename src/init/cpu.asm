@@ -193,11 +193,11 @@ avx_not_supported:
 	lock inc word [p_cpu_activated]
 	mov ecx, APIC_ID
 	call apic_read			; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov rdi, 0x00005700		; The location where the cpu values are stored
-	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5701 would be APIC ID 1
+	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+	mov rdi, IM_ActivedCoreIDs	; The location where the activated cores set their record to 1
+	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5E01 would be APIC ID 1
 	mov al, 1
-	stosb
+	stosb				; Store a 1 as the core is activated
 
 	ret
 
@@ -207,11 +207,8 @@ avx_not_supported:
 ; OUT:	EAX = Register value
 ;	All other registers preserved
 apic_read:
-	push rsi
-	mov rsi, [p_LocalAPICAddress]
-	add rsi, rcx			; Add offset
-	lodsd
-	pop rsi
+	mov rax, [p_LocalAPICAddress]
+	mov eax, [rax + rcx]
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -222,11 +219,10 @@ apic_read:
 ;	EAX = Value to write
 ; OUT:	All registers preserved
 apic_write:
-	push rdi
-	mov rdi, [p_LocalAPICAddress]
-	add rdi, rcx			; Add offset
-	stosd
-	pop rdi
+	push rcx
+	add rcx, [p_LocalAPICAddress]
+	mov [rcx], eax
+	pop rcx
 	ret
 ; -----------------------------------------------------------------------------
 

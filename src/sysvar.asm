@@ -25,10 +25,12 @@ cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
 InfoMap:		equ 0x0000000000005000
+IM_DetectedCoreIDs:	equ 0x0000000000005100		; 1 byte per entry - Each byte is the APIC ID of a core
 IM_PCIE:		equ 0x0000000000005400		; 16 bytes per entry
 IM_IOAPICAddress:	equ 0x0000000000005600		; 16 bytes per entry
 IM_IOAPICIntSource:	equ 0x0000000000005700		; 8 bytes per entry
 SystemVariables:	equ 0x0000000000005800
+IM_ActivedCoreIDs:	equ 0x0000000000005E00		; 1 byte per entry - 1 if the core was activated
 VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8

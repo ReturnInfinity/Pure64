@@ -19,7 +19,7 @@ init_smp:
 	shr rax, 24			; APIC ID is stored in bits 31:24
 	mov dl, al			; Store BSP APIC ID in DL
 
-	mov esi, 0x00005100
+	mov esi, IM_DetectedCoreIDs
 	xor eax, eax
 	xor ecx, ecx
 	mov cx, [p_cpu_detected]
@@ -52,7 +52,7 @@ smp_send_INIT_done:
 	mov eax, 500
 	call os_hpet_delay
 
-	mov esi, 0x00005100
+	mov esi, IM_DetectedCoreIDs
 	xor ecx, ecx
 	mov cx, [p_cpu_detected]
 smp_send_SIPI:
