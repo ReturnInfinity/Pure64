@@ -80,8 +80,8 @@ smp_send_SIPI_skipcore:
 
 smp_send_SIPI_done:
 
-	; Wait 1000 microseconds for the AP's to finish
-	mov eax, 1000
+	; Wait 10000 microseconds for the AP's to finish
+	mov eax, 10000
 	call os_hpet_delay
 
 noMP:
