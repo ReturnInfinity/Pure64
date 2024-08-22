@@ -268,10 +268,10 @@ msg_boot_done:
 ; A single PML4 entry can map 512GiB
 ; A single PML4 entry is 8 bytes in length
 	mov edi, 0x00002000		; Create a PML4 entry for physical memory
-	mov eax, 0x00003007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of low PDP (4KiB aligned)
+	mov eax, 0x00003003		; Bits 0 (P), 1 (R/W), location of low PDP (4KiB aligned)
 	stosq
 	mov edi, 0x00002800		; Create a PML4 entry for higher half (starting at 0xFFFF800000000000)
-	mov eax, 0x00004007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of high PDP (4KiB aligned)
+	mov eax, 0x00004003		; Bits 0 (P), 1 (R/W), location of high PDP (4KiB aligned)
 	stosq
 
 ; Check to see if the system supports 1 GiB pages
@@ -288,7 +288,7 @@ msg_boot_done:
 ; FIXME - This will completely fill the 64K set for the low PDE (only 16GiB identity mapped)
 	mov ecx, 16			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
-	mov eax, 0x00010007		; Bits 0 (P), 1 (R/W), 2 (U/S), location of first low PD (4KiB aligned)
+	mov eax, 0x00010003		; Bits 0 (P), 1 (R/W), location of first low PD (4KiB aligned)
 pdpte_low:
 	stosq
 	add rax, 0x00001000		; 4KiB later (512 records x 8 bytes)
@@ -299,7 +299,7 @@ pdpte_low:
 ; A single PDE can map 2MiB of RAM
 ; A single PDE is 8 bytes in length
 	mov edi, 0x00010000		; Location of first PDE
-	mov eax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), and 7 (PS) set
+	mov eax, 0x00000083		; Bits 0 (P), 1 (R/W), and 7 (PS) set
 	mov ecx, 8192			; Create 8192 2MiB page maps
 pde_low:				; Create a 2MiB page
 	stosq
@@ -316,7 +316,7 @@ pde_low:				; Create a 2MiB page
 pdpte_1GB:
 	mov ecx, 512			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
-	mov eax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), 7 (PS)
+	mov eax, 0x00000083		; Bits 0 (P), 1 (R/W), 7 (PS)
 pdpte_low_1GB:				; Create a 1GiB page
 	stosq
 	add rax, 0x40000000		; Increment by 1GiB
@@ -572,7 +572,7 @@ memmap_saniend:
 	shr ecx, 10			; MBs -> GBs
 	add rcx, 1			; Add 1. This is the number of PDPE's to make
 	mov edi, 0x00004000		; location of high PDPE
-	mov eax, 0x00020007		; location of first high PD. Bits (0) P, 1 (R/W), and 2 (U/S) set
+	mov eax, 0x00020003		; location of first high PD. Bits 0 (P) and 1 (R/W) set
 create_pdpe_high:
 	stosq
 	add rax, 0x00001000		; 4K later (512 records x 8 bytes)
@@ -598,7 +598,7 @@ pde_next_range:
 	sub rcx, 2			; Subtract 2 MiB from the length
 skipfirst4mb:
 	shr ecx, 1			; Quick divide by 2 for 2 MB pages
-	add rax, 0x00000087		; Bits 0 (P), 1 (R/W), 2 (U/S), and 7 (PS) set
+	add rax, 0x00000083		; Bits 0 (P), 1 (R/W), and 7 (PS) set
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
@@ -790,7 +790,7 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	cpuid
 	bt edx, 26			; Page1GB
 	jnc lfb_wc_2MB
-; Set the 1GB page the frame buffer is in to WC
+; Set the 1GB page the frame buffer is in to WC - PAT = 1, PCD = 0, PWT = 1
 lfb_wc_1GB:
 	mov rax, [0x00005F00]		; Base address of video memory
 	mov rbx, 0x100000000		; Compare to 4GB
@@ -800,19 +800,21 @@ lfb_wc_1GB:
 	mov edi, 0x00003000		; Address of low PDPTEs 
 	add edi, eax			; Add the offset
 	mov eax, [edi]			; Load the 8-byte value
-	mov ax, 0x108F			; Change the lower 16-bits
+	or ax, 0x1008			; Set bits 12 (PAT) and 3 (PWT)
+	and ax, 0xFFEF			; Clear bit 4 (PCD)
 	mov [edi], eax			; Write it back
 	jmp lfb_wc_end
 ; Set the relevant 2MB pages the frame buffer is in to WC
 lfb_wc_2MB:
-	mov ecx, 4			; 4 2MiB pages
+	mov ecx, 4			; 4 2MiB pages - TODO only set the pages needed
 	mov edi, 0x00010000
 	mov rax, [0x00005F00]		; Base address of video memory
 	shr rax, 18
 	add rdi, rax
 lfb_wc_2MB_nextpage:
 	mov eax, [edi]			; Load the 8-byte value
-	mov ax, 0x108F			; Change the lower 16-bits
+	or ax, 0x1008			; Set bits 12 (PAT) and 3 (PWT)
+	and ax, 0xFFEF			; Clear bit 4 (PCD)
 	mov [edi], eax			; Write it back
 	add edi, 8
 	sub ecx, 1
