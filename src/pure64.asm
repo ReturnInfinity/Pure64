@@ -386,122 +386,87 @@ clearcs64:
 
 ; Parse the memory map provided by UEFI
 uefi_memmap:
-; Process the UEFI memory map to find all possible 2MiB pages that are free to use
-; Build an available memory map at 0x200000
-	xor ebx, ebx			; Running counter of available MiBs
-	mov esi, 0x00220000
-	mov edi, 0x00200000		; 2MiB
-	sub esi, 48
-uefi_memmap_next:
-	add esi, 48
+; Stage 1 - Process the UEFI memory map to find all usable memory
+; Types 1-7 are ok to use once Boot Services were exited. Anything else should be considered unusable.
+; Build an usable memory map at 0x200000
+	xor r9, r9
+	xor ebx, ebx
+	mov esi, 0x00220000 - 48	; The start of the UEFI map minus 48 bytes for the loop start
+	mov edi, 0x00200000		; Where to build the clean map
+uefi_test_next:
+	add esi, 48			; Skip to start of next record
+	mov rax, [rsi+24]		; Check for end of records
+	cmp rax, 0			; If there are 0 pages we are at the end of the list
+	je uefi_test_end
 	mov rax, [rsi]
 	cmp rax, 0			; EfiReservedMemoryType (Not usable)
-	je uefi_memmem_reserved
+	je uefi_test_next
 	cmp rax, 7			; EfiConventionalMemory (Free)
-	jle uefi_memmap_free		; Memory types 0x1-0x7
-uefi_memmem_reserved:			; Memory type 0x0 and 0x8-0xF
-	mov rax, [rsi+24]		; Number of pages
-	cmp rax, 0			; Is it 0
-	je uefi_memmap_end		; If so, we are at the end
-	jmp uefi_memmap_next		; Otherwise process next entry
-uefi_memmap_free:
-	xor ecx, ecx
-	mov rax, [rsi+8]		; Physical Address
-	mov rdx, rax
-	cmp rax, 0x000100000		; Is it an entry for within the first MiB
-	jl uefi_memmap_next		; If so, ignore it and process next entry
-	mov rax, [rsi+24]		; Number of pages
-	cmp rax, 0			; Is it 0
-	je uefi_memmap_end		; If so, we are at the end
-	mov rcx, rax			; Save the pages
-uefi_memmap_free_next:
-	add esi, 48			; Next record
-	mov rax, [rsi]
-	cmp rax, 0
-	je uefi_memmap_free_next_isnt
-	cmp rax, 7
-	jg uefi_memmap_free_next_isnt
+	jle uefi_test_usable
+	jmp uefi_test_next
+uefi_test_usable:
+	cmp bl, 1
+	je uefi_test_usable_contiguous
+	mov rax, [rsi+8]
+	stosq				; Store Physical Start
 	mov rax, [rsi+24]
-	cmp rax, 0
-	je uefi_memmap_free_next_isnt
-	add rcx, rax
-	jmp uefi_memmap_free_next
-uefi_memmap_free_next_isnt:
-	sub esi, 48
-	mov rax, rdx
+	stosq				; Store NumberOfPages
+uefi_test_usable_contiguous_next:
+	mov r9, rax
+	shl r9, 12			; Quick multiply by 4096
+	add r9, [rsi+8]			; R9 should match the physical address of the next record if they are contiguous
+	mov bl, 0			; Non-contiguous
+	cmp r9, [rsi+56]		; Check R9 against the next Physical Start
+	jne uefi_test_next
+	mov bl, 1			; Contiguous
+	jmp uefi_test_next
+uefi_test_usable_contiguous:
+	sub rdi, 8
+	mov rax, [rsi+24]
+	add rax, [rdi]
 	stosq
-	mov rax, rcx
-	stosq
-	cmp rax, 0
-	jne uefi_memmap_keeprecord
-	sub rdi, 16
-uefi_memmap_keeprecord:
-	jmp uefi_memmap_next
-uefi_memmap_end:
-; UEFI memory records cleanup stage 1
-; Round up starting addresses (and remove end pages)
-; TODO - This code needs to be redone.
-	mov esi, 0x00200000		; Start at the beginning of the records
-	mov edi, 0x00200000
-uefi_clean1:
-	mov rax, [rsi]			; Load the starting address
-	cmp rax, 0			; Is it 0?
-	je uefi_clean1_end		; If so we are at the end, bail out
-	bt rax, 20			; Is the MiB value odd
-	jc uefi_clean1_itsodd		; If so, round up
-uefi_clean1_itsodd:
-	add rax, 0x100000		; Round up
-	stosq				; Store it back
-	mov rax, [rsi+8]		; Load the length in 4K pages
-	cmp rax, 0x100			; Is at least 1MiB
-	jle uefi_clean1_remove		; If not, remove the record
-	sub rax, 0x100			; 1 MiB of 4K pages
-	stosq				; Write it back
-	add esi, 16			; Next record
-	jmp uefi_clean1
-uefi_clean1_remove:
-	sub edi, 8
-	add esi, 16			; Next record
-	jmp uefi_clean1
-uefi_clean1_end:
-	xor eax, eax
+	mov rax, [rsi+24]
+	jmp uefi_test_usable_contiguous_next
+uefi_test_end:
+	xor eax, eax			; Store a blank record
 	stosq
 	stosq
-; UEFI memory records cleanup stage 2
-; Recalculate starting address and length if the starting address is not a 2MiB boundary
-	mov esi, 0x00200000		; Start at the beginning of the records
+
+; Stage 2 - Convert 4KiB pages to 1MiB pages
+uefi_clean:
+	mov esi, 0x00200000		; Where to build the clean map
+	mov edi, 0x00200000		; Where to build the clean map
 	xor ebx, ebx			; Counter for MiB of RAM available
-uefi_clean2:
-	mov rax, [rsi]			; Load the starting address
-	cmp rax, 0			; Is it 0?
-	je uefi_clean2_end		; If so we are at the end, bail out
-	and rax, 0xFFFFF		; Check for a Megabyte boundary
-	cmp rax, 0			; Should be 0
-	jne uefi_clean2_boundary	; Clean the record
-	mov rax, [rsi+8]		; Load the length in 4K pages
+uefi_clean_next:
+	lodsq
+	cmp rax, 0x00100000
+	je uefi_clean_1MB
+	stosq
+	lodsq
+	cmp rax, 0
+	je uefi_clean_end
 	shr rax, 8			; Convert 4K blocks to MiB
-	add rbx, rax			; Save to running total
-	mov [rsi+8], rax		; Write it back
-	add esi, 16			; Next record
-	jmp uefi_clean2
-uefi_clean2_boundary:
-	shr rax, 12			; Get the number of 4K pages
-	mov rcx, rax			; Save it to RCX
-	mov rax, [rsi]			; Load the starting address again
-	shr rax, 20
-	shl rax, 20			; Clear the lower 20 bits
-	mov [rsi], rax			; Store the updated starting address
-	mov rax, 0x100
-	sub rax, rcx			; 0x100 - # of 4K pages
-	mov rcx, rax
-	mov rax, [rsi+8]		; Load the length
-	sub rax, rcx			; Subtract the overflow 4KiB pages
+	cmp rax, 2
+	jl uefi_clean_skip
+	add rbx, rax
+	stosq
+	jmp uefi_clean_next
+uefi_clean_1MB:
+	add rax, 0x00100000
+	stosq
+	lodsq
 	shr rax, 8			; Convert 4K blocks to MiB
-	add rbx, rax			; Save to running total
-	mov [rsi+8], rax		; Write MiB to length
-	add esi, 16			; Next record
-	jmp uefi_clean2
-uefi_clean2_end:
+	dec rax				; Decrement the counter by 1MiB
+	add rbx, rax
+	stosq
+	jmp uefi_clean_next
+uefi_clean_skip:
+	sub edi, 8
+	jmp uefi_clean_next
+uefi_clean_end:
+	xor eax, eax			; Store a blank record
+	stosq
+	stosq
 	jmp memmap_end
 
 ; Parse the memory map provided by BIOS
