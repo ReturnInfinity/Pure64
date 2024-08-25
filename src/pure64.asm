@@ -459,6 +459,7 @@ uefi_purge_end:
 
 ; Stage 3 - Round up Physical Address to next 2MiB boundary if needed and convert 4KiB pages to 1MiB pages
 	mov esi, 0x00200000 - 16	; Start at the beginning of the records
+	xor ebx, ebx
 uefi_round:
 	add esi, 16
 	mov rax, [rsi]
@@ -466,47 +467,28 @@ uefi_round:
 	je uefi_round_end
 	bt rax, 20
 	jc uefi_round_odd
-	jmp uefi_round
+	jmp uefi_convert
 uefi_round_odd:
 	mov rax, [rsi]			; Load the Physical Address
-	mov rbx, rax
-	not rbx
-	shl rbx, 44
-	shr rbx, 44
-	add rbx, 1
-	add rax, rbx
+	mov rdx, rax
+	not rdx
+	shl rdx, 44
+	shr rdx, 44
+	add rdx, 1
+	add rax, rdx
 	mov [rsi], rax			; Store the rounded up Physical Address
 	mov rax, [rsi+8]
-	shr rbx, 12
-	sub rax, rbx
+	shr rdx, 12
+	sub rax, rdx
 	mov [rsi+8], rax
+uefi_convert:
+	mov rax, [rsi+8]
+	shr rax, 8			; Convert 4K blocks to MiB
+	mov [rsi+8], rax
+	add rbx, rax
 	jmp uefi_round
 uefi_round_end:
-	xor eax, eax			; Store a blank record
-	stosq
-	stosq
-
-; Stage 4 - Convert 4KiB pages to 1MiB pages
-uefi_clean:
-	mov esi, 0x00200000		; Where to build the clean map
-	mov edi, 0x00200000		; Where to build the clean map
-	xor ebx, ebx			; Counter for MiB of RAM available
-uefi_clean_next:
-	lodsq
-	stosq
-	lodsq
-	cmp rax, 0
-	je uefi_clean_end
-	shr rax, 8			; Convert 4K blocks to MiB
-	cmp rax, 2
-	jl uefi_clean_skip
-	add rbx, rax
-	stosq
-	jmp uefi_clean_next
-uefi_clean_skip:
-	sub edi, 8
-	jmp uefi_clean_next
-uefi_clean_end:
+	mov dword [p_mem_amount], ebx
 	xor eax, eax			; Store a blank record
 	stosq
 	stosq
@@ -514,7 +496,7 @@ uefi_clean_end:
 
 ; Parse the memory map provided by BIOS
 bios_memmap:
-; Process the E820 memory map to find all possible 2MiB pages that are free to use
+; Stage 1 - Process the E820 memory map to find all possible 2MiB pages that are free to use
 ; Build an available memory map at 0x200000
 	xor ecx, ecx
 	xor ebx, ebx			; Running counter of available MiBs
@@ -546,8 +528,7 @@ bios_memmap_processfree:
 	jmp bios_memmap_nextentry
 bios_memmap_end820:
 
-memmap_end:
-; Sanitize the records
+; Stage 2 - Sanitize the records
 	mov esi, 0x00200000
 memmap_sani:
 	mov rax, [rsi]
@@ -571,6 +552,8 @@ memmap_saniend:
 	xor eax, eax
 	stosq
 	stosq
+
+memmap_end:
 
 ; Create the High Page-Directory-Pointer-Table Entries (PDPTE)
 ; High PDPTE is stored at 0x0000000000004000, create the first entry there
