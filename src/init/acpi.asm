@@ -117,7 +117,7 @@ nextACPITable:
 	je foundMCFGTable
 	cmp ecx, edx
 	jne nextACPITable
-	jmp init_smp_acpi_done		;noACPIAPIC
+	jmp init_smp_acpi_done
 
 foundAPICTable:
 	call parseAPICTable
@@ -136,9 +136,11 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
-	mov rdi, [0x00005F00 + 40]
-	mov eax, 0x00FF0000					; 0x00RRGGBB
-	mov ecx, 800 * 600
+	; Set screen to Teal
+	mov rdi, [0x00005F00]		; Frame buffer base
+	mov rcx, [0x00005F08]		; Frame buffer size
+	shr rcx, 2			; Quick divide by 4
+	mov eax, 0x0000FFFF		; 0x00RRGGBB
 	rep stosd
 	jmp $
 

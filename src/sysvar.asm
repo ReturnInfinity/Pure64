@@ -10,6 +10,7 @@
 msg_pure64:		db 13, 10, 13, 10, '[ Pure64 ]', 0
 msg_ok:			db 'ok', 0
 msg_error:		db 'ERROR', 0
+msg_exception:		db 'EXCEPTION 0x', 0
 msg_pml4:		db 13, 10, 'pml4 ', 0
 msg_boot:		db 13, 10, 'boot ', 0
 msg_bios:		db 'bios', 0
