@@ -50,7 +50,7 @@ nextchecksum:
 	je foundACPIv1			; If AL is 0 then the system is using ACPI v1.0
 	jmp foundACPIv2			; Otherwise it is v2.0 or higher
 
-foundACPIv1:
+foundACPIv1:				; Root System Description Table (RSDT)
 	xor eax, eax
 	lodsd				; Grab the 32 bit physical address of the RSDT (Offset 16).
 	mov rsi, rax			; RSI now points to the RSDT
@@ -68,14 +68,14 @@ foundACPIv1:
 	mov rdx, rax			; RDX is the entry count
 	xor ecx, ecx
 foundACPIv1_nextentry:
-	lodsd
-	push rax
+	lodsd				; Load an Entry address
+	push rax			; Push it to the stack
 	add ecx, 1
 	cmp ecx, edx
 	je findACPITables
 	jmp foundACPIv1_nextentry
 
-foundACPIv2:
+foundACPIv2:				; Extended System Description Table (XSDT)
 	lodsd				; RSDT Address
 	lodsd				; Length
 	lodsq				; Grab the 64 bit physical address of the XSDT (Offset 24).
@@ -94,8 +94,8 @@ foundACPIv2:
 	mov rdx, rax			; RDX is the entry count
 	xor ecx, ecx
 foundACPIv2_nextentry:
-	lodsq
-	push rax
+	lodsq				; Load an Entry address
+	push rax			; Push it to the stack
 	add ecx, 1
 	cmp ecx, edx
 	jne foundACPIv2_nextentry
@@ -103,7 +103,9 @@ foundACPIv2_nextentry:
 findACPITables:
 	xor ecx, ecx
 nextACPITable:
-	pop rsi
+	cmp ecx, edx			; Compare current count to entry count
+	je init_smp_acpi_done
+	pop rsi				; Pop an Entry address from the stack
 	lodsd
 	add ecx, 1
 	mov ebx, 'APIC'			; Signature for the Multiple APIC Description Table
@@ -115,9 +117,10 @@ nextACPITable:
 	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
 	cmp eax, ebx
 	je foundMCFGTable
-	cmp ecx, edx
-	jne nextACPITable
-	jmp init_smp_acpi_done
+	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
+	cmp eax, ebx
+	je foundFACPTable
+	jmp nextACPITable
 
 foundAPICTable:
 	call parseAPICTable
@@ -129,6 +132,10 @@ foundHPETTable:
 
 foundMCFGTable:
 	call parseMCFGTable
+	jmp nextACPITable
+
+foundFACPTable:
+	call parseFACPTable
 	jmp nextACPITable
 
 init_smp_acpi_done:
@@ -363,6 +370,17 @@ parseMCFGTable_next:
 
 	pop rcx
 	pop rdi
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+parseFACPTable:
+	; At this point RSI points to offset 4 for the FACP
+	add rsi, 36
+	lodsd				; DSDT
+	add rsi, 20
+	lodsd				; PM1a_CNT_BLK
 	ret
 ; -----------------------------------------------------------------------------
 
