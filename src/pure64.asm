@@ -99,7 +99,9 @@ bootmode:
 	stosw				; 16-bit Screen Y
 	pop eax
 	shr eax, 2			; Quick divide by 4
-	stosd				; PixelsPerScanLine
+	stosw				; PixelsPerScanLine
+	mov eax, 32
+	stosw				; BitsPerPixel
 
 	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00210000
@@ -774,7 +776,9 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov eax, [0x00005F00 + 0x10]	; X and Y resolution (16-bits each)
 	stosd
 	mov eax, [0x00005F00 + 0x14]	; Pixels per scan line
-	stosd
+	stosw
+	mov ax, 32
+	stosw
 
 ; Set the Linear Frame Buffer to use write-combining
 	mov eax, 0x80000001

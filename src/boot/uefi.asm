@@ -324,7 +324,9 @@ get_memmap:
 	mov rax, [VR]
 	stosw							; 16-bit Screen Y
 	mov rax, [PPSL]
-	stosd							; 32-bit PixelsPerScanLine
+	stosw							; 16-bit PixelsPerScanLine
+	mov rax, 32						; TODO - Verify this
+	stosw							; 16-bit BitsPerPixel
 	mov rax, [memmap]
 	stosq							; Memory Map Base
 	mov rax, [memmapsize]
@@ -439,6 +441,7 @@ FBS:			dq 0					; Frame buffer size
 HR:			dq 0					; Horizontal Resolution
 VR:			dq 0					; Vertical Resolution
 PPSL:			dq 0					; PixelsPerScanLine
+BPP:			dq 0					; BitsPerPixel
 memmap:			dq 0x220000				; Store the Memory Map from UEFI here
 memmapsize:		dq 32768				; Max size we are expecting in bytes
 memmapkey:		dq 0
