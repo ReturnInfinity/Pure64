@@ -19,10 +19,6 @@ init_hpet:
 	and ebx, 11111b			; Save only the lower 5 bits
 	inc bl				; Increment the number of timers by 1
 	mov [p_HPET_Timers], bl		; Save the # of HPET timers
-	bt rax, 13			; Check for 64-bit support
-	jnc os_hpet_init_error
-	bt rax, 15			; Check for legacy replacement mode
-	jnc os_hpet_init_error
 	shr rax, 32			; EAX contains the tick period in femtoseconds
 
 	; Verify the Counter Clock Period is valid
@@ -56,8 +52,8 @@ os_hpet_init_disable_int:
 	xor eax, eax
 	call os_hpet_write
 
-	; Enable HPET main counter (0) and enable legacy replacement mapping (1)
-	mov eax, 0b11
+	; Enable HPET main counter (bit 0)
+	mov eax, 1			; Bit 0 is set
 	mov ecx, HPET_GEN_CONF
 	call os_hpet_write
 
