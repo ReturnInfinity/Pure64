@@ -136,22 +136,38 @@ init_cpu:
 ; Enable Math Co-processor
 	finit
 
-; Enable AVX
+; Enable AVX-1 and AVX-2
 	mov eax, 1			; CPUID Feature information 1
-	cpuid				; Sets info in eax and ecx
-	bt ecx, 28			; AVX is supported if bit 28 is set in ecx
+	cpuid				; Sets info in ECX and EDX
+	bt ecx, 28			; AVX-1 is supported if bit 28 is set in ECX
+					; AVX-2 is supported if bit 5 is set in EBX on CPUID (EAX=7, ECX=0)
 	jnc avx_not_supported		; Skip activating AVX if not supported
 avx_supported:
 	mov rax, cr4
 	bts rax, 18			; Enable OSXSAVE (Bit 18)
 	mov cr4, rax
-	mov rcx, 0			; Set load XCR Nr. 0
+	xor ecx, ecx			; Set load XCR0
 	xgetbv				; Load XCR0 register
 	bts rax, 0			; Set X87 enable (Bit 0)
 	bts rax, 1			; Set SSE enable (Bit 1)
 	bts rax, 2			; Set AVX enable (Bit 2)
 	xsetbv				; Save XCR0 register
 avx_not_supported:
+
+; Enable AVX-512
+	mov eax, 7			; CPUID Feature information 7
+	xor ecx, ecx			; Extended Features 0
+	cpuid				; Sets info in EBX, ECX, and EDX
+	bt ebx, 16			; AVX-512 is supported if bit 16 is set in EBX
+	jnc avx512_not_supported
+avx512_supported:
+	xor ecx, ecx			; Set load XCR0
+	xgetbv				; Load XCR0 register
+	bts rax, 5			; Set OPMASK (Bit 5)
+	bts rax, 6			; Set ZMM_Hi256 (Bit 6)
+	bts rax, 7			; Set Hi16_ZMM (Bit 7)
+	xsetbv				; Save XCR0 register
+avx512_not_supported:
 
 ; Enable and Configure Local APIC
 ;	mov ecx, IA32_APIC_BASE
