@@ -314,10 +314,16 @@ pde_low:				; Create a 2MiB page
 ; PDPTE is stored at 0x0000000000003000, create the first entry there
 ; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
-; 512 entries are created to map the first 512GiB of RAM
+; 1024 entries are created to map the first 1024GiB of RAM
 pdpte_1GB:
-	mov ecx, 512			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
-	mov edi, 0x00003000		; location of low PDPE
+	; Overwrite the original PML4 entry for physical memory
+	mov edi, 0x00002000		; Create a PML4 entry for physical memory
+	mov eax, 0x00010003		; Bits 0 (P), 1 (R/W), location of low PDP (4KiB aligned)
+	stosq
+	add eax, 0x1000
+	stosq
+	mov ecx, 1024			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov edi, 0x00010000		; location of low PDPE
 	mov eax, 0x00000083		; Bits 0 (P), 1 (R/W), 7 (PS)
 pdpte_low_1GB:				; Create a 1GiB page
 	stosq
