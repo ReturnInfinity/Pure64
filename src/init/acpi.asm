@@ -3,29 +3,36 @@
 ; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
 ;
 ; INIT ACPI
+;
+; Comments reference the following document:
+; Advanced Configuration and Power Interface (ACPI) Specification Release 6.5
+; https://uefi.org/sites/default/files/resources/ACPI_Spec_6_5_Aug29.pdf
 ; =============================================================================
 
 
 init_acpi:
-	mov al, [p_BootMode]
-	cmp al, 'U'
-	je foundACPIfromUEFI
+	mov al, [p_BootMode]		; Check how the system was booted
+	cmp al, 'U'			; UEFI?
+	je foundACPIfromUEFI		; If so, jump - otherwise fall thru for BIOS
+
+; Find the ACPI RSDP Structure on a BIOS system
 	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
 	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
 searchingforACPI:
 	lodsq				; Load a quad word from RSI and store in RAX, then increment RSI by 8
-	cmp rax, rbx
+	cmp rax, rbx			; Verify the Signature
 	je foundACPI
 	cmp esi, 0x000FFFFF		; Keep looking until we get here
-	jge noACPI			; ACPI tables couldn't be found, Fail.
+	jge noACPI			; ACPI tables couldn't be found, fail
 	jmp searchingforACPI
 
+; Find the ACPI RSDP Structure on a UEFI system
 foundACPIfromUEFI:
 	mov rsi, [0x400830]		; TODO This should be passed properly
 	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
 	lodsq
-	cmp rax, rbx
-	jne noACPI
+	cmp rax, rbx			; Verify the Signature
+	jne noACPI			; If it isn't a match then fail
 
 foundACPI:				; Found a Pointer Structure, verify the checksum
 	push rsi
@@ -39,22 +46,22 @@ nextchecksum:
 	cmp cl, 0
 	jne nextchecksum
 	pop rsi
-	cmp bl, 0
-	jne searchingforACPI		; Checksum didn't check out? Then keep looking.
+	cmp bl, 0			; Verify the checksum is zero
+	jne searchingforACPI		; Checksum didn't check out? Then keep looking
 
 	lodsb				; Checksum
 	lodsd				; OEMID (First 4 bytes)
 	lodsw				; OEMID (Last 2 bytes)
-	lodsb				; Grab the Revision value (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
+	lodsb				; Revision (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
 	cmp al, 0
 	je foundACPIv1			; If AL is 0 then the system is using ACPI v1.0
 	jmp foundACPIv2			; Otherwise it is v2.0 or higher
 
 foundACPIv1:				; Root System Description Table (RSDT)
 	xor eax, eax
-	lodsd				; Grab the 32 bit physical address of the RSDT (Offset 16).
+	lodsd				; RsdtAddress - 32 bit physical address of the RSDT (Offset 16)
 	mov rsi, rax			; RSI now points to the RSDT
-	lodsd				; Grab the Signature
+	lodsd				; Load Signature
 	cmp eax, 'RSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
@@ -76,11 +83,11 @@ foundACPIv1_nextentry:
 	jmp foundACPIv1_nextentry
 
 foundACPIv2:				; Extended System Description Table (XSDT)
-	lodsd				; RSDT Address
+	lodsd				; RsdtAddress - 32 bit physical address of the RSDT (Offset 16)
 	lodsd				; Length
-	lodsq				; Grab the 64 bit physical address of the XSDT (Offset 24).
+	lodsq				; XsdtAddress - 64 bit physical address of the XSDT (Offset 24).
 	mov rsi, rax			; RSI now points to the XSDT
-	lodsd				; Grab the Signature
+	lodsd				; Load Signature
 	cmp eax, 'XSDT'			; Make sure the signature is valid
 	jne novalidacpi			; Not the same? Bail out
 	sub rsi, 4
@@ -117,9 +124,9 @@ nextACPITable:
 	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
 	cmp eax, ebx
 	je foundMCFGTable
-	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
+	mov ebx, 'FADT'			; Signature for the Fixed ACPI Description Table
 	cmp eax, ebx
-	je foundFACPTable
+	je foundFADTTable
 	jmp nextACPITable
 
 foundAPICTable:
@@ -134,8 +141,8 @@ foundMCFGTable:
 	call parseMCFGTable
 	jmp nextACPITable
 
-foundFACPTable:
-	call parseFACPTable
+foundFADTTable:
+	call parseFADTTable
 	jmp nextACPITable
 
 init_smp_acpi_done:
@@ -153,6 +160,8 @@ novalidacpi:
 
 
 ; -----------------------------------------------------------------------------
+; 5.2.12 Multiple APIC Description Table (MADT)
+; Chapter 5.2.12
 parseAPICTable:
 	push rcx
 	push rdx
@@ -299,6 +308,8 @@ parseAPICTable_done:
 
 
 ; -----------------------------------------------------------------------------
+; High Precision Event Timer (HPET)
+; http://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 parseHPETTable:
 	lodsd				; Length of HPET in bytes
 	lodsb				; Revision
@@ -325,6 +336,8 @@ parseHPETTable:
 
 
 ; -----------------------------------------------------------------------------
+; PCI Express Memory-mapped Configuration (MCFG)
+; Locked behind a paywall - Search Google for "pcie specification pdf"
 parseMCFGTable:
 	push rdi
 	push rcx
@@ -375,12 +388,22 @@ parseMCFGTable_next:
 
 
 ; -----------------------------------------------------------------------------
-parseFACPTable:
-	; At this point RSI points to offset 4 for the FACP
-	add rsi, 36
-	lodsd				; DSDT
-	add rsi, 20
-	lodsd				; PM1a_CNT_BLK
+; Fixed ACPI Description Table (FADT)
+; Chapter 5.2.9
+parseFADTTable:
+	; At this point RSI points to offset 4 for the FADT
+	add rsi, 116			; RESET_REG (Generic Address Structure - 5.2.3.2)
+	lodsb				; Address Space ID (0x00 = Memory, 0x01 = I/O, 0x02 = PCI)
+	lodsb				; Register Width
+	lodsb				; Register Offset
+	lodsb				; Access Size
+	lodsq				; Address
+	lodsb				; RESET_VALUE
+
+;	add rsi, 36
+;	lodsd				; DSDT
+;	add rsi, 20
+;	lodsd				; PM1a_CNT_BLK
 	ret
 ; -----------------------------------------------------------------------------
 
