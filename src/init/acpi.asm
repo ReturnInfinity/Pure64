@@ -30,12 +30,13 @@ searchingforACPI:
 foundACPIfromUEFI:
 	mov rsi, [0x400830]		; TODO This should be passed properly
 	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
-	lodsq
+	lodsq				; Signature
 	cmp rax, rbx			; Verify the Signature
 	jne noACPI			; If it isn't a match then fail
 
+; Parse the Root System Description Pointer (RSDP) Structure (5.2.5.3)
 foundACPI:				; Found a Pointer Structure, verify the checksum
-	push rsi
+	push rsi			; Save the RSDP location - currently pointing to the checksum
 	xor ebx, ebx
 	mov ecx, 20			; As per the spec only the first 20 bytes matter
 	sub rsi, 8			; Bytes 0 thru 19 must sum to zero
@@ -45,9 +46,9 @@ nextchecksum:
 	sub cl, 1
 	cmp cl, 0
 	jne nextchecksum
-	pop rsi
+	pop rsi				; Restore the RSDP location
 	cmp bl, 0			; Verify the checksum is zero
-	jne searchingforACPI		; Checksum didn't check out? Then keep looking
+	jne noACPI			; Checksum didn't check out? Fail
 
 	lodsb				; Checksum
 	lodsd				; OEMID (First 4 bytes)
@@ -75,8 +76,8 @@ foundACPIv1:				; Root System Description Table (RSDT)
 	mov rdx, rax			; RDX is the entry count
 	xor ecx, ecx
 foundACPIv1_nextentry:
-	lodsd				; Load an Entry address
-	push rax			; Push it to the stack
+	lodsd				; Load a 32-bit Entry address
+	push rax			; Push it to the stack as a 64-bit value
 	add ecx, 1
 	cmp ecx, edx
 	je findACPITables
@@ -101,7 +102,7 @@ foundACPIv2:				; Extended System Description Table (XSDT)
 	mov rdx, rax			; RDX is the entry count
 	xor ecx, ecx
 foundACPIv2_nextentry:
-	lodsq				; Load an Entry address
+	lodsq				; Load a 64-bit Entry address
 	push rax			; Push it to the stack
 	add ecx, 1
 	cmp ecx, edx
