@@ -53,6 +53,7 @@ BITS 16
 ; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
 BITS 32
 bootmode:
+	mov [p_BootDisk], bh; Save from whwre system is booted
 	cmp bl, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
 	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
 
@@ -174,6 +175,7 @@ pde_low_32:				; Create a 2 MiB page
 	wrmsr				; Write EFER
 
 	mov bl, 'B'
+	mov bh, byte [p_BootDisk]
 
 ; Enable paging to activate long mode
 	mov eax, cr0
@@ -195,6 +197,7 @@ start64:
 	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
 
 	mov [p_BootMode], bl
+	mov [p_BootDisk], bh
 
 	; Mask all PIC interrupts
 	mov al, 0xFF
@@ -843,7 +846,12 @@ lfb_wc_end:
 	mov rsi, msg_kernel
 	call debug_msg
 
+	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
+	jnz clear_regs
+	call read_floppy		; Then load whole floppy at memory
+
 ; Clear all registers (skip the stack pointer)
+clear_regs:
 	xor eax, eax			; These 32-bit calls also clear the upper bits of the 64-bit registers
 	xor ebx, ebx
 	xor ecx, ecx
@@ -868,6 +876,8 @@ lfb_wc_end:
 %include "init/serial.asm"
 %include "init/hpet.asm"
 %include "init/smp.asm"
+%include "fdc/dma.asm"
+%include "fdc/fdc_64.asm"
 %include "interrupt.asm"
 %include "sysvar.asm"
 
@@ -911,7 +921,7 @@ debug_block:
 
 	; Draw the 8x8 pixel block
 	mov ebx, 8			; 8 pixels tall
-	mov eax, 0x00F7CA54		; Return Infinity Yellow/Orange
+	mov eax, [box_color]; 0x00F7CA54		; Return Infinity Yellow/Orange
 nextline:
 	mov ecx, 8			; 8 pixels wide
 	rep stosd

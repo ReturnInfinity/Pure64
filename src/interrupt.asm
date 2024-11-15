@@ -48,6 +48,26 @@ keyboard_done:
 
 
 ; -----------------------------------------------------------------------------
+; Floppy drive interrupt. IRQ 0x06, INT 0x26
+; This IRQ runs when floppy drive reads from or writes to whole disk
+align 16
+floppy_irq:
+	push rdi
+	push rbx
+	push rax
+
+	mov word [int_done], 1
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
+
+	pop rax
+	pop rbx
+	pop rdi
+	iretq
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
 ; Spurious interrupt. INT 0xFF
 align 16
 spurious:				; handler for spurious interrupts

@@ -172,6 +172,7 @@ VBESearch:
 	pop dx
 
 	mov bl, 'B'			; 'B' as we booted via BIOS
+	mov bh, 'F'			; 'F' as we booted via floppy drive
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
