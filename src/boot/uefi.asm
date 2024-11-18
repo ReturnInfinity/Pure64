@@ -422,7 +422,7 @@ printhex_loop:
 ; -----------------------------------------------------------------------------
 
 
-align 2048
+times 2048-$+$$ db 0
 CODE_END:
 
 ; Data begins here
@@ -472,10 +472,13 @@ Num:			dw 0, 0
 newline:		dw 13, 10, 0
 
 
-align 4096
+align 4096							; Pad out to 4KiB for UEFI loader
 PAYLOAD:
 
-align 65536							; Pad out to 64K
+align 65536							; Pad out to 64KiB for payload (Pure64, Kernel, etc)
+RAMDISK:
+
+times 65535+1048576-$+$$ db 0					; 1MiB of padding for RAM disk image
 DATA_END:
 END:
 
