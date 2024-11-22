@@ -22,8 +22,8 @@ DIG_IN_REG		EQU 0x3F7	; read-only
 READ			EQU 0x00
 WRITE			EQU 0x01
 
-DMA_BUFF EQU 0x200000	; temporary buffer for DMA
-MEM_BUFF EQU 0x300000	; Start addres of memory buffer
+DMA_BUFF EQU 0x210000	; temporary buffer for DMA
+MEM_BUFF EQU 0x400000	; Start addres of memory buffer
 
 ; Some constants needed for increasing delay for
 ; recalibrate, seek track and interrupt
