@@ -137,6 +137,7 @@ check_A20:
 	call print_string_16
 
 	mov bl, 'B'			; 'B' as we booted via BIOS
+	mov bh, 'P'			; 'P' as we booted via PXE
 
 ; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	cli				; No more interrupts
