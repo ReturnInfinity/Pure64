@@ -53,10 +53,11 @@ BITS 16
 ; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
 BITS 32
 bootmode:
-	mov [p_BootDisk], bh; Save from whwre system is booted
+	mov [p_BootDisk], bh		; Save from where system is booted
 	cmp bl, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
 	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
 
+%ifenv BIOS
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -183,7 +184,7 @@ pde_low_32:				; Create a 2 MiB page
 	mov cr0, eax
 
 	jmp SYS64_CODE_SEL:start64	; Jump to 64-bit mode
-
+%endif
 
 ; =============================================================================
 ; 64-bit mode
@@ -395,6 +396,7 @@ clearcs64:
 	cmp byte [p_BootMode], 'U'
 	jne bios_memmap
 
+%ifenv UEFI
 ; Parse the memory map provided by UEFI
 uefi_memmap:
 ; Stage 1 - Process the UEFI memory map to find all usable memory
@@ -504,9 +506,11 @@ uefi_round_end:
 	stosq
 	stosq
 	jmp memmap_end
+%endif
 
 ; Parse the memory map provided by BIOS
 bios_memmap:
+%ifenv BIOS
 ; Stage 1 - Process the E820 memory map to find all possible 2MiB pages that are free to use
 ; Build an available memory map at 0x200000
 	xor ecx, ecx
@@ -563,6 +567,7 @@ memmap_saniend:
 	xor eax, eax
 	stosq
 	stosq
+%endif
 
 memmap_end:
 
@@ -846,9 +851,11 @@ lfb_wc_end:
 	mov rsi, msg_kernel
 	call debug_msg
 
+%ifenv BIOS
 	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
+%endif
 
 ; Clear all registers (skip the stack pointer)
 clear_regs:
@@ -876,8 +883,10 @@ clear_regs:
 %include "init/serial.asm"
 %include "init/hpet.asm"
 %include "init/smp.asm"
+%ifenv BIOS
 %include "fdc/dma.asm"
 %include "fdc/fdc_64.asm"
+%endif
 %include "interrupt.asm"
 %include "sysvar.asm"
 
@@ -939,6 +948,7 @@ nextline:
 ; -----------------------------------------------------------------------------
 
 
+%ifenv BIOS
 ; -----------------------------------------------------------------------------
 ; debug_progressbar
 ; IN:	EBX = Index #
@@ -962,6 +972,7 @@ debug_progressbar:
 
 	ret
 ; -----------------------------------------------------------------------------
+%endif
 
 
 ; -----------------------------------------------------------------------------

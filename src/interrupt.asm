@@ -50,6 +50,7 @@ keyboard_done:
 ; -----------------------------------------------------------------------------
 ; Floppy drive interrupt. IRQ 0x06, INT 0x26
 ; This IRQ runs when floppy drive reads from or writes to whole disk
+%ifenv BIOS
 align 16
 floppy_irq:
 	push rdi
@@ -64,6 +65,7 @@ floppy_irq:
 	pop rbx
 	pop rdi
 	iretq
+%endif
 ; -----------------------------------------------------------------------------
 
 
