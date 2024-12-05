@@ -4,12 +4,8 @@ mkdir -p bin
 
 cd src
 
-export BIOS=1
-nasm pure64.asm -o ../bin/pure64-bios.sys -l ../bin/pure64-bios-debug.txt
-unset BIOS
-export UEFI=1
-nasm pure64.asm -o ../bin/pure64-uefi.sys -l ../bin/pure64-uefi-debug.txt
-unset UEFI
+nasm -DBIOS=1 pure64.asm -o ../bin/pure64-bios.sys -l ../bin/pure64-bios-debug.txt
+nasm -DUEFI=1 pure64.asm -o ../bin/pure64-uefi.sys -l ../bin/pure64-uefi-debug.txt
 
 cd boot
 
