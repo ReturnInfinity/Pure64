@@ -1,6 +1,6 @@
 ; =============================================================================
 ; DMA Driver
-; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
 ; Implemented by Isa Isoux -- https://github.com/isoux/BMFLFS
 
 ; The DMA controller performs data transfers:

@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Floppy Disk Driver
-; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
 ; Implemented by Isa Isoux -- https://github.com/isoux/BMFLFS
 
 ; Here is a minimal simplified version intended only for reading whole floppy 

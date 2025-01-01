@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 PXE Start -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
 ;
 ; This is a stub file for loading Pure64 and a kernel/software package via PXE.
 ;

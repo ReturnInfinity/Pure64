@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2024 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; floppy drive without making use of the file system.
