@@ -393,13 +393,17 @@ parseMCFGTable_next:
 ; Chapter 5.2.9
 parseFADTTable:
 	; At this point RSI points to offset 4 for the FADT
-	add rsi, 116			; RESET_REG (Generic Address Structure - 5.2.3.2)
-	lodsb				; Address Space ID (0x00 = Memory, 0x01 = I/O, 0x02 = PCI)
-	lodsb				; Register Width
-	lodsb				; Register Offset
-	lodsb				; Access Size
-	lodsq				; Address
-	lodsb				; RESET_VALUE
+	add rsi, 109-4			; IAPC_BOOT_ARCH (IA-PC Boot Architecture Flags - 5.2.9.3)
+	lodsw
+	mov [p_IAPC_BOOT_ARCH], ax	; Save the IAPC_BOOT_ARCH word
+
+;	add rsi, 116			; RESET_REG (Generic Address Structure - 5.2.3.2)
+;	lodsb				; Address Space ID (0x00 = Memory, 0x01 = I/O, 0x02 = PCI)
+;	lodsb				; Register Width
+;	lodsb				; Register Offset
+;	lodsb				; Access Size
+;	lodsq				; Address
+;	lodsb				; RESET_VALUE
 
 ;	add rsi, 36
 ;	lodsd				; DSDT

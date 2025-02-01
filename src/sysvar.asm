@@ -52,6 +52,7 @@ p_cpu_activated:	equ SystemVariables + 0x102
 p_cpu_detected:		equ SystemVariables + 0x104
 p_PCIECount:		equ SystemVariables + 0x106
 p_HPET_CounterMin:	equ SystemVariables + 0x108
+p_IAPC_BOOT_ARCH:	equ SystemVariables + 0x10A
 
 ; DB - Starting at offset 0x180, increments by 1
 p_IOAPICCount:		equ SystemVariables + 0x180

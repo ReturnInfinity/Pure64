@@ -838,6 +838,8 @@ lfb_wc_end:
 	mov di, 0x5090
 	mov ax, [p_PCIECount]
 	stosw
+	mov ax, [p_IAPC_BOOT_ARCH]
+	stosw
 
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
