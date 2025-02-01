@@ -795,6 +795,13 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	mov ax, 32
 	stosw
 
+; Store the PCI(e) data
+	mov di, 0x5090
+	mov ax, [p_PCIECount]
+	stosw
+	mov ax, [p_IAPC_BOOT_ARCH]
+	stosw
+
 ; Set the Linear Frame Buffer to use write-combining
 	mov eax, 0x80000001
 	cpuid
@@ -833,13 +840,6 @@ lfb_wc_end:
 	mov rax, cr3			; Flush TLB
 	mov cr3, rax
 	wbinvd				; Flush Cache
-
-; Store the PCI(e) data
-	mov di, 0x5090
-	mov ax, [p_PCIECount]
-	stosw
-	mov ax, [p_IAPC_BOOT_ARCH]
-	stosw
 
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
