@@ -125,7 +125,7 @@ nextACPITable:
 	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
 	cmp eax, ebx
 	je foundMCFGTable
-	mov ebx, 'FADT'			; Signature for the Fixed ACPI Description Table
+	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
 	cmp eax, ebx
 	je foundFADTTable
 	jmp nextACPITable
