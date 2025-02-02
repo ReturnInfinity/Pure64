@@ -212,6 +212,7 @@ readAPICstructures:
 
 	jmp APICignore
 
+; Processor Local APIC Structure - 5.2.12.2
 APICapic:				; Entry Type 0
 	xor eax, eax
 	xor edx, edx
@@ -225,9 +226,10 @@ APICapic:				; Entry Type 0
 	jnc readAPICstructures		; Read the next structure if CPU not usable
 	inc word [p_cpu_detected]
 	xchg eax, edx			; Restore the APIC ID back to EAX
-	stosb
+	stosb				; Store the 8-bit APIC ID
 	jmp readAPICstructures		; Read the next structure
 
+; I/O APIC Structure - 5.2.12.3
 APICioapic:				; Entry Type 1
 	xor eax, eax
 	lodsb				; Length (will be set to 12)
@@ -252,6 +254,7 @@ APICioapic:				; Entry Type 1
 	inc byte [p_IOAPICCount]
 	jmp readAPICstructures		; Read the next structure
 
+; Interrupt Source Override Structure - 5.2.12.5
 APICinterruptsourceoverride:		; Entry Type 2
 	xor eax, eax
 	lodsb				; Length (will be set to 10)
@@ -276,6 +279,7 @@ APICinterruptsourceoverride:		; Entry Type 2
 	inc byte [p_IOAPICIntSourceC]
 	jmp readAPICstructures		; Read the next structure
 
+; Processor Local x2APIC Structure - 5.2.12.12
 ;APICx2apic:				; Entry Type 9
 ;	xor eax, eax
 ;	xor edx, edx
