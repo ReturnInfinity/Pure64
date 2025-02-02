@@ -200,6 +200,9 @@ start64:
 	mov [p_BootMode], bl
 	mov [p_BootDisk], bh
 
+	mov ax, 0x03			; Set flags for legacy ports (in case of no ACPI data)
+	mov [p_IAPC_BOOT_ARCH], ax
+
 	; Mask all PIC interrupts
 	mov al, 0xFF
 	out 0x21, al
