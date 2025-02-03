@@ -19,31 +19,9 @@ exception_gate_halt:
 ; -----------------------------------------------------------------------------
 ; Default interrupt handler
 interrupt_gate:				; handler for all other interrupts
-	iretq
-; -----------------------------------------------------------------------------
-
-
-; -----------------------------------------------------------------------------
-; Keyboard interrupt. IRQ 0x01, INT 0x21
-; This IRQ runs whenever there is input on the keyboard
-align 16
-keyboard:
-	push rdi
-	push rax
-
-	xor eax, eax
-
-	in al, 0x60			; Get the scancode from the keyboard
-	test al, 0x80
-	jnz keyboard_done
-
-keyboard_done:
-	mov al, 0x20			; Acknowledge the IRQ
-	out 0x20, al
-
-	pop rax
-	pop rdi
-	iretq
+	cli				; Disable interrupts
+	hlt				; Halt the system
+	jmp interrupt_gate
 ; -----------------------------------------------------------------------------
 
 
@@ -157,6 +135,14 @@ exception_gate_18:
 
 exception_gate_19:
 	mov al, 0x13
+	jmp exception_gate_main
+
+exception_gate_20:
+	mov al, 0x14
+	jmp exception_gate_main
+
+exception_gate_21:
+	mov al, 0x15
 	jmp exception_gate_main
 
 exception_gate_main:

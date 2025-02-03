@@ -397,10 +397,13 @@ parseMCFGTable_next:
 ; Chapter 5.2.9
 parseFADTTable:
 	; At this point RSI points to offset 4 for the FADT
-	mov eax, [rsi+10-4]		; Check start of OEMID
+	sub rsi, 4			; Set RSI back to start to make offsets easier below
+
+	; Gather IAPC_BOOT_ARCH
+	mov eax, [rsi+10]		; Check start of OEMID
 	cmp eax, 0x48434F42		; Is it "BOCH"?
 	je parseFADTTable_end		; If so, bail out
-	mov ax, [rsi+109-4]		; IAPC_BOOT_ARCH (IA-PC Boot Architecture Flags - 5.2.9.3)
+	mov ax, [rsi+109]		; IAPC_BOOT_ARCH (IA-PC Boot Architecture Flags - 5.2.9.3)
 	mov [p_IAPC_BOOT_ARCH], ax	; Save the IAPC_BOOT_ARCH word
 
 ;	add rsi, 116			; RESET_REG (Generic Address Structure - 5.2.3.2)
@@ -415,6 +418,7 @@ parseFADTTable:
 ;	lodsd				; DSDT
 ;	add rsi, 20
 ;	lodsd				; PM1a_CNT_BLK
+
 parseFADTTable_end:
 	ret
 ; -----------------------------------------------------------------------------

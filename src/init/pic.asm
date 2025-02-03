@@ -29,7 +29,7 @@ init_pic:
 	mov al, 1
 	out 0xA1, al
 
-; Set up RTC
+	; Set up RTC
 rtc_poll:
 	mov al, 0x0A			; Status Register A
 	out 0x70, al			; Select the address
@@ -50,9 +50,9 @@ rtc_poll:
 	bts ax, 6			; Set Periodic Interrupt Enable (bit 6)
 	out 0x71, al			; Write the new settings
 
-	; Enable specific interrupts
+	; Enable specific interrupt
 	in al, 0x21
-	mov al, 11111001b		; Enable Cascade (HPET Timer 0), Keyboard
+	mov al, 11111011b		; Enable Cascade (HPET Timer 0)
 	out 0x21, al
 
 	sti				; Enable interrupts
