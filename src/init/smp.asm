@@ -93,30 +93,6 @@ noMP:
 	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 	mov [p_BSP], eax		; Store the BSP APIC ID
 
-	; Calculate base speed of CPU
-	cpuid
-	xor edx, edx
-	xor eax, eax
-	rdtsc
-	push rax
-	mov rax, 1024
-	call os_hpet_delay
-	rdtsc
-	pop rdx
-	sub rax, rdx
-	xor edx, edx
-	mov rcx, 1024
-	div rcx
-	mov [p_cpu_speed], ax
-
-	cli				; Disable Interrupts
-
-	; Disable PIT
-	mov al, 0x30			; Channel 0 (7:6), Access Mode lo/hi (5:4), Mode 0 (3:1), Binary (0)
-	out 0x43, al
-	mov al, 0x00
-	out 0x40, al
-
 	ret
 
 

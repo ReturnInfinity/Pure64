@@ -203,6 +203,27 @@ start64:
 	mov ax, 0x03			; Set flags for legacy ports (in case of no ACPI data)
 	mov [p_IAPC_BOOT_ARCH], ax
 
+	; Initialize and remap PIC IRQ's
+	; ICW1
+	mov al, 0x11;			; Initialize PIC 1, init (bit 4) and ICW4 (bit 0)
+	out 0x20, al
+	mov al, 0x11;			; Initialize PIC 2, init (bit 4) and ICW4 (bit 0)
+	out 0xA0, al
+	; ICW2
+	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
+	out 0x21, al
+	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
+	out 0xA1, al
+	; ICW3
+	mov al, 4
+	out 0x21, al
+	mov al, 2
+	out 0xA1, al
+	; ICW4
+	mov al, 1
+	out 0x21, al
+	mov al, 1
+	out 0xA1, al
 	; Mask all PIC interrupts
 	mov al, 0xFF
 	out 0x21, al
@@ -723,17 +744,27 @@ pde_end:
 	mov ebx, 4
 	call debug_block
 
-	mov rsi, msg_pic
-	call debug_msg
-	call init_pic			; Configure the PIC(s), activate interrupts
-	mov rsi, msg_ok
-	call debug_msg
-
 	mov rsi, msg_smp
 	call debug_msg
 	call init_smp			; Init of SMP, deactivate interrupts
 	mov rsi, msg_ok
 	call debug_msg
+
+	; Calculate base speed of CPU
+	cpuid
+	xor edx, edx
+	xor eax, eax
+	rdtsc
+	push rax
+	mov rax, 1024
+	call os_hpet_delay
+	rdtsc
+	pop rdx
+	sub rax, rdx
+	xor edx, edx
+	mov rcx, 1024
+	div rcx
+	mov [p_cpu_speed], ax
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
@@ -883,7 +914,6 @@ clear_regs:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/pic.asm"
 %include "init/serial.asm"
 %include "init/hpet.asm"
 %include "init/smp.asm"
