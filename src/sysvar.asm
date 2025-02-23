@@ -17,7 +17,6 @@ msg_bios:		db 'bios', 0
 msg_uefi:		db 'uefi', 0
 msg_acpi:		db 13, 10, 'acpi ', 0
 msg_bsp:		db 13, 10, 'bsp ', 0
-msg_pic:		db 13, 10, 'pic ', 0
 msg_smp:		db 13, 10, 'smp ', 0
 msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 
