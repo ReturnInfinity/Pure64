@@ -8,16 +8,16 @@
 
 init_cpu:
 
-; Disable Cache
+	; Disable Cache
 	mov rax, cr0
 	btr rax, 29			; Clear No Write Thru (Bit 29)
 	bts rax, 30			; Set Cache Disable (Bit 30)
 	mov cr0, rax
 
-; Flush Cache
+	; Flush Cache
 	wbinvd
 
-; Flush TLB
+	; Flush TLB
 	mov rax, cr3
 	mov cr3, rax
 
@@ -108,35 +108,35 @@ init_cpu:
 ;	bts eax, 11			; Set MTRR Enable (Bit 11), Only enables Variable Range MTRR's
 ;	wrmsr
 
-; Flush TLB
+	; Flush TLB
 	mov rax, cr3
 	mov cr3, rax
 
-; Flush Cache
+	; Flush Cache
 	wbinvd
 
-; Enable Cache
+	; Enable Cache
 	mov rax, cr0
 	btr rax, 29			; Clear No Write Thru (Bit 29)
 	btr rax, 30			; Clear CD (Bit 30)
 	mov cr0, rax
 
-; Enable Floating Point
+	; Enable Floating Point
 	mov rax, cr0
 	bts rax, 1			; Set Monitor co-processor (Bit 1)
 	btr rax, 2			; Clear Emulation (Bit 2)
 	mov cr0, rax
 
-; Enable SSE
+	; Enable SSE
 	mov rax, cr4
 	bts rax, 9			; Set Operating System Support for FXSAVE and FXSTOR instructions (Bit 9)
 	bts rax, 10			; Set Operating System Support for Unmasked SIMD Floating-Point Exceptions (Bit 10)
 	mov cr4, rax
 
-; Enable Math Co-processor
+	; Enable Math Co-processor
 	finit
 
-; Enable AVX-1 and AVX-2
+	; Enable AVX-1 and AVX-2
 	mov eax, 1			; CPUID Feature information 1
 	cpuid				; Sets info in ECX and EDX
 	bt ecx, 28			; AVX-1 is supported if bit 28 is set in ECX
@@ -154,7 +154,7 @@ avx_supported:
 	xsetbv				; Save XCR0 register
 avx_not_supported:
 
-; Enable AVX-512
+	; Enable AVX-512
 	mov eax, 7			; CPUID Feature information 7
 	xor ecx, ecx			; Extended Features 0
 	cpuid				; Sets info in EBX, ECX, and EDX

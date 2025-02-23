@@ -208,6 +208,28 @@ start64:
 	out 0x21, al
 	out 0xA1, al
 
+	; Initialize and remap PIC IRQ's
+	; ICW1
+	mov al, 0x11;			; Initialize PIC 1, init (bit 4) and ICW4 (bit 0)
+	out 0x20, al
+	mov al, 0x11;			; Initialize PIC 2, init (bit 4) and ICW4 (bit 0)
+	out 0xA0, al
+	; ICW2
+	mov al, 0x20			; IRQ 0-7: interrupts 20h-27h
+	out 0x21, al
+	mov al, 0x28			; IRQ 8-15: interrupts 28h-2Fh
+	out 0xA1, al
+	; ICW3
+	mov al, 4
+	out 0x21, al
+	mov al, 2
+	out 0xA1, al
+	; ICW4
+	mov al, 1
+	out 0x21, al
+	mov al, 1
+	out 0xA1, al
+
 	; Disable NMIs
 	in al, 0x70
 	or al, 0x80
@@ -723,12 +745,6 @@ pde_end:
 	mov ebx, 4
 	call debug_block
 
-	mov rsi, msg_pic
-	call debug_msg
-	call init_pic			; Configure the PIC(s), activate interrupts
-	mov rsi, msg_ok
-	call debug_msg
-
 	mov rsi, msg_smp
 	call debug_msg
 	call init_smp			; Init of SMP, deactivate interrupts
@@ -883,7 +899,6 @@ clear_regs:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/pic.asm"
 %include "init/serial.asm"
 %include "init/hpet.asm"
 %include "init/smp.asm"

@@ -10,7 +10,7 @@ BITS 16
 
 init_smp_ap:
 
-; Enable the A20 gate
+	; Enable the A20 gate
 set_A20_ap:
 	in al, 0x64
 	test al, 0x02
@@ -24,10 +24,10 @@ check_A20_ap:
 	mov al, 0xDF
 	out 0x60, al
 
-; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
-	lgdt [cs:GDTR32]		; load GDT register
+	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
+	lgdt [cs:GDTR32]		; Load GDT register
 
-	mov eax, cr0 			; switch to 32-bit protected mode
+	mov eax, cr0 			; Switch to 32-bit protected mode
 	or al, 1
 	mov cr0, eax
 
@@ -41,7 +41,7 @@ align 16
 BITS 32
 
 startap32:
-	mov eax, 16			; load 4 GB data descriptor
+	mov eax, 16			; Load 4 GB data descriptor
 	mov ds, ax			; to all data segment registers
 	mov es, ax
 	mov fs, ax
@@ -56,30 +56,30 @@ startap32:
 	xor ebp, ebp
 	mov esp, 0x7000			; Set a known free location for the temporary stack (shared by all APs)
 
-; Load the GDT
+	; Load the GDT
 	lgdt [GDTR64]
 
-; Enable extended properties
+	; Enable extended properties
 	mov eax, cr4
 	or eax, 0x0000000B0		; PGE (Bit 7), PAE (Bit 5), and PSE (Bit 4)
 	mov cr4, eax
 
-; Point cr3 at PML4
+	; Point cr3 at PML4
 	mov eax, 0x00002008		; Write-thru (Bit 3)
 	mov cr3, eax
 
-; Enable long mode and SYSCALL/SYSRET
+	; Enable long mode and SYSCALL/SYSRET
 	mov ecx, 0xC0000080		; EFER MSR number
 	rdmsr				; Read EFER
 	or eax, 0x00000101 		; LME (Bit 8)
 	wrmsr				; Write EFER
 
-; Enable paging to activate long mode
+	; Enable paging to activate long mode
 	mov eax, cr0
 	or eax, 0x80000000		; PG (Bit 31)
 	mov cr0, eax
 
-; Make the jump directly from 16-bit real mode to 64-bit long mode
+	; Make the jump directly from 16-bit real mode to 64-bit long mode
 	jmp SYS64_CODE_SEL:startap64
 
 align 16
@@ -124,21 +124,12 @@ startap64:
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
 	lgdt [GDTR64]			; Load the GDT
-	lidt [IDTR64]			; load IDT register
-
-; Enable Local APIC on AP
-;	mov rsi, [p_LocalAPICAddress]
-;	add rsi, 0x00f0			; Offset to Spurious Interrupt Register
-;	mov rdi, rsi
-;	lodsd
-;	or eax, 0000000100000000b
-;	stosd
+	lidt [IDTR64]			; Load the IDT
 
 	call init_cpu			; Setup CPU
 
 	sti				; Activate interrupts for SMP
 	jmp ap_sleep
-
 
 align 16
 
