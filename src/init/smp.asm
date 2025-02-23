@@ -109,14 +109,6 @@ noMP:
 	div rcx
 	mov [p_cpu_speed], ax
 
-	cli				; Disable Interrupts
-
-	; Disable PIT
-	mov al, 0x30			; Channel 0 (7:6), Access Mode lo/hi (5:4), Mode 0 (3:1), Binary (0)
-	out 0x43, al
-	mov al, 0x00
-	out 0x40, al
-
 	ret
 
 
