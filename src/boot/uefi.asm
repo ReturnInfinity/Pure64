@@ -12,8 +12,8 @@
 ; =============================================================================
 
 ; Set the desired screen resolution values below
-Horizontal_Resolution		equ 1024
-Vertical_Resolution		equ 768
+;Horizontal_Resolution		equ 1024
+;Vertical_Resolution		equ 768
 
 BITS 64
 ORG 0x00400000
@@ -166,7 +166,7 @@ nextentry:
 	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
 	call rax
 	cmp rax, EFI_SUCCESS
-	je use_EDID
+	je get_EDID						; If it exists, process EDID
 
 	; Find the interface to EFI_EDID_DISCOVERED_PROTOCOL_GUID via its GUID
 	mov rcx, EFI_EDID_DISCOVERED_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -176,21 +176,46 @@ nextentry:
 	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
 	call rax
 	cmp rax, EFI_SUCCESS
-	je use_EDID
-	jmp use_GOP
+	je get_EDID						; If it exists, process EDID
+	jmp use_GOP						; If not found, or other error, use GOP
 
-use_EDID:
-	mov rbx, rax
-	call printhex
-	; Parse the current graphics information
-	; EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Structure
+	; Gather preferred screen resolution
+get_EDID:
+	; Parse the EDID information
 	; 0  UINT32 - SizeOfEdid
 	; 4  UINT8 - *Edid
 	mov rax, [EDID]
-	mov rbx, rax
-	call printhex
-	jmp $
+	mov ebx, [rax]
+	cmp ebx, 128						; Minimum size of 128 bytes
+	jb use_GOP						; Fail out to GOP with default resolution
+	mov rbx, [rax+8]					; Pointer to EDID. Why not +4?
+	mov rax, [rbx]						; Load RAX with EDID header
+	mov rcx, 0x00FFFFFFFFFFFF00				; Required EDID header
+	cmp rax, rcx						; Verify 8-byte header at 0x00 is 0x00FFFFFFFFFFFF00
+	jne use_GOP						; Fail out to GOP with default resolution
+	; Preferred Timing Mode starts at 0x36
+	; 0x38 - Lower 8 bits of Horizontal pixels in bits 7:0
+	; 0x3A - Upper 4 bits of Horizontal pixels in bits 7:4
+	; 0x3B - Lower 8 bits of Vertical pixels in bits 7:0
+	; 0x3D - Upper 4 bits of Vertical pixels in bits 7:4
+	xor eax, eax
+	xor ecx, ecx
+	mov al, [rbx+0x38]
+	mov cl, [rbx+0x3A]
+	and cl, 0xF0						; Keep bits 7:4
+	shl ecx, 4
+	or eax, ecx
+	mov [Horizontal_Resolution], eax
+	xor eax, eax
+	xor ecx, ecx
+	mov al, [rbx+0x3B]
+	mov cl, [rbx+0x3D]
+	and cl, 0xF0						; Keep bits 7:4
+	shl ecx, 4
+	or eax, ecx
+	mov [Vertical_Resolution], eax
 
+	; Set video to desired resolution. By default it is 1024x768 unless EDID was found
 use_GOP:
 	; Find the interface to GRAPHICS_OUTPUT_PROTOCOL via its GUID
 	mov rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
@@ -237,10 +262,10 @@ vid_query:
 	mov rsi, [vid_info]
 	lodsd							; UINT32 - Version
 	lodsd							; UINT32 - HorizontalResolution
-	cmp eax, Horizontal_Resolution
+	cmp eax, [Horizontal_Resolution]
 	jne next_video_mode
 	lodsd							; UINT32 - VerticalResolution
-	cmp eax, Vertical_Resolution
+	cmp eax, [Vertical_Resolution]
 	jne next_video_mode
 	lodsd							; EFI_GRAPHICS_PIXEL_FORMAT - PixelFormat (UINT32)
 	bt eax, 0						; Bit 0 is set for 32-bit colour mode
@@ -373,6 +398,8 @@ get_memmap:
 	stosq							; EFI_MEMORY_DESCRIPTOR version
 	mov rax, [ACPI]
 	stosq							; ACPI Table Address
+	mov rax, [EDID]
+	stosq							; EDID Data (Size and Address)
 
 	; Set screen to black before jumping to Pure64
 	mov rdi, [FB]
@@ -487,6 +514,8 @@ vid_index:		dq 0
 vid_max:		dq 0
 vid_size:		dq 0
 vid_info:		dq 0
+Horizontal_Resolution:	dd 1024					; Default resolution X - If no EDID found
+Vertical_Resolution:	dd 768					; Default resolution Y - If no EDID found
 
 ACPI_TABLE_GUID:
 dd 0xeb9d2d30
