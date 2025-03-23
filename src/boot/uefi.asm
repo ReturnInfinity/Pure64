@@ -11,9 +11,6 @@
 ; dd if=PAYLOAD of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
 ; =============================================================================
 
-; Set the desired screen resolution values below
-;Horizontal_Resolution		equ 1024
-;Vertical_Resolution		equ 768
 
 BITS 64
 ORG 0x00400000
