@@ -158,6 +158,40 @@ nextentry:
 	lodsq							; Load the address of the ACPI table
 	mov [ACPI], rax						; Save the address
 
+	; Find the interface to EFI_EDID_ACTIVE_PROTOCOL_GUID via its GUID
+	mov rcx, EFI_EDID_ACTIVE_PROTOCOL_GUID			; IN EFI_GUID *Protocol
+	mov rdx, 0						; IN VOID *Registration OPTIONAL
+	mov r8, EDID						; OUT VOID **Interface
+	mov rax, [BS]
+	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
+	call rax
+	cmp rax, EFI_SUCCESS
+	je use_EDID
+
+	; Find the interface to EFI_EDID_DISCOVERED_PROTOCOL_GUID via its GUID
+	mov rcx, EFI_EDID_DISCOVERED_PROTOCOL_GUID		; IN EFI_GUID *Protocol
+	mov rdx, 0						; IN VOID *Registration OPTIONAL
+	mov r8, EDID						; OUT VOID **Interface
+	mov rax, [BS]
+	mov rax, [rax + EFI_BOOT_SERVICES_LOCATEPROTOCOL]
+	call rax
+	cmp rax, EFI_SUCCESS
+	je use_EDID
+	jmp use_GOP
+
+use_EDID:
+	mov rbx, rax
+	call printhex
+	; Parse the current graphics information
+	; EFI_GRAPHICS_OUTPUT_PROTOCOL_MODE Structure
+	; 0  UINT32 - SizeOfEdid
+	; 4  UINT8 - *Edid
+	mov rax, [EDID]
+	mov rbx, rax
+	call printhex
+	jmp $
+
+use_GOP:
 	; Find the interface to GRAPHICS_OUTPUT_PROTOCOL via its GUID
 	mov rcx, EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID		; IN EFI_GUID *Protocol
 	mov rdx, 0						; IN VOID *Registration OPTIONAL
@@ -436,6 +470,7 @@ CONFIG:			dq 0					; Config Table address
 ACPI:			dq 0					; ACPI table address
 OUTPUT:			dq 0					; Output services
 VIDEO:			dq 0					; Video services
+EDID:			dq 0
 FB:			dq 0					; Frame buffer base address
 FBS:			dq 0					; Frame buffer size
 HR:			dq 0					; Horizontal Resolution
@@ -457,6 +492,16 @@ ACPI_TABLE_GUID:
 dd 0xeb9d2d30
 dw 0x2d88, 0x11d3
 db 0x9a, 0x16, 0x00, 0x90, 0x27, 0x3f, 0xc1, 0x4d
+
+EFI_EDID_ACTIVE_PROTOCOL_GUID:
+dd 0xbd8c1056
+dw 0x9f36, 0x44ec
+db 0x92, 0xa8, 0xa6, 0x33, 0x7f, 0x81, 0x79, 0x86
+
+EFI_EDID_DISCOVERED_PROTOCOL_GUID:
+dd 0x1c0c34f6
+dw 0xd380, 0x41fa
+db 0xa0, 0x49, 0x8a, 0xd0, 0x6c, 0x1a, 0x66, 0xaa
 
 EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID:
 dd 0x9042a9de
