@@ -7,7 +7,7 @@
 ; PE https://wiki.osdev.org/PE
 ; GOP https://wiki.osdev.org/GOP
 ; Automatic boot: Assemble and save as /EFI/BOOT/BOOTX64.EFI
-; Add payload up to 32 KiB
+; Add payload up to 60KB
 ; dd if=PAYLOAD of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
 ; =============================================================================
 
@@ -387,8 +387,10 @@ get_memmap:
 	mov rax, 32						; TODO - Verify this
 	stosw							; 16-bit BitsPerPixel
 	mov rax, [memmap]
+	mov rdx, rax						; Save Memory Map Base address to RDX
 	stosq							; Memory Map Base
 	mov rax, [memmapsize]
+	add rdx, rax						; Add Memory Map Size to RDX
 	stosq							; Size of Memory Map in bytes
 	mov rax, [memmapkey]
 	stosq							; The key used to exit Boot Services
@@ -400,6 +402,12 @@ get_memmap:
 	stosq							; ACPI Table Address
 	mov rax, [EDID]
 	stosq							; EDID Data (Size and Address)
+
+	; Add blank entries to the end of the UEFI memory map
+	mov rdi, rdx						; RDX holds address to end of memory map
+	xor eax, eax
+	mov ecx, 8
+	rep stosq
 
 	; Set screen to black before jumping to Pure64
 	mov rdi, [FB]

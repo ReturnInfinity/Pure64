@@ -146,10 +146,6 @@ exception_gate_21:
 	jmp exception_gate_main
 
 exception_gate_main:
-	; Output message via serial port
-	mov rsi, msg_exception		; Location of message
-	call debug_msg
-	call debug_dump_al
 	; Set screen to Red
 	mov rdi, [0x00005F00]		; Frame buffer base
 	mov rcx, [0x00005F08]		; Frame buffer size
