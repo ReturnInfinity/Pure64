@@ -7,7 +7,7 @@
 ; PE https://wiki.osdev.org/PE
 ; GOP https://wiki.osdev.org/GOP
 ; Automatic boot: Assemble and save as /EFI/BOOT/BOOTX64.EFI
-; Add payload up to 60KB
+; Add payload up to 32 KiB
 ; dd if=PAYLOAD of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
 ; =============================================================================
 
@@ -299,14 +299,11 @@ skip_set_video:
 	mov eax, [rcx+32]					; RAX holds the PixelsPerScanLine
 	mov [PPSL], rax						; Save the PixelsPerScanLine
 
-	; Copy Pure64 to the correct memory address
-	mov rsi, PAYLOAD
-	mov rdi, 0x8000
-	mov rcx, 61440						; Copy 60KB
-	rep movsb
-	mov ax, [0x8006]
-	cmp ax, 0x3436						; Match against the Pure64 binary
-	jne sig_fail
+	; Check for payload
+	mov rsi, PAYLOAD+6
+	mov ax, [rsi]
+	cmp ax, 0x3436						; Match against the '64' in the Pure64 binary
+	jne sig_fail						; Bail out if Pure64 isn't present
 
 ; Debug
 ;	mov rbx, [FB]						; Display the framebuffer address
@@ -368,6 +365,12 @@ get_memmap:
 
 	; Stop interrupts
 	cli
+
+	; Copy Pure64 to the correct memory address
+	mov rsi, PAYLOAD
+	mov rdi, 0x8000
+	mov rcx, 32768						; Copy 32 KiB to 0x8000
+	rep movsb
 
 	; Save UEFI values to the area of memory where Pure64 expects them
 	mov rdi, 0x00005F00
