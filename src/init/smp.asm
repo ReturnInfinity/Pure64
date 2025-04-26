@@ -11,6 +11,71 @@ init_smp:
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
 
+	; Check for APIC support
+	mov eax, 1
+	cpuid
+	bt edx, 9			; APIC bit should be set
+	jnc noMP			; If APIC bit is not set then skip SMP init
+
+	; Enable the APIC
+	mov ecx, 0x1B			; APIC_BASE
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 11			; EN
+	wrmsr				; Write EDX:EAX to MSR
+
+	; Check for x2APIC support
+	mov eax, 1
+	cpuid
+	bt ecx, 21			; x2APIC bit might be set
+	jnc init_smp_apic		; If not, continue to APIC SMP init
+
+	; Enable the x2APIC
+	mov ecx, 0x1B			; APIC_BASE
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 10			; EXTD
+	wrmsr				; Write EDX:EAX to MSR
+
+init_smp_x2apic:
+	; Start the AP's one by one
+	xor eax, eax
+	xor edx, edx
+	mov ecx, 0x00000800 + 0x20
+	rdmsr
+	mov ebx, eax			; Store BSP APIC ID in EBX
+
+	; Send 'INIT' IPI to APIC ID in AL
+	mov ecx, 0x00000800 + 0x30
+	mov edx, eax
+	mov edx, 2
+	mov eax, 0x00004500
+	wrmsr
+init_smp_x2apic_INIT_verify:
+	rdmsr
+	bt eax, 12			; Verify that the command completed
+	jc init_smp_x2apic_INIT_verify
+
+	; Wait 500 microseconds
+	mov eax, 500
+	call os_hpet_delay
+
+	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
+	mov ecx, 0x00000800 + 0x30
+	mov edx, eax
+	mov edx, 2
+	mov eax, 0x00004608
+	wrmsr
+init_smp_x2apic_SIPI_verify:
+	rdmsr
+	bt eax, 12			; Verify that the command completed
+	jc init_smp_x2apic_SIPI_verify
+
+	; Wait 10000 microseconds for the AP's to finish
+	mov eax, 10000
+	call os_hpet_delay
+
+	jmp noMP
+
+init_smp_apic:
 	; Start the AP's one by one
 	xor eax, eax
 	xor edx, edx

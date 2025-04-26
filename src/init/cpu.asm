@@ -169,15 +169,54 @@ avx512_supported:
 	xsetbv				; Save XCR0 register
 avx512_not_supported:
 
-; Enable and Configure Local APIC
-;	mov ecx, IA32_APIC_BASE
-;	rdmsr
-;	bts eax, 11			; APIC Global Enable
-;	cmp byte [p_x2APIC], 1
-;	jne skip_x2APIC_enable
-;	bts eax, 10			; Enable x2APIC mode
-;skip_x2APIC_enable:
-;	wrmsr
+	; Check for x2APIC support
+	mov eax, 1
+	cpuid
+	bt ecx, 21			; x2APIC bit might be set
+	jnc init_cpu_apic		; If not, continue to CPU APIC init
+
+	; Enable the x2APIC
+	mov ecx, 0x1B			; APIC_BASE
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 10			; EXTD
+	wrmsr				; Write EDX:EAX to MSR
+
+	; Configure the x2APIC
+	xor edx, edx
+	mov ecx, APIC_TPR
+	mov eax, 0x00000020
+	call x2apic_write		; Disable softint delivery
+	mov ecx, APIC_LVT_TMR
+	mov eax, 0x00010000
+	call x2apic_write		; Disable timer interrupts
+	mov ecx, APIC_LVT_PERF
+	mov eax, 0x00010000
+	call x2apic_write		; Disable performance counter interrupts
+	mov ecx, APIC_LVT_LINT0
+	mov eax, 0x00008700		; Bit 15 (1 = Level), Bits 10:8 for Ext
+	call x2apic_write		; Enable normal external interrupts
+	mov ecx, APIC_LVT_LINT1
+	mov eax, 0x00000400
+	call x2apic_write		; Enable normal NMI processing
+	mov ecx, APIC_LVT_ERR
+	mov eax, 0x00010000
+	call x2apic_write		; Disable error interrupts
+	mov ecx, APIC_SPURIOUS
+	mov eax, 0x000001FF
+	call x2apic_write		; Enable the APIC (bit 8) and set spurious vector to 0xFF
+
+	lock inc word [p_cpu_activated]
+	mov ecx, APIC_ID
+	call x2apic_read		; APIC ID is stored in EDX
+	mov eax, edx			; EAX now holds the CPU's APIC ID
+	mov rdi, IM_ActivedCoreIDs	; The location where the activated cores set their record to 1
+	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5E01 would be APIC ID 1
+	mov al, 1
+	stosb				; Store a 1 as the core is activated
+
+	jmp init_cpu_apic_done
+
+init_cpu_apic:
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020
 	call apic_write			; Disable softint delivery
@@ -215,6 +254,7 @@ avx512_not_supported:
 	mov al, 1
 	stosb				; Store a 1 as the core is activated
 
+init_cpu_apic_done:
 	ret
 
 ; -----------------------------------------------------------------------------
@@ -238,6 +278,38 @@ apic_write:
 	push rcx
 	add rcx, [p_LocalAPICAddress]
 	mov [rcx], eax
+	pop rcx
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; x2apic_read -- Read from a register in the x2APIC
+;  IN:	ECX = Register to read
+; OUT:	EAX = Register value (bits 31:0)
+;	EDX = Register value (bits 63:32)
+;	All other registers preserved
+x2apic_read:
+	push rcx
+	shr ecx, 4			; Quick divide by 16
+	add ecx, 0x800			; Base MSR for x2APIC
+	rdmsr				; Read MSR to EDX:EAX
+	pop rcx
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; x2apic_write -- Write to a register in the x2APIC
+;  IN:	ECX = Register to write
+;	EAX = Value to write (bits 31:0)
+;	EDX = Value to write (bits 63:32)
+; OUT:	All registers preserved
+x2apic_write:
+	push rcx
+	shr ecx, 4			; Quick divide by 16
+	add ecx, 0x800			; Base MSR for x2APIC
+	wrmsr				; Write EDX:EAX to MSR
 	pop rcx
 	ret
 ; -----------------------------------------------------------------------------
