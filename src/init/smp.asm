@@ -9,13 +9,13 @@
 init_smp:
 	; Check if we want the AP's to be enabled.. if not then skip to end
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
-	jne noMP			; If not then skip SMP init
+	jne init_smp_done		; If not then skip SMP init
 
 	; Check for APIC support
 	mov eax, 1
 	cpuid
 	bt edx, 9			; APIC bit should be set
-	jnc noMP			; If APIC bit is not set then skip SMP init
+	jnc init_smp_done		; If APIC bit is not set then skip SMP init
 
 	; Enable the APIC
 	mov ecx, 0x1B			; APIC_BASE MSR
@@ -113,7 +113,7 @@ init_smp_x2apic_SIPI_done:
 	mov eax, 10000
 	call os_hpet_delay
 
-	jmp noMP
+	jmp init_smp_done
 
 init_smp_apic:
 	; Start the AP's one by one
@@ -190,7 +190,7 @@ smp_send_SIPI_done:
 	mov eax, 10000
 	call os_hpet_delay
 
-noMP:
+init_smp_done:
 	; Calculate base speed of CPU
 	cpuid
 	xor edx, edx
