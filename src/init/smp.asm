@@ -41,35 +41,72 @@ init_smp_x2apic:
 	; Start the AP's one by one
 	xor eax, eax
 	xor edx, edx
-	mov ecx, 0x00000800 + 0x20
+	mov ecx, 0x00000802		; x2APIC Local APIC ID Register MSR
 	rdmsr
 	mov ebx, eax			; Store BSP APIC ID in EBX
 
-	; Send 'INIT' IPI to APIC ID in AL
-	mov ecx, 0x00000800 + 0x30
+	mov esi, IM_DetectedCoreIDs
+	xor eax, eax
+	xor ecx, ecx
+	mov cx, [p_cpu_detected]
+init_smp_x2apic_INIT:
+	cmp cx, 0
+	je init_smp_x2apic_INIT_done
+	lodsd
+
+	cmp eax, ebx			; Is it the BSP?
+	je init_smp_x2apic_INIT_skipcore
+
+	; Send 'INIT' IPI to APIC ID in EAX
+	push rcx
+	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov edx, 2
 	mov eax, 0x00004500
 	wrmsr
 init_smp_x2apic_INIT_verify:
 	rdmsr
 	bt eax, 12			; Verify that the command completed
 	jc init_smp_x2apic_INIT_verify
+	pop rcx
+
+init_smp_x2apic_INIT_skipcore:
+	dec cx
+	jmp init_smp_x2apic_INIT
+
+init_smp_x2apic_INIT_done:
 
 	; Wait 500 microseconds
 	mov eax, 500
 	call os_hpet_delay
 
+	mov esi, IM_DetectedCoreIDs
+	xor ecx, ecx
+	mov cx, [p_cpu_detected]
+init_smp_x2apic_SIPI:
+	cmp cx, 0
+	je init_smp_x2apic_SIPI_done
+	lodsd
+
+	cmp eax, ebx			; Is it the BSP?
+	je init_smp_x2apic_SIPI_skipcore
+
 	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
-	mov ecx, 0x00000800 + 0x30
+	push rcx
+	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov edx, 2
 	mov eax, 0x00004608
 	wrmsr
 init_smp_x2apic_SIPI_verify:
 	rdmsr
 	bt eax, 12			; Verify that the command completed
 	jc init_smp_x2apic_SIPI_verify
+	pop rcx
+
+init_smp_x2apic_SIPI_skipcore:
+	dec cx
+	jmp init_smp_x2apic_SIPI
+
+init_smp_x2apic_SIPI_done:
 
 	; Wait 10000 microseconds for the AP's to finish
 	mov eax, 10000
