@@ -733,6 +733,9 @@ pde_end:
 	stosw
 	mov ax, [p_cpu_detected]
 	stosw
+	mov di, 0x501F
+	mov al, [p_x2APIC]
+	stosb
 
 	mov di, 0x5020
 	mov eax, [p_mem_amount]
