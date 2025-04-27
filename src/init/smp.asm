@@ -18,7 +18,7 @@ init_smp:
 	jnc noMP			; If APIC bit is not set then skip SMP init
 
 	; Enable the APIC
-	mov ecx, 0x1B			; APIC_BASE
+	mov ecx, 0x1B			; APIC_BASE MSR
 	rdmsr				; Read MSR to EDX:EAX
 	bts eax, 11			; EN
 	wrmsr				; Write EDX:EAX to MSR
@@ -30,10 +30,12 @@ init_smp:
 	jnc init_smp_apic		; If not, continue to APIC SMP init
 
 	; Enable the x2APIC
-	mov ecx, 0x1B			; APIC_BASE
+	mov ecx, 0x1B			; APIC_BASE MSR
 	rdmsr				; Read MSR to EDX:EAX
 	bts eax, 10			; EXTD
 	wrmsr				; Write EDX:EAX to MSR
+
+	mov byte [p_x2APIC], 1		; Set flag for x2APIC support
 
 init_smp_x2apic:
 	; Start the AP's one by one
@@ -81,8 +83,8 @@ init_smp_apic:
 	xor edx, edx
 	mov rsi, [p_LocalAPICAddress]
 	mov eax, [rsi+0x20]		; Add the offset for the APIC ID location
-	shr rax, 24			; APIC ID is stored in bits 31:24
-	mov dl, al			; Store BSP APIC ID in DL
+	shr eax, 24			; APIC ID is stored in bits 31:24
+	mov ebx, eax			; Store BSP APIC ID in EBX
 
 	mov esi, IM_DetectedCoreIDs
 	xor eax, eax
@@ -91,9 +93,9 @@ init_smp_apic:
 smp_send_INIT:
 	cmp cx, 0
 	je smp_send_INIT_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
+	cmp eax, ebx			; Is it the BSP?
 	je smp_send_INIT_skipcore
 
 	; Send 'INIT' IPI to APIC ID in AL
@@ -123,9 +125,9 @@ smp_send_INIT_done:
 smp_send_SIPI:
 	cmp cx, 0
 	je smp_send_SIPI_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
+	cmp eax, ebx			; Is it the BSP?
 	je smp_send_SIPI_skipcore
 
 	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
