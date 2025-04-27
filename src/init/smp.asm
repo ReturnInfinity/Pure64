@@ -64,10 +64,6 @@ init_smp_x2apic_INIT:
 	mov edx, eax
 	mov eax, 0x00004500
 	wrmsr
-init_smp_x2apic_INIT_verify:
-	rdmsr
-	bt eax, 12			; Verify that the command completed
-	jc init_smp_x2apic_INIT_verify
 	pop rcx
 
 init_smp_x2apic_INIT_skipcore:
@@ -97,10 +93,6 @@ init_smp_x2apic_SIPI:
 	mov edx, eax
 	mov eax, 0x00004608
 	wrmsr
-init_smp_x2apic_SIPI_verify:
-	rdmsr
-	bt eax, 12			; Verify that the command completed
-	jc init_smp_x2apic_SIPI_verify
 	pop rcx
 
 init_smp_x2apic_SIPI_skipcore:
