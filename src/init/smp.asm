@@ -44,6 +44,7 @@ init_smp_x2apic:
 	mov ecx, 0x00000802		; x2APIC Local APIC ID Register MSR
 	rdmsr
 	mov ebx, eax			; Store BSP APIC ID in EBX
+	mov [p_BSP], eax		; Store the BSP APIC ID
 
 	mov esi, IM_DetectedCoreIDs
 	xor eax, eax
@@ -122,6 +123,7 @@ init_smp_apic:
 	mov eax, [rsi+0x20]		; Add the offset for the APIC ID location
 	shr eax, 24			; APIC ID is stored in bits 31:24
 	mov ebx, eax			; Store BSP APIC ID in EBX
+	mov [p_BSP], eax		; Store the BSP APIC ID
 
 	mov esi, IM_DetectedCoreIDs
 	xor eax, eax
@@ -189,14 +191,6 @@ smp_send_SIPI_done:
 	call os_hpet_delay
 
 noMP:
-	; Gather and store the APIC ID of the BSP
-	xor eax, eax
-	mov rsi, [p_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov [p_BSP], eax		; Store the BSP APIC ID
-
 	; Calculate base speed of CPU
 	cpuid
 	xor edx, edx
