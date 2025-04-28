@@ -114,7 +114,7 @@ startap64:
 	mov fs, ax
 	mov gs, ax
 
-	cmp byte [p_x2APIC], 1
+	cmp byte [p_x2APIC], 1		; Check if BSP enabled x2APIC
 	jne startap64_apic
 startap64_x2apic:
 	; Enable the x2APIC
@@ -123,14 +123,14 @@ startap64_x2apic:
 	bts eax, 10			; EXTD
 	wrmsr				; Write EDX:EAX to MSR
 	mov ecx, 0x802
-	rdmsr				; Read x2APIC ID
+	rdmsr				; Read x2APIC ID into EAX
 	jmp startap64_setstack
 
 startap64_apic:
-	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
-	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+	mov rsi, [p_LocalAPICAddress]
+	add rsi, 0x20			; APIC_ID
+	lodsd				; Load a 32-bit value. APIC ID is in the high 8 bits
+	shr eax, 24			; Shift to the right and AL now holds the CPU's APIC ID
 
 startap64_setstack:
 	; Reset the stack. Each CPU gets a 1024-byte unique stack location
