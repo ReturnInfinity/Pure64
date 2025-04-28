@@ -114,11 +114,26 @@ startap64:
 	mov fs, ax
 	mov gs, ax
 
-	; Reset the stack. Each CPU gets a 1024-byte unique stack location
+	cmp byte [p_x2APIC], 1
+	jne startap64_apic
+startap64_x2apic:
+	; Enable the x2APIC
+	mov ecx, 0x1B			; APIC_BASE
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 10			; EXTD
+	wrmsr				; Write EDX:EAX to MSR
+	mov ecx, 0x802
+	rdmsr				; Read x2APIC ID
+	jmp startap64_setstack
+
+startap64_apic:
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
 	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
 	lodsd				; Load a 32-bit value. We only want the high 8 bits
 	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
+
+startap64_setstack:
+	; Reset the stack. Each CPU gets a 1024-byte unique stack location
 	shl rax, 10			; shift left 10 bits for a 1024byte stack
 	add rax, 0x0000000000090000	; stacks decrement when you "push", start at 1024 bytes in
 	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
@@ -127,6 +142,23 @@ startap64:
 	lidt [IDTR64]			; Load the IDT
 
 	call init_cpu			; Setup CPU
+
+	; Clear registers. Gives us a clean slate to work with
+	xor eax, eax			; aka r0
+	xor ecx, ecx			; aka r1
+	xor edx, edx			; aka r2
+	xor ebx, ebx			; aka r3
+	xor ebp, ebp			; aka r5, We skip RSP (aka r4) as it was previously set
+	xor esi, esi			; aka r6
+	xor edi, edi			; aka r7
+	xor r8, r8
+	xor r9, r9
+	xor r10, r10
+	xor r11, r11
+	xor r12, r12
+	xor r13, r13
+	xor r14, r14
+	xor r15, r15
 
 	sti				; Activate interrupts for SMP
 	jmp ap_sleep
