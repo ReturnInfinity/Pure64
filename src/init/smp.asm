@@ -69,19 +69,7 @@ init_smp_x2apic_INIT:
 	push rcx
 	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov eax, 0x0000C500
-	wrmsr
-	pop rcx
-
-	; Wait
-	mov eax, 200
-	call os_hpet_delay
-
-	; Send 'INIT' IPI to APIC ID in EAX
-	push rcx
-	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
-	mov edx, eax
-	mov eax, 0x00008500
+	mov eax, 0x00004500
 	wrmsr
 	pop rcx
 
@@ -110,7 +98,7 @@ init_smp_x2apic_SIPI:
 	push rcx
 	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov eax, 0x00000608
+	mov eax, 0x00004608
 	wrmsr
 	pop rcx
 
