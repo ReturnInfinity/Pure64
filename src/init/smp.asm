@@ -35,6 +35,13 @@ init_smp:
 	bts eax, 10			; EXTD
 	wrmsr				; Write EDX:EAX to MSR
 
+	; Clear the x2APIC Error Status Register
+	mov ecx, 0x00000828
+	xor eax, eax
+	xor edx, edx
+	wrmsr
+	rdmsr
+
 	mov byte [p_x2APIC], 1		; Set flag for x2APIC support
 
 init_smp_x2apic:
@@ -62,7 +69,19 @@ init_smp_x2apic_INIT:
 	push rcx
 	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov eax, 0x00004500
+	mov eax, 0x0000C500
+	wrmsr
+	pop rcx
+
+	; Wait
+	mov eax, 200
+	call os_hpet_delay
+
+	; Send 'INIT' IPI to APIC ID in EAX
+	push rcx
+	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
+	mov edx, eax
+	mov eax, 0x00008500
 	wrmsr
 	pop rcx
 
@@ -91,7 +110,7 @@ init_smp_x2apic_SIPI:
 	push rcx
 	mov ecx, 0x00000830		; x2APIC Interrupt Command Register (ICR) MSR
 	mov edx, eax
-	mov eax, 0x00004608
+	mov eax, 0x00000608
 	wrmsr
 	pop rcx
 
@@ -108,6 +127,12 @@ init_smp_x2apic_SIPI_done:
 	jmp init_smp_done
 
 init_smp_apic:
+	; Clear APIC Error
+	mov rsi, [p_LocalAPICAddress]
+	xor eax, eax
+	mov [rsi+0x280], eax
+	mov eax, [rsi+0x280]
+
 	; Start the AP's one by one
 	xor eax, eax
 	xor edx, edx
