@@ -24,16 +24,8 @@ init_smp:
 	wrmsr				; Write EDX:EAX to MSR
 
 	; Check for x2APIC support
-	mov eax, 1
-	cpuid
-	bt ecx, 21			; x2APIC bit might be set
-	jnc init_smp_apic		; If not, continue to APIC SMP init
-
-	; Enable the x2APIC
-	mov ecx, 0x1B			; APIC_BASE MSR
-	rdmsr				; Read MSR to EDX:EAX
-	bts eax, 10			; EXTD
-	wrmsr				; Write EDX:EAX to MSR
+	cmp byte [p_x2APIC], 1
+	jne init_smp_apic		; If not, continue to APIC SMP init
 
 	; Clear the x2APIC Error Status Register
 	mov ecx, 0x00000828

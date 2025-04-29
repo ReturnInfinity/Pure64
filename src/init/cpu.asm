@@ -169,19 +169,12 @@ avx512_supported:
 	xsetbv				; Save XCR0 register
 avx512_not_supported:
 
-	; Check for x2APIC support
-	mov eax, 1
-	cpuid
-	bt ecx, 21			; x2APIC bit might be set
-	jnc init_cpu_apic		; If not, continue to CPU APIC init
-
-	; Enable the x2APIC
-	mov ecx, 0x1B			; APIC_BASE
-	rdmsr				; Read MSR to EDX:EAX
-	bts eax, 10			; EXTD
-	wrmsr				; Write EDX:EAX to MSR
+	; Check if x2APIC support was detected
+	cmp byte [p_x2APIC], 1
+	jne init_cpu_apic		; If not, continue to CPU APIC init
 
 	; Configure the x2APIC
+init_cpu_x2apic:
 	xor edx, edx
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020
@@ -216,6 +209,7 @@ avx512_not_supported:
 
 	jmp init_cpu_apic_done
 
+	; Configure the APIC
 init_cpu_apic:
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020

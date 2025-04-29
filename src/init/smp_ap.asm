@@ -114,10 +114,16 @@ startap64:
 	mov fs, ax
 	mov gs, ax
 
+	; Enable the APIC on the AP (if it isn't already)
+	mov ecx, 0x1B			; APIC_BASE MSR
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 11			; EN
+	wrmsr				; Write EDX:EAX to MSR
+
 	cmp byte [p_x2APIC], 1		; Check if BSP enabled x2APIC
 	jne startap64_apic
 startap64_x2apic:
-	; Enable the x2APIC
+	; Enable the x2APIC on the AP
 	mov ecx, 0x1B			; APIC_BASE
 	rdmsr				; Read MSR to EDX:EAX
 	bts eax, 10			; EXTD

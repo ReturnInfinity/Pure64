@@ -692,12 +692,21 @@ pde_end:
 	add rax, rdx
 	mov [p_LocalAPICAddress], rax
 
-; Check for x2APIC support
+; Check for x2APIC support on the BSP
 	mov eax, 1
-	cpuid				; x2APIC is supported if bit 21 is set
+	cpuid				; x2APIC is supported if bit 21 of ECX is set
 	shr ecx, 21
 	and cl, 1
-	mov byte [p_x2APIC], cl
+	mov byte [p_x2APIC], cl		; Set the flag for x2APIC (will be used in init_cpu)
+
+; Enable the x2APIC on the BSP if it is supported
+	cmp cl, 1
+	jne skip_x2apic
+	mov ecx, 0x1B			; APIC_BASE MSR
+	rdmsr				; Read MSR to EDX:EAX
+	bts eax, 10			; EXTD
+	wrmsr				; Write EDX:EAX to MSR
+skip_x2apic:
 
 	call init_acpi			; Find and process the ACPI tables
 	call init_cpu			; Configure the BSP CPU
