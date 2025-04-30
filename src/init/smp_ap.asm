@@ -10,6 +10,10 @@ BITS 16
 
 init_smp_ap:
 
+	; Check boot method of BSP
+	cmp byte [p_BootMode], 'U'
+	je skip_a20_ap			; If UEFI, then skip A20 code
+
 	; Enable the A20 gate
 set_A20_ap:
 	in al, 0x64
@@ -23,6 +27,7 @@ check_A20_ap:
 	jnz check_A20_ap
 	mov al, 0xDF
 	out 0x60, al
+skip_a20_ap:
 
 	; At this point we are done with real mode and BIOS interrupts. Jump to 32-bit mode.
 	lgdt [cs:GDTR32]		; Load GDT register

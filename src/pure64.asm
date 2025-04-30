@@ -53,11 +53,12 @@ BITS 16
 ; immediately proceed to start64. Otherwise we need to set up a minimal 64-bit environment.
 BITS 32
 bootmode:
-	mov [p_BootDisk], bh		; Save from where system is booted
 	cmp bl, 'U'			; If it is 'U' then we booted via UEFI and are already in 64-bit mode for the BSP
 	je start64			; Jump to the 64-bit code, otherwise fall through to 32-bit init
 
 %ifdef BIOS
+	mov [p_BootDisk], bh		; Save disk from where system was booted from
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
