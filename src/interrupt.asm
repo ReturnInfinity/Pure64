@@ -19,9 +19,7 @@ exception_gate_halt:
 ; -----------------------------------------------------------------------------
 ; Default interrupt handler
 interrupt_gate:				; handler for all other interrupts
-	cli				; Disable interrupts
-	hlt				; Halt the system
-	jmp interrupt_gate
+	iretq
 ; -----------------------------------------------------------------------------
 
 
