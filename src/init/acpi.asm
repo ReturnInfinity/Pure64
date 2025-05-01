@@ -128,6 +128,9 @@ nextACPITable:
 	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
 	cmp eax, ebx
 	je foundFADTTable
+	mov ebx, 'DMAR'			; Signature for the DMA Remapping Table
+	cmp eax, ebx
+	je foundDMARTable
 	jmp nextACPITable
 
 foundAPICTable:
@@ -144,6 +147,10 @@ foundMCFGTable:
 
 foundFADTTable:
 	call parseFADTTable
+	jmp nextACPITable
+
+foundDMARTable:
+	call parseDMARTable
 	jmp nextACPITable
 
 init_smp_acpi_done:
@@ -420,6 +427,29 @@ parseFADTTable:
 ;	lodsd				; PM1a_CNT_BLK
 
 parseFADTTable_end:
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; DMA Remapping Table (DMAR)
+; https://software.intel.com/content/dam/develop/external/us/en/documents-tps/vt-directed-io-spec.pdf
+parseDMARTable:
+	lodsd				; Length of DMAR in bytes
+	lodsb				; Revision
+	lodsb				; Checksum
+	lodsd				; OEMID (First 4 bytes)
+	lodsw				; OEMID (Last 2 bytes)
+	lodsq				; OEM Table ID
+	lodsd				; OEM Revision
+	lodsd				; Creator ID
+	lodsd				; Creator Revision
+
+	lodsb				; Host Address Width (HAW)
+	lodsb				; Flags - X2APIC_OPT_OUT (1), INTR_REMAP (0)
+	mov [p_DMAR], al		; Save the DMAR Flags
+
+parseDMARTable_end:
 	ret
 ; -----------------------------------------------------------------------------
 
