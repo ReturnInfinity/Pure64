@@ -40,7 +40,16 @@ init_cpu:
 ;	wrmsr				; Write the 64-bit value from EDX:EAX
 
 ; Configure Page Attribute Table (IA32_PAT)
-; On system power-up/reset the PAT is configured at WB, WT, UC-, UC, WB, WT, UC-, UC
+;
+; MTRR Memory Types
+; 0x00 - Uncacheable (UC)
+; 0x01 - Write Combining (WC)
+; 0x04 - Write Through (WT)
+; 0x05 - Write Protected (WP)
+; 0x06 - Write Back (WB)
+; 0x07 - Uncached (UC-)
+;
+; On system power-up/reset the PAT is configured as WB, WT, UC-, UC, WB, WT, UC-, UC for entries 0-7
 ; PA0-3 are left at system default
 ; PA4-7 are reconfigured to enable WP and WC
 ; The following table is used to set a mapped page to a specific PAT
@@ -58,49 +67,6 @@ init_cpu:
 	mov eax, 0x00070406		; PA3 UC (00), PA2 UC- (07), PA1 WT (04), PA0 WB (06)
 	mov ecx, IA32_PAT
 	wrmsr
-
-; Setup variable-size address ranges
-
-; IA32_MTRR_PHYSBASE Register - 64-bit
-; PhysBase (bits MAXPHYADDR-1:12)
-; Type (bits 7:0) — memory type
-;
-; IA32_MTRR_PHYSMASK Register - 64-bit
-; PhysBase (bits MAXPHYADDR-1:12)
-; Valid (bit 11)
-;
-; Cache 64 MiB as type 6 (WB) cache
-;	mov ecx, 0x00000200		; MTRR_Phys_Base_MSR(0)
-;	mov edx, 0x00000000		; Base is EDX:EAX, 0x0000000000000006
-;	mov eax, 0x00000006		; Type 6 (Writeback)
-;	wrmsr
-;	mov ecx, 0x00000201		; MTRR_Phys_Mask_MSR(0)
-;	mov edx, 0x0000000F		; Mask is EDX:EAX, 0x0000000FFC000800 (64 MiB)
-;	mov eax, 0xFF800800		; Bit 11 set for Valid
-;	wrmsr
-;
-; MTRR Example (From Example 12-2):
-; 64 MiB of System Memory, 8MiB Graphics at 0xA0000000
-;  Cache 64 MByte starting at 0x0 as WB cache type
-;  IA32_MTRR_PHYSBASE0 = 0x0000000000000006
-;  IA32_MTRR_PHYSMASK0 = 0x0000000FFC000800
-;  Cache 0xA0000000-0xA0800000 as WC type
-;  IA32_MTRR_PHYSBASE1 = 0x00000000A0000001
-;  IA32_MTRR_PHYSMASK1 = 0x0000000FFF800800
-; Note the change for a 40-bit physical address size:
-;  Cache 64 MByte starting at 0x0 as WB cache type
-;  IA32_MTRR_PHYSBASE0 = 0x0000000000000006
-;  IA32_MTRR_PHYSMASK0 = 0x000000FFFC000800
-;  Cache 0xA0000000-0xA0800000 as WC type
-;  IA32_MTRR_PHYSBASE5 = 0x00000000A0000001
-;  IA32_MTRR_PHYSMASK5 = 0x000000FFFF800800
-;
-; MTRR Memory Types
-; 0x00 - Uncacheable (UC)
-; 0x01 - Write Combining (WC)
-; 0x04 - Write-through (WT)
-; 0x05 - Write-protected (WP)
-; 0x06 - Writeback (WB)
 
 ; Enable MTRRs
 ;	mov ecx, IA32_MTRR_DEF_TYPE
