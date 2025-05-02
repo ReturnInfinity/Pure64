@@ -478,12 +478,12 @@ uefi_memmap_next:
 	je uefi_memmap_end
 	mov rax, [rsi+8]
 	cmp rax, 0x100000		; Test if the Physical Address less than 0x100000
-	jl uefi_memmap_next		; If so, skip it
+	jb uefi_memmap_next		; If so, skip it
 	mov rax, [rsi]
 	cmp rax, 0			; EfiReservedMemoryType (Not usable)
 	je uefi_memmap_next
 	cmp rax, 7			; EfiConventionalMemory (Free)
-	jle uefi_memmap_usable
+	jbe uefi_memmap_usable
 	mov bl, 0
 	jmp uefi_memmap_next
 uefi_memmap_usable:
@@ -524,7 +524,7 @@ uefi_purge:
 	stosq
 	lodsq
 	cmp rax, 0x300
-	jl uefi_purge_remove
+	jb uefi_purge_remove
 	stosq
 	jmp uefi_purge
 uefi_purge_remove:
@@ -666,7 +666,7 @@ pde_next_range:
 	cmp rax, 0			; Check if at end of records
 	je pde_end			; Bail out if so
 	cmp rax, 0x00200000
-	jg skipfirst4mb
+	ja skipfirst4mb
 	add rax, 0x00200000		; Add 2 MiB to the base
 	sub rcx, 2			; Subtract 2 MiB from the length
 skipfirst4mb:
@@ -788,7 +788,7 @@ lfb_wc_1GB:
 	mov rax, [0x00005F00]		; Base address of video memory
 	mov rbx, 0x100000000		; Compare to 4GB
 	cmp rax, rbx
-	jle lfb_wc_end			; If less, don't set WC
+	jbe lfb_wc_end			; If less, don't set WC
 	shr rax, 27			; Quick divide
 	mov edi, 0x00003000		; Address of low PDPTEs 
 	add edi, eax			; Add the offset

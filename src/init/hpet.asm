@@ -23,7 +23,7 @@ init_hpet:
 
 	; Verify the Counter Clock Period is valid
 	cmp eax, 0x05F5E100		; 100,000,000 femtoseconds is the maximum
-	jg os_hpet_init_error
+	ja os_hpet_init_error
 	cmp eax, 0			; The Period has to be greater than 1 femtosecond
 	je os_hpet_init_error
 

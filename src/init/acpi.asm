@@ -23,7 +23,7 @@ searchingforACPI:
 	cmp rax, rbx			; Verify the Signature
 	je foundACPI
 	cmp esi, 0x000FFFFF		; Keep looking until we get here
-	jge noACPI			; ACPI tables couldn't be found, fail
+	jae noACPI			; ACPI tables couldn't be found, fail
 	jmp searchingforACPI
 
 ; Find the ACPI RSDP Structure on a UEFI system
@@ -185,7 +185,7 @@ parseAPICTable:
 
 readAPICstructures:
 	cmp ebx, ecx
-	jge parseAPICTable_done
+	jae parseAPICTable_done
 	lodsb				; APIC Structure Type
 	cmp al, 0x00			; Processor Local APIC
 	je APICapic
