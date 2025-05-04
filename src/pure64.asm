@@ -798,12 +798,11 @@ lfb_wc_1GB:
 	cmp rax, rbx
 	jbe lfb_wc_end			; If less, don't set WC
 	shr rax, 27			; Quick divide
-	mov edi, 0x00003000		; Address of low PDPTEs 
-	add edi, eax			; Add the offset
-	mov eax, [edi]			; Load the 8-byte value
-	or ax, 0x1008			; Set bits 12 (PAT) and 3 (PWT)
-	and ax, 0xFFEF			; Clear bit 4 (PCD)
-	mov [edi], eax			; Write it back
+	mov rdi, 0x10000		; Base address of low PDPT
+	add rdi, rax			; Add offset to 1GB page where video memory is
+	mov rax, [rdi]			; Gather current PDPTE
+	mov ax, 0x108B			; P (0), R/W (1), PWT (3), PS (7), PAT (12)
+	mov [rdi], rax			; Write updated PDPTE
 	jmp lfb_wc_end
 ; Set the relevant 2MB pages the frame buffer is in to WC
 lfb_wc_2MB:
