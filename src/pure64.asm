@@ -327,6 +327,7 @@ pde_low:				; Create a 2MiB page
 ; A single PDPTE is 8 bytes in length
 ; 1024 entries are created to map the first 1024GiB of RAM
 pdpte_1GB:
+	mov byte [p_1GPages], 1
 	; Overwrite the original PML4 entry for physical memory
 	mov edi, 0x00002000		; Create a PML4 entry for physical memory
 	mov eax, 0x00010003		; Bits 0 (P), 1 (R/W), location of low PDP (4KiB aligned)
@@ -777,6 +778,13 @@ pde_end:
 	stosw
 	mov ax, [p_IAPC_BOOT_ARCH]
 	stosw
+
+; Store miscellaneous flags
+	mov di, 0x50E0
+	mov al, [p_1GPages]
+	stosb
+	mov al, [p_x2APIC]
+	stosb
 
 ; Set the Linear Frame Buffer to use write-combining
 	mov eax, 0x80000001

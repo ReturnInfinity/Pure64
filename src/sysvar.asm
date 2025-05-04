@@ -46,6 +46,7 @@ p_IOAPICIntSourceC:	equ SystemVariables + 0x182
 p_x2APIC:		equ SystemVariables + 0x183
 p_HPET_Timers:		equ SystemVariables + 0x184
 p_BootDisk:		equ SystemVariables + 0x185	; 'F' for Floppy drive
+p_1GPages:		equ SystemVariables + 0x186	; 1 if 1GB pages are supported
 
 align 16
 GDTR32:					; Global Descriptors Table Register
