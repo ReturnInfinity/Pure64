@@ -798,6 +798,7 @@ lfb_wc_1GB:
 	cmp rax, rbx
 	jbe lfb_wc_end			; If less, don't set WC
 	shr rax, 27			; Quick divide
+	and al, 0xF8			; Clear lower 3 bits
 	mov rdi, 0x10000		; Base address of low PDPT
 	add rdi, rax			; Add offset to 1GB page where video memory is
 	mov rax, [rdi]			; Gather current PDPTE
