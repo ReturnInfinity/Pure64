@@ -294,10 +294,12 @@ start64:
 	bt edx, 26			; Page1GB
 	jc pdpte_1GB
 
+; 2MiB Pages
 ; Create the Low Page-Directory-Pointer-Table Entries (PDPTE)
-; PDPTE is stored at 0x0000000000003000, create the first entry there
+; PDPTE starts at 0x0000000000003000, create the first entry there
 ; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
+; A PDPTE points to 4KiB of memory which contains 512 PDEs
 ; FIXME - This will completely fill the 64K set for the low PDE (only 16GiB identity mapped)
 	mov ecx, 16			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00003000		; location of low PDPE
@@ -321,20 +323,28 @@ pde_low:				; Create a 2MiB page
 	jnz pde_low
 	jmp skip1GB
 
+; 1GiB Pages
 ; Create the Low Page-Directory-Pointer Table Entries (PDPTE)
-; PDPTE is stored at 0x0000000000003000, create the first entry there
+; PDPTE starts at 0x0000000000010000, create the first entry there
 ; A single PDPTE can map 1GiB
 ; A single PDPTE is 8 bytes in length
-; 1024 entries are created to map the first 1024GiB of RAM
+; A PDPTE points to 4KiB of memory which contains 512 PDEs
+; 8191 entries are created to map the first 8191GiB of RAM
+; The last entry is reserved for the virtual LFB address
 pdpte_1GB:
 	mov byte [p_1GPages], 1
-	; Overwrite the original PML4 entry for physical memory
+
+; Overwrite the original PML4 entry for physical memory
+	mov ecx, 16
 	mov edi, 0x00002000		; Create a PML4 entry for physical memory
 	mov eax, 0x00010003		; Bits 0 (P), 1 (R/W), location of low PDP (4KiB aligned)
+pml4_low_1GB:
 	stosq
-	add eax, 0x1000
-	stosq
-	mov ecx, 1024			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	add rax, 0x00001000		; 4KiB later (512 records x 8 bytes)
+	dec ecx
+	jnz pml4_low_1GB
+
+	mov ecx, 8191			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00010000		; location of low PDPE
 	mov eax, 0x00000083		; Bits 0 (P), 1 (R/W), 7 (PS)
 pdpte_low_1GB:				; Create a 1GiB page
@@ -799,11 +809,15 @@ lfb_wc_1GB:
 	jbe lfb_wc_end			; If less, don't set WC
 	shr rax, 27			; Quick divide
 	and al, 0xF8			; Clear lower 3 bits
-	mov rdi, 0x10000		; Base address of low PDPT
-	add rdi, rax			; Add offset to 1GB page where video memory is
-	mov rax, [rdi]			; Gather current PDPTE
-	mov ax, 0x108B			; P (0), R/W (1), PWT (3), PS (7), PAT (12)
+;	mov rdi, 0x10000		; Base address of low PDPT
+;	add rdi, rax			; Add offset to 1GB page where video memory is
+;	mov rax, [rdi]			; Gather current PDPTE
+;	mov ax, 0x108B			; P (0), R/W (1), PWT (3), PS (7), PAT (12)
+;	mov [rdi], rax			; Write updated PDPTE
+	mov rdi, 0x1FFF8
 	mov [rdi], rax			; Write updated PDPTE
+	mov rax, 0x000007FFC0000000
+	mov [0x00005F00], rax
 	jmp lfb_wc_end
 ; Set the relevant 2MB pages the frame buffer is in to WC
 lfb_wc_2MB:
