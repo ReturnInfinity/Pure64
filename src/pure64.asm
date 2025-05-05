@@ -801,24 +801,29 @@ pde_end:
 	cpuid
 	bt edx, 26			; Page1GB
 	jnc lfb_wc_2MB
+
 ; Set the 1GB page the frame buffer is in to WC - PAT = 1, PCD = 0, PWT = 1
 lfb_wc_1GB:
 	mov rax, [0x00005F00]		; Base address of video memory
 	mov rbx, 0x100000000		; Compare to 4GB
 	cmp rax, rbx
 	jbe lfb_wc_end			; If less, don't set WC
-	shr rax, 27			; Quick divide
-	and al, 0xF8			; Clear lower 3 bits
-;	mov rdi, 0x10000		; Base address of low PDPT
-;	add rdi, rax			; Add offset to 1GB page where video memory is
-;	mov rax, [rdi]			; Gather current PDPTE
-;	mov ax, 0x108B			; P (0), R/W (1), PWT (3), PS (7), PAT (12)
-;	mov [rdi], rax			; Write updated PDPTE
+
+	mov rbx, rax
+	mov rcx, 0xFFFFFFFFC0000000
+	and rax, rcx
+	mov rcx, 0x000000003FFFFFFF
+	and rbx, rcx
+	mov ax, 0x108B			; P (0), R/W (1), PWT (3), PS (7), PAT (12)
 	mov rdi, 0x1FFF8
 	mov [rdi], rax			; Write updated PDPTE
-	mov rax, 0x000007FFC0000000
-	mov [0x00005F00], rax
+
+	mov rax, 0x000007FFC0000000	; 8191GiB
+	add rax, rbx			; Add offset within 1GiB page
+	mov [0x00005080], rax		; Write out new virtual address to LFB
+
 	jmp lfb_wc_end
+
 ; Set the relevant 2MB pages the frame buffer is in to WC
 lfb_wc_2MB:
 	mov ecx, 4			; 4 2MiB pages - TODO only set the pages needed
