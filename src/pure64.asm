@@ -746,6 +746,20 @@ pde_end:
 	mov ax, [p_cpu_detected]
 	stosw
 
+	mov di, 0x5018
+	xor eax, eax
+	cpuid
+	stosd				; Store maximum supported CPUID standard level
+	mov eax, 0x80000000
+	cpuid
+	stosd				; Store maximum supported CPUID extended level
+	cmp eax, 0x80000008
+	jb no_address_size
+	mov eax, 0x80000008
+	cpuid
+	mov [0x5016], ax		; Store virtual/physical address bits
+no_address_size:
+
 	mov di, 0x5020
 	mov eax, [p_mem_amount]
 	and eax, 0xFFFFFFFE
