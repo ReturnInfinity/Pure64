@@ -11,25 +11,26 @@
 
 
 init_acpi:
+	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
 	mov al, [p_BootMode]		; Check how the system was booted
 	cmp al, 'U'			; UEFI?
 	je foundACPIfromUEFI		; If so, jump - otherwise fall thru for BIOS
 
 ; Find the ACPI RSDP Structure on a BIOS system
-	mov esi, 0x000E0000		; Start looking for the Root System Description Pointer Structure
-	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
+; It's supposed to be somewhere in the first MiB of memory but some systems don't adhere to that
+	mov esi, 0x00000007		; Start looking for the Root System Description Pointer Structure
 searchingforACPI:
+	sub esi, 0x7
 	lodsq				; Load a quad word from RSI and store in RAX, then increment RSI by 8
 	cmp rax, rbx			; Verify the Signature
 	je foundACPI
-	cmp esi, 0x000FFFFF		; Keep looking until we get here
-	jae noACPI			; ACPI tables couldn't be found, fail
+	cmp esi, 0xFFFFFFF8		; Keep looking until we get here
+	ja noACPI			; ACPI tables couldn't be found, fail
 	jmp searchingforACPI
 
 ; Find the ACPI RSDP Structure on a UEFI system
 foundACPIfromUEFI:
 	mov rsi, [0x400830]		; TODO This should be passed properly
-	mov rbx, 'RSD PTR '		; This in the Signature for the ACPI Structure Table (0x2052545020445352)
 	lodsq				; Signature
 	cmp rax, rbx			; Verify the Signature
 	jne noACPI			; If it isn't a match then fail
@@ -37,18 +38,20 @@ foundACPIfromUEFI:
 ; Parse the Root System Description Pointer (RSDP) Structure (5.2.5.3)
 foundACPI:				; Found a Pointer Structure, verify the checksum
 	push rsi			; Save the RSDP location - currently pointing to the checksum
+	push rbx
 	xor ebx, ebx
 	mov ecx, 20			; As per the spec only the first 20 bytes matter
-	sub rsi, 8			; Bytes 0 thru 19 must sum to zero
+	sub esi, 8			; Bytes 0 thru 19 must sum to zero
 nextchecksum:
 	lodsb				; Get a byte
 	add bl, al			; Add it to the running total
-	sub cl, 1
-	cmp cl, 0
-	jne nextchecksum
+	dec cl
+	jnz nextchecksum		; 'dec' will set the zero flag
+	mov al, bl			; Save the value to AL before RBX gets popped
+	pop rbx
 	pop rsi				; Restore the RSDP location
-	cmp bl, 0			; Verify the checksum is zero
-	jne noACPI			; Checksum didn't check out? Fail
+	cmp al, 0			; Verify the checksum is zero
+	jne searchingforACPI		; Checksum didn't check out? Keep looking for a valid record
 
 	lodsb				; Checksum
 	lodsd				; OEMID (First 4 bytes)
