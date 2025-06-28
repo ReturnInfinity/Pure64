@@ -9,6 +9,7 @@
 init_hpet:
 	; Verify there is a valid HPET address
 	mov rax, [p_HPET_Address]
+	cmp rax, 0
 	jz os_hpet_init_error
 
 	; Verify the capabilities of HPET

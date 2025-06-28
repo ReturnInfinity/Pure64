@@ -255,7 +255,7 @@ start64:
 	mov eax, 0x00404040
 	rep stosd
 
-; Visual Debug (1/4)
+; Visual Debug (1/8)
 	mov ebx, 0
 	call debug_block
 
@@ -394,7 +394,7 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
-; Visual Debug (2/4)
+; Visual Debug (2/8)
 	mov ebx, 2
 	call debug_block
 
@@ -711,12 +711,26 @@ pde_end:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
+; Visual Debug (3/8)
+	mov ebx, 4
+	call debug_block
+
 	call init_acpi			; Find and process the ACPI tables
+
+; Visual Debug (4/8)
+	mov ebx, 6
+	call debug_block
+
 	call init_cpu			; Configure the BSP CPU
+
+; Visual Debug (5/8)
+	mov ebx, 8
+	call debug_block
+	
 	call init_hpet			; Configure the HPET
 
-; Visual Debug (3/4)
-	mov ebx, 4
+; Visual Debug (6/8)
+	mov ebx, 10
 	call debug_block
 
 	call init_smp			; Init of SMP, deactivate interrupts
@@ -810,6 +824,10 @@ no_address_size:
 	mov al, [p_x2APIC]
 	stosb
 
+; Visual Debug (7/8)
+	mov ebx, 12
+	call debug_block
+
 ; Set the Linear Frame Buffer to use write-combining
 	mov eax, 0x80000001
 	cpuid
@@ -864,8 +882,8 @@ lfb_wc_end:
 	mov ecx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
-; Visual Debug (4/4)
-	mov ebx, 6
+; Visual Debug (8/8)
+	mov ebx, 14
 	call debug_block
 
 %ifdef BIOS
@@ -937,11 +955,12 @@ debug_block:
 	shl edx, 2			; Quick multiply by 4 for line offset
 	xor ecx, ecx
 	mov cx, [0x00005F00 + 0x10]	; Screen X
-	shr cx, 4			; CX = total amount of 8-pixel wide blocks
-	sub cx, 4
+	shr cx, 4			; Quick divide by 16 (box width plus blank width)
+	sub cx, 8			; CX = total amount of 8-pixel wide blocks
 	add ebx, ecx
 	shl ebx, 5			; Quick multiply by 32 (8 pixels by 4 bytes each)
 	add rdi, rbx
+	sub rdi, 16			; Move left by half a box width (4 pixels by 4 bytes each)
 
 	; Draw the 8x8 pixel block
 	mov ebx, 8			; 8 pixels tall
