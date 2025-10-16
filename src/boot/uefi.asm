@@ -14,6 +14,7 @@
 
 BITS 64
 ORG 0x00400000
+DEFAULT ABS
 %define u(x) __utf16__(x)
 
 START:

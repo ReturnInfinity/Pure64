@@ -19,6 +19,7 @@
 
 BITS 64
 ORG 0x00008000
+DEFAULT ABS
 PURE64SIZE equ 6144			; Pad Pure64 to this length
 
 start:
