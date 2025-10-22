@@ -118,6 +118,10 @@ ld -T kernel.ld -o kernel.bin start.o kernel.o
 
 ## Creating a bootable image
 
+All Pure64 binaries are in the `bin` directory.
+
+### BIOS
+
 After creating a kernel this is a possible routine to create a bootable image.
 The commands require Pure64 to be build and `pure64.sys` and `mbr.sys` to be in the same directory 
 as your kernel with the name `kernel.bin`
@@ -132,6 +136,18 @@ dd if=software.sys of=disk.img bs=512 seek=16 conv=notrunc
 
 After creating a bootable image it can be tested using qemu:
 `qemu-system-x86_64 -drive format=raw,file=disk.img`
+
+### UEFI
+
+For UEFI systems you'll need `pure64-uefi.sys`, `uefi.sys`, and a FAT-formatted drive/partition.
+
+```
+cat pure64-uefi.sys kernel.bin > software-uefi.sys
+cp uefi.sys BOOTX64.EFI
+dd if=software-uefi.sys of=BOOTX64.EFI bs=4096 seek=1 conv=notrunc > /dev/null 2>&1
+```
+
+The resulting `BOOTX64.EFI` can be copied to the `\EFI\BOOT\` folder on the storage device you plan on booting from.
 
 ## Memory Map
 
