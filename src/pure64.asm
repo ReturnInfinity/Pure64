@@ -260,6 +260,25 @@ start64:
 	mov ebx, 0
 	call debug_block
 
+	; Configure serial port @ 0x03F8 as 115200 8N1
+	call init_serial
+	
+	mov rsi, msg_pure64		; Output "[ Pure64 ]"
+	call debug_msg
+	
+	; Output boot method
+	mov rsi, msg_boot
+	call debug_msg
+	cmp byte [p_BootMode], 'U'
+	je boot_uefi
+	mov rsi, msg_bios
+	call debug_msg
+	jmp msg_boot_done
+boot_uefi:
+	mov rsi, msg_uefi
+	call debug_msg
+msg_boot_done:
+
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
 	xor eax, eax
@@ -716,25 +735,41 @@ pde_end:
 	mov ebx, 4
 	call debug_block
 
+	mov rsi, msg_acpi
+	call debug_msg
 	call init_acpi			; Find and process the ACPI tables
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Visual Debug (4/8)
 	mov ebx, 6
 	call debug_block
 
+	mov rsi, msg_bsp
+	call debug_msg
 	call init_cpu			; Configure the BSP CPU
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Visual Debug (5/8)
 	mov ebx, 8
 	call debug_block
 	
+	mov rsi, msg_hpet
+	call debug_msg
 	call init_hpet			; Configure the HPET
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Visual Debug (6/8)
 	mov ebx, 10
 	call debug_block
 
+	mov rsi, msg_smp
+	call debug_msg
 	call init_smp			; Init of SMP, deactivate interrupts
+	mov rsi, msg_ok
+	call debug_msg
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
@@ -887,6 +922,9 @@ lfb_wc_end:
 	mov ebx, 14
 	call debug_block
 
+	mov rsi, msg_kernel
+	call debug_msg
+
 %ifdef BIOS
 	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
 	jnz clear_regs
@@ -916,6 +954,7 @@ clear_regs:
 %include "init/acpi.asm"
 %include "init/cpu.asm"
 %include "init/hpet.asm"
+%include "init/serial.asm"
 %include "init/smp.asm"
 %ifdef BIOS
 %include "fdc/dma.asm"
@@ -1008,6 +1047,106 @@ debug_progressbar:
 	ret
 ; -----------------------------------------------------------------------------
 %endif
+
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a single char via the serial port
+; IN: AL = Byte to send
+debug_msg_char:
+	pushf
+	push rdx
+	push rax			; Save the byte
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_char_wait:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_char_wait
+	pop rax				; Restore the byte
+	out dx, al			; Send the char to the serial port
+debug_msg_char_done:
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; debug_msg_char - Send a message via the serial port
+; IN: RSI = Location of message
+debug_msg:
+	pushf
+	push rdx
+	push rax
+	cld				; Clear the direction flag.. we want to increment through the string
+	mov dx, 0x03F8			; Address of first serial port
+debug_msg_next:
+	add dx, 5			; Offset to Line Status Register
+	in al, dx
+	sub dx, 5			; Back to to base
+	and al, 0x20
+	cmp al, 0
+	je debug_msg_next
+	lodsb				; Get char from string and store in AL
+	cmp al, 0
+	je debug_msg_done
+	out dx, al			; Send the char to the serial port
+	jmp debug_msg_next
+debug_msg_done:
+	pop rax
+	pop rdx
+	popf
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; debug_dump_(rax|eax|ax|al) -- Dump content of RAX, EAX, AX, or AL
+;  IN:	RAX/EAX/AX/AL = content to dump
+; OUT:	Nothing, all registers preserved
+debug_dump_rax:
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 32
+debug_dump_eax:				; RAX is used here instead of EAX to preserve the upper 32-bits
+	rol rax, 40
+	call debug_dump_al
+	rol rax, 8
+	call debug_dump_al
+	rol rax, 16
+debug_dump_ax:
+	rol ax, 8
+	call debug_dump_al
+	rol ax, 8
+debug_dump_al:
+	push rax			; Save RAX
+	push ax				; Save AX for the low nibble
+	shr al, 4			; Shift the high 4 bits into the low 4, high bits cleared
+	or al, '0'			; Add "0"
+	cmp al, '9'+1			; Digit?
+	jl debug_dump_al_h		; Yes, store it
+	add al, 7			; Add offset for character "A"
+debug_dump_al_h:
+	call debug_msg_char
+	pop ax				; Restore AX
+	and al, 0x0F			; Keep only the low 4 bits
+	or al, '0'			; Add "0"
+	cmp al, '9'+1			; Digit?
+	jl debug_dump_al_l		; Yes, store it
+	add al, 7			; Add offset for character "A"
+debug_dump_al_l:
+	call debug_msg_char
+	pop rax				; Restore RAX
+	ret
+; -----------------------------------------------------------------------------
 
 
 EOF:
