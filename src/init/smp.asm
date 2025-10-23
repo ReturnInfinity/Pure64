@@ -7,6 +7,8 @@
 
 
 init_smp:
+	sti				; Enable interrupts in case PIT is needed
+
 	; Check if we want the AP's to be enabled.. if not then skip to end
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
@@ -50,7 +52,7 @@ smp_send_INIT_done:
 
 	; Wait 500 microseconds
 	mov eax, 500
-	call os_hpet_delay
+	call delay
 
 	mov esi, IM_DetectedCoreIDs
 	xor ecx, ecx
@@ -82,7 +84,7 @@ smp_send_SIPI_done:
 
 	; Wait 10000 microseconds for the AP's to finish
 	mov eax, 10000
-	call os_hpet_delay
+	call delay
 
 noMP:
 	; Gather and store the APIC ID of the BSP
@@ -100,7 +102,7 @@ noMP:
 	rdtsc
 	push rax
 	mov rax, 1024
-	call os_hpet_delay
+	call delay
 	rdtsc
 	pop rdx
 	sub rax, rdx
@@ -109,7 +111,35 @@ noMP:
 	div rcx
 	mov [p_cpu_speed], ax
 
+	cli				; Disable interrupts in case PIT was needed
+
 	ret
+
+
+; -----------------------------------------------------------------------------
+; delay -- Delay by X microseconds
+; IN:	RAX = Time microseconds
+; OUT:	All registers preserved
+; Note:	There are 1,000,000 microseconds in a second
+;	There are 1,000 milliseconds in a second
+delay:
+	push rax
+	push rbx
+
+	mov rbx, [p_HPET_Address]	; Was HPET detected?
+	cmp rbx, 0
+	je delay_pit			; If not, use PIT for timing
+	call os_hpet_delay
+	jmp delay_done
+
+delay_pit:
+	call os_pit_delay
+
+delay_done:
+	pop rbx
+	pop rax
+	ret
+; -----------------------------------------------------------------------------
 
 
 ; =============================================================================

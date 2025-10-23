@@ -24,6 +24,22 @@ interrupt_gate:				; handler for all other interrupts
 
 
 ; -----------------------------------------------------------------------------
+; PIT interrupt. IRQ 0x00, INT 0x20
+align 16
+pit_irq:
+	push rax
+
+	inc qword [p_Counter_Timer]
+
+	mov al, 0x20			; Acknowledge the IRQ
+	out 0x20, al
+
+	pop rax
+	iretq
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
 ; Floppy drive interrupt. IRQ 0x06, INT 0x26
 ; This IRQ runs when floppy drive reads from or writes to whole disk
 %ifdef BIOS

@@ -769,6 +769,9 @@ pde_end:
 	call debug_block
 %endif
 
+; Configure system timer
+; HPET is preferred but may not exist. If there was no ACPI table entry then use PIT
+
 	mov rax, [p_HPET_Address]
 	cmp rax, 0
 	jz skip_hpet
