@@ -76,6 +76,7 @@ bootmode:
 	xor ebp, ebp
 	mov esp, 0x8000			; Set a known free location for the stack
 
+%ifndef NOVIDEO
 	; Save the frame buffer address, size (after its calculated), and the screen x,y
 	xor eax, eax
 	xor ebx, ebx
@@ -106,6 +107,7 @@ bootmode:
 	stosw				; PixelsPerScanLine
 	mov eax, 32
 	stosw				; BitsPerPixel
+%endif
 
 	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00210000
@@ -244,6 +246,7 @@ start64:
 	mov al, 0x00
 	out 0x40, al
 
+%ifndef NOVIDEO
 	; Clear screen
 	xor eax, eax
 	xor ecx, ecx
@@ -255,10 +258,13 @@ start64:
 	mov rdi, [0x00005F00]
 	mov eax, 0x00404040
 	rep stosd
+%endif
 
+%ifndef NOVIDEO
 ; Visual Debug (1/8)
 	mov ebx, 0
 	call debug_block
+%endif
 
 	; Configure serial port @ 0x03F8 as 115200 8N1
 	call init_serial
@@ -414,9 +420,11 @@ clearcs64:
 
 	lgdt [GDTR64]			; Reload the GDT
 
+%ifndef NOVIDEO
 ; Visual Debug (2/8)
 	mov ebx, 2
 	call debug_block
+%endif
 
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
@@ -731,9 +739,11 @@ pde_end:
 	and cl, 1
 	mov byte [p_x2APIC], cl
 
+%ifndef NOVIDEO
 ; Visual Debug (3/8)
 	mov ebx, 4
 	call debug_block
+%endif
 
 	mov rsi, msg_acpi
 	call debug_msg
@@ -741,9 +751,11 @@ pde_end:
 	mov rsi, msg_ok
 	call debug_msg
 
+%ifndef NOVIDEO
 ; Visual Debug (4/8)
 	mov ebx, 6
 	call debug_block
+%endif
 
 	mov rsi, msg_bsp
 	call debug_msg
@@ -751,19 +763,37 @@ pde_end:
 	mov rsi, msg_ok
 	call debug_msg
 
+%ifndef NOVIDEO
 ; Visual Debug (5/8)
 	mov ebx, 8
 	call debug_block
-	
+%endif
+
+	mov rax, [p_HPET_Address]
+	cmp rax, 0
+	jz skip_hpet
+
 	mov rsi, msg_hpet
 	call debug_msg
 	call init_hpet			; Configure the HPET
 	mov rsi, msg_ok
 	call debug_msg
+	jmp timer_done
 
+skip_hpet:
+	mov rsi, msg_pit
+	call debug_msg
+	call init_pit			; Configure the PIT
+	mov rsi, msg_ok
+	call debug_msg
+
+timer_done:
+
+%ifndef NOVIDEO
 ; Visual Debug (6/8)
 	mov ebx, 10
 	call debug_block
+%endif
 
 	mov rsi, msg_smp
 	call debug_msg
@@ -860,6 +890,7 @@ no_address_size:
 	mov al, [p_x2APIC]
 	stosb
 
+%ifndef NOVIDEO
 ; Visual Debug (7/8)
 	mov ebx, 12
 	call debug_block
@@ -911,6 +942,7 @@ lfb_wc_end:
 	mov rax, cr3			; Flush TLB
 	mov cr3, rax
 	wbinvd				; Flush Cache
+%endif
 
 ; Move the trailing binary to its final location
 	mov esi, 0x8000+PURE64SIZE	; Memory offset to end of pure64.sys
@@ -918,9 +950,11 @@ lfb_wc_end:
 	mov ecx, ((32768 - PURE64SIZE) / 8)
 	rep movsq			; Copy 8 bytes at a time
 
+%ifndef NOVIDEO
 ; Visual Debug (8/8)
 	mov ebx, 14
 	call debug_block
+%endif
 
 	mov rsi, msg_kernel
 	call debug_msg
@@ -954,6 +988,7 @@ clear_regs:
 %include "init/acpi.asm"
 %include "init/cpu.asm"
 %include "init/hpet.asm"
+%include "init/pit.asm"
 %include "init/serial.asm"
 %include "init/smp.asm"
 %ifdef BIOS
@@ -964,6 +999,7 @@ clear_regs:
 %include "sysvar.asm"
 
 
+%ifndef NOVIDEO
 ; -----------------------------------------------------------------------------
 ; debug_block - Create a block of colour on the screen
 ; IN:	EBX = Index #
@@ -1020,7 +1056,7 @@ nextline:
 	pop rax
 	ret
 ; -----------------------------------------------------------------------------
-
+%endif
 
 %ifdef BIOS
 ; -----------------------------------------------------------------------------

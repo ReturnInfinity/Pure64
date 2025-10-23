@@ -18,6 +18,7 @@ msg_uefi:		db 'uefi', 0
 msg_acpi:		db 13, 10, 'acpi ', 0
 msg_bsp:		db 13, 10, 'bsp ', 0
 msg_hpet:		db 13, 10, 'hpet ', 0
+msg_pit:		db 13, 10, 'pit ', 0
 msg_smp:		db 13, 10, 'smp ', 0
 msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 

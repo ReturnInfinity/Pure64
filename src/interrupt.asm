@@ -144,12 +144,14 @@ exception_gate_21:
 	jmp exception_gate_main
 
 exception_gate_main:
+%ifndef NOVIDEO
 	; Set screen to Red
 	mov rdi, [0x00005F00]		; Frame buffer base
 	mov rcx, [0x00005F08]		; Frame buffer size
 	shr rcx, 2			; Quick divide by 4
 	mov eax, 0x00FF0000		; 0x00RRGGBB
 	rep stosd
+%endif
 exception_gate_main_hang:
 	hlt
 	jmp exception_gate_main_hang	; Hang. User must reset machine at this point
