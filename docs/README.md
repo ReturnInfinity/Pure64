@@ -122,9 +122,7 @@ All Pure64 binaries are in the `bin` directory.
 
 ### BIOS
 
-After creating a kernel this is a possible routine to create a bootable image.
-The commands require Pure64 to be build and `pure64.sys` and `mbr.sys` to be in the same directory 
-as your kernel with the name `kernel.bin`
+For BIOS systems you'll need `pure64-bios.sys` and `mbr.sys` to be in the same directory as your kernel with the name `kernel.bin`
 
 ```
 dd if=/dev/zero of=disk.img count=128 bs=1048576
