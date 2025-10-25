@@ -126,14 +126,7 @@ delay:
 	push rax
 	push rbx
 
-	mov rbx, [p_HPET_Address]	; Was HPET detected?
-	cmp rbx, 0
-	je delay_pit			; If not, use PIT for timing
 	call os_hpet_delay
-	jmp delay_done
-
-delay_pit:
-	call os_pit_delay
 
 delay_done:
 	pop rbx

@@ -770,27 +770,11 @@ pde_end:
 %endif
 
 ; Configure system timer
-; HPET is preferred but may not exist. If there was no ACPI table entry then use PIT
-
-	mov rax, [p_HPET_Address]
-	cmp rax, 0
-	jz skip_hpet
-
 	mov rsi, msg_hpet
 	call debug_msg
 	call init_hpet			; Configure the HPET
 	mov rsi, msg_ok
 	call debug_msg
-	jmp timer_done
-
-skip_hpet:
-	mov rsi, msg_pit
-	call debug_msg
-	call init_pit			; Configure the PIT
-	mov rsi, msg_ok
-	call debug_msg
-
-timer_done:
 
 %ifndef NOVIDEO
 ; Visual Debug (6/8)
@@ -991,7 +975,6 @@ clear_regs:
 %include "init/acpi.asm"
 %include "init/cpu.asm"
 %include "init/hpet.asm"
-%include "init/pit.asm"
 %include "init/serial.asm"
 %include "init/smp.asm"
 %ifdef BIOS
