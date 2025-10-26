@@ -770,9 +770,9 @@ pde_end:
 %endif
 
 ; Configure system timer
-	mov rsi, msg_hpet
+	mov rsi, msg_timer
 	call debug_msg
-	call init_hpet			; Configure the HPET
+	call init_timer			; Configure the timer
 	mov rsi, msg_ok
 	call debug_msg
 
@@ -974,9 +974,9 @@ clear_regs:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/hpet.asm"
 %include "init/serial.asm"
 %include "init/smp.asm"
+%include "init/timer.asm"
 %ifdef BIOS
 %include "fdc/dma.asm"
 %include "fdc/fdc_64.asm"

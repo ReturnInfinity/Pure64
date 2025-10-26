@@ -2,16 +2,43 @@
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
 ; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
 ;
-; INIT HPET
+; INIT TIMER
 ; =============================================================================
 
 
-init_hpet:
+init_timer:
+	; Check for hypervisor presence
+	mov eax, 1
+	cpuid
+	bt ecx, 31			; HV - hypervisor present
+	jnc init_timer_phys		; If bit is clear then jump to phys init
+
+	; Check for hypervisor type
+	mov eax, 0x40000000
+	cpuid
+	cmp ebx, 0x4B4D564B		; KMVK - KVM
+	je init_timer_virt		; KVM detected? Then init_virt
+	; If not, fall through to init_phys
+
+init_timer_phys:
 	; Verify there is a valid HPET address
 	mov rax, [p_HPET_Address]
 	cmp rax, 0
-	jz os_hpet_init_error
+	jz init_timer_error
+	call init_timer_hpet
+	jmp init_timer_done
 
+init_timer_virt:
+	call init_timer_kvm
+
+init_timer_error:
+
+init_timer_done:
+	ret
+
+
+; -----------------------------------------------------------------------------
+init_timer_hpet:
 	; Verify the capabilities of HPET
 	mov ecx, HPET_GEN_CAP
 	call os_hpet_read
@@ -24,9 +51,9 @@ init_hpet:
 
 	; Verify the Counter Clock Period is valid
 	cmp eax, 0x05F5E100		; 100,000,000 femtoseconds is the maximum
-	ja os_hpet_init_error
+	ja init_timer_hpet_error
 	cmp eax, 0			; The Period has to be greater than 1 femtosecond
-	je os_hpet_init_error
+	je init_timer_hpet_error
 
 	; Calculate the HPET frequency
 	mov rbx, rax			; Move Counter Clock Period to RBX
@@ -58,8 +85,9 @@ os_hpet_init_disable_int:
 	mov ecx, HPET_GEN_CONF
 	call os_hpet_write
 
-os_hpet_init_error:
+init_timer_hpet_error:
 	ret
+; -----------------------------------------------------------------------------
 
 
 ; -----------------------------------------------------------------------------
@@ -129,6 +157,34 @@ os_hpet_delay_end:
 ; -----------------------------------------------------------------------------
 
 
+; -----------------------------------------------------------------------------
+init_timer_kvm:
+	; Check hypervisor feature bits
+	mov eax, 0x40000001
+	cpuid
+	bt eax, 3
+	jc init_timer_kvm_clocksource2
+	bt eax, 0
+	jc init_timer_kvm_clocksource
+	jmp init_timer_done
+
+init_timer_kvm_clocksource2:
+	mov ecx, MSR_KVM_SYSTEM_TIME_NEW
+	jmp init_timer_kvm_configure
+
+init_timer_kvm_clocksource:
+	mov ecx, MSR_KVM_SYSTEM_TIME
+
+init_timer_kvm_configure:
+	xor edx, edx
+	mov eax, p_timer
+	bts eax, 0			; Enable bit
+	wrmsr
+
+	ret
+; -----------------------------------------------------------------------------
+
+
 ; Register list (64-bits wide)
 HPET_GEN_CAP		equ 0x000 ; COUNTER_CLK_PERIOD (63:32), LEG_RT_CAP (15), COUNT_SIZE_CAP (13), NUM_TIM_CAP (12:8)
 ; 0x008 - 0x00F are Reserved
@@ -151,6 +207,11 @@ HPET_TIMER_2_COMP	equ 0x148
 HPET_TIMER_2_INT	equ 0x150
 ; 0x158 - 0x15F are Reserved
 ; 0x160 - 0x3FF are Reserved for Timers 3-31
+
+
+; MSRs
+MSR_KVM_SYSTEM_TIME_NEW	equ 0x4B564D01
+MSR_KVM_SYSTEM_TIME	equ 0x00000012
 
 
 ; =============================================================================
