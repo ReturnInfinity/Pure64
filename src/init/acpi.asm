@@ -154,12 +154,14 @@ init_smp_acpi_done:
 
 noACPI:
 novalidacpi:
+%ifndef NOVIDEO
 	; Set screen to Teal
 	mov rdi, [0x00005F00]		; Frame buffer base
 	mov rcx, [0x00005F08]		; Frame buffer size
 	shr rcx, 2			; Quick divide by 4
 	mov eax, 0x0000FFFF		; 0x00RRGGBB
 	rep stosd
+%endif
 	jmp $
 
 
