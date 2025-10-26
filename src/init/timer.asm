@@ -41,7 +41,7 @@ init_timer_done:
 init_timer_hpet:
 	; Verify the capabilities of HPET
 	mov ecx, HPET_GEN_CAP
-	call os_hpet_read
+	call hpet_read
 	mov rbx, rax			; Save results for # of timers
 	shr ebx, 8			; Bits 12:8 contain the # of timers
 	and ebx, 11111b			; Save only the lower 5 bits
@@ -66,24 +66,24 @@ init_timer_hpet:
 	xor ebx, ebx
 	mov bl, [p_HPET_Timers]
 	mov ecx, 0xE0			; HPET_TIMER_0_CONF - 0x20
-os_hpet_init_disable_int:
+init_timer_hpet_disable_int:
 	add ecx, 0x20
-	call os_hpet_read
+	call hpet_read
 	btc ax, 2
 	btc ax, 3
-	call os_hpet_write
+	call hpet_write
 	dec bl
-	jnz os_hpet_init_disable_int
+	jnz init_timer_hpet_disable_int
 
 	; Clear the main counter before it is enabled
 	mov ecx, HPET_MAIN_COUNTER
 	xor eax, eax
-	call os_hpet_write
+	call hpet_write
 
 	; Enable HPET main counter (bit 0)
 	mov eax, 1			; Bit 0 is set
 	mov ecx, HPET_GEN_CONF
-	call os_hpet_write
+	call hpet_write
 
 init_timer_hpet_error:
 	ret
@@ -91,11 +91,11 @@ init_timer_hpet_error:
 
 
 ; -----------------------------------------------------------------------------
-; os_hpet_read -- Read from a register in the High Precision Event Timer
+; hpet_read -- Read from a register in the High Precision Event Timer
 ;  IN:	ECX = Register to read
 ; OUT:	RAX = Register value
 ;	All other registers preserved
-os_hpet_read:
+hpet_read:
 	mov rax, [p_HPET_Address]
 	mov rax, [rax + rcx]
 	ret
@@ -103,11 +103,11 @@ os_hpet_read:
 
 
 ; -----------------------------------------------------------------------------
-; os_hpet_write -- Write to a register in the High Precision Event Timer
+; hpet_write -- Write to a register in the High Precision Event Timer
 ;  IN:	ECX = Register to write
 ;	RAX = Value to write
 ; OUT:	All registers preserved
-os_hpet_write:
+hpet_write:
 	push rcx
 	add rcx, [p_HPET_Address]
 	mov [rcx], rax
@@ -117,12 +117,12 @@ os_hpet_write:
 
 
 ; -----------------------------------------------------------------------------
-; os_hpet_delay -- Delay by X microseconds
+; hpet_delay -- Delay by X microseconds
 ; IN:	RAX = Time microseconds
 ; OUT:	All registers preserved
 ; Note:	There are 1,000,000 microseconds in a second
 ;	There are 1,000 milliseconds in a second
-os_hpet_delay:
+hpet_delay:
 	push rdx
 	push rcx
 	push rbx
@@ -131,7 +131,7 @@ os_hpet_delay:
 	mov rbx, rax			; Save delay to RBX
 	xor edx, edx
 	xor ecx, ecx
-	call os_hpet_read		; Get HPET General Capabilities and ID Register
+	call hpet_read			; Get HPET General Capabilities and ID Register
 	shr rax, 32
 	mov rcx, rax			; RCX = RAX >> 32 (timer period in femtoseconds)
 	mov rax, 1000000000
@@ -139,15 +139,15 @@ os_hpet_delay:
 	mul rbx				; RAX *= RBX, should get number of HPET cycles to wait, save result in RBX
 	mov rbx, rax
 	mov ecx, HPET_MAIN_COUNTER
-	call os_hpet_read		; Get HPET counter in RAX
+	call hpet_read			; Get HPET counter in RAX
 	add rbx, rax			; RBX += RAX Until when to wait
-os_hpet_delay_loop:			; Stay in this loop until the HPET timer reaches the expected value
+hpet_delay_loop:			; Stay in this loop until the HPET timer reaches the expected value
 	mov ecx, HPET_MAIN_COUNTER
-	call os_hpet_read		; Get HPET counter in RAX
+	call hpet_read			; Get HPET counter in RAX
 	cmp rax, rbx			; If RAX >= RBX then jump to end, otherwise jump to loop
-	jae os_hpet_delay_end
-	jmp os_hpet_delay_loop
-os_hpet_delay_end:
+	jae hpet_delay_end
+	jmp hpet_delay_loop
+hpet_delay_end:
 
 	pop rax
 	pop rbx
@@ -185,6 +185,132 @@ init_timer_kvm_configure:
 ; -----------------------------------------------------------------------------
 
 
+; -----------------------------------------------------------------------------
+; kvm_get_usec -- Returns # of microseconds elapsed since guest start
+; IN:	Nothing
+; OUT:	RAX = microseconds elapsed since start
+;	All other registers preserved
+kvm_get_usec:
+	push r10
+	push r9
+	push r8
+	push rdi
+	push rdx
+	push rcx
+	push rbx
+
+	mov rdi, p_timer
+kvm_get_usec_wait:
+	mov r10d, [rdi]			; Get 32-bit version
+	test r10d, 1			; Check if version is odd (update in progress)
+	jnz kvm_get_usec_wait		; If so, retry
+
+	lfence
+
+	rdtsc				; Read CPU TSC into EDX:EAX
+	shl rdx, 32
+	or rax, rdx			; Combine EDX:EAX into RAX
+	mov r9, rax			; Save the 64-bit TSC value
+
+	; Load KVM timer data
+	mov rax, [rdi+0x08]		; 64-bit tsc_timestamp
+	mov rbx, [rdi+0x10]		; 64-bit system_time
+	mov ecx, [rdi+0x18]		; 32-bit tsc_to_system_mul
+	movzx r8, byte [rdi+0x1C]	; 8-bit tsc_shift
+
+	; Reorg register usage
+	push rcx			; Save tsc_to_system_mul to stack
+	mov ecx, r8d			; Copy tsc_shift to ECX
+
+	; Calculate timer delta (CPU TSC - tsc_timestamp)
+	sub r9, rax
+	mov rax, r9
+
+	; Apply tsc_shift
+	cmp cl, 0
+	jl kvm_get_usec_shift_right
+	shl rax, cl
+	jmp kvm_get_usec_shift_done
+kvm_get_usec_shift_right:
+	neg cl
+	shr rax, cl
+kvm_get_usec_shift_done:
+
+	pop rcx				; Restore tsc_to_system_mul
+
+	; Calculate nanoseconds as (delta * mul) >> 32
+
+	; Add system time to nanoseconds
+	add rax, rbx
+
+	; Recheck struct version
+	lfence
+	mov ecx, [rdi]			; Load 32-bit version
+	cmp r10d, ecx			; Compare to first version read
+	jne kvm_get_usec_wait		; If not equal then an update occured, restart
+
+	; Convert nanoseconds to microseconds
+	xor edx, edx
+	mov ecx, 1000
+	div rcx
+
+	pop rbx
+	pop rcx
+	pop rdx
+	pop rdi
+	pop r8
+	pop r9
+	pop r10
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; kvm_delay -- Delay by X microseconds
+; IN:	RAX = Time microseconds
+; OUT:	All registers preserved
+; Note:	There are 1,000,000 microseconds in a second
+;	There are 1,000 milliseconds in a second
+kvm_delay:
+	push rbx
+	push rax
+
+	mov rbx, rax			; Store delay in RBX
+	call kvm_get_usec
+	add rbx, rax			; Add elapsed time
+kvm_delay_wait:
+	call kvm_get_usec
+	cmp rax, rbx
+	jb kvm_delay_wait
+
+	pop rax
+	pop rbx
+	ret
+; -----------------------------------------------------------------------------
+
+
+; -----------------------------------------------------------------------------
+; timer_delay -- Delay by X microseconds
+; IN:	RAX = Time microseconds
+; OUT:	All registers preserved
+; Note:	There are 1,000,000 microseconds in a second
+;	There are 1,000 milliseconds in a second
+timer_delay:
+	push rax
+	push rbx
+
+	; Detect which timer is to be used
+
+
+	call hpet_delay
+;	call kvm_delay
+
+	pop rbx
+	pop rax
+	ret
+; -----------------------------------------------------------------------------
+
+
 ; Register list (64-bits wide)
 HPET_GEN_CAP		equ 0x000 ; COUNTER_CLK_PERIOD (63:32), LEG_RT_CAP (15), COUNT_SIZE_CAP (13), NUM_TIM_CAP (12:8)
 ; 0x008 - 0x00F are Reserved
@@ -212,6 +338,15 @@ HPET_TIMER_2_INT	equ 0x150
 ; MSRs
 MSR_KVM_SYSTEM_TIME_NEW	equ 0x4B564D01
 MSR_KVM_SYSTEM_TIME	equ 0x00000012
+
+; KVM pvclock structure
+pvclock_version		equ 0x00 ; 32-bit
+pvclock_tsc_timestamp	equ 0x08 ; 64-bit
+pvclock_system_time	equ 0x10 ; 64-bit
+pvclock_tsc_system_mul	equ 0x18 ; 32-bit
+pvclock_tsc_shift	equ 0x1C ; 8-bit
+pvclock_flags		equ 0x1D ; 8-bit
+
 
 
 ; =============================================================================
