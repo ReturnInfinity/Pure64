@@ -25,21 +25,26 @@ init_timer_phys:
 	mov rax, [p_HPET_Address]
 	cmp rax, 0
 	jz init_timer_error
+	; Initialize the HPET
 	call init_timer_hpet
 	mov qword [sys_timer], hpet_delay
 	jmp init_timer_done
 
 init_timer_virt:
+	; Initialize the KVM timer
 	call init_timer_kvm
 	mov qword [sys_timer], kvm_delay
+	jmp init_timer_done
 
 init_timer_error:
+	jmp $				; Spin forever as there was no timer source
 
 init_timer_done:
 	ret
 
 
 ; -----------------------------------------------------------------------------
+; init_timer_hpet -- Initialize the HPET
 init_timer_hpet:
 	; Verify the capabilities of HPET
 	mov ecx, HPET_GEN_CAP
@@ -87,7 +92,11 @@ init_timer_hpet_disable_int:
 	mov ecx, HPET_GEN_CONF
 	call hpet_write
 
+	jmp init_timer_hpet_done
+
 init_timer_hpet_error:
+
+init_timer_hpet_done:
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -160,6 +169,7 @@ hpet_delay_end:
 
 
 ; -----------------------------------------------------------------------------
+; init_timer_kvm - Initialize the KVM timer
 init_timer_kvm:
 	; Check hypervisor feature bits
 	mov eax, 0x40000001
@@ -179,7 +189,7 @@ init_timer_kvm_clocksource:
 
 init_timer_kvm_configure:
 	xor edx, edx
-	mov eax, p_timer
+	mov eax, p_timer		; Memory address for structure
 	bts eax, 0			; Enable bit
 	wrmsr
 
@@ -230,11 +240,11 @@ kvm_get_usec_wait:
 
 	; Apply tsc_shift
 	cmp cl, 0
-	jl kvm_get_usec_shift_right
+	jl kvm_get_usec_shift_right	; Signed comparison
 	shl rax, cl
 	jmp kvm_get_usec_shift_done
 kvm_get_usec_shift_right:
-	neg cl
+	neg cl				; Ex: 0xFF = tsc shift of -1
 	shr rax, cl
 kvm_get_usec_shift_done:
 
