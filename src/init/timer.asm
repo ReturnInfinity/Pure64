@@ -26,10 +26,12 @@ init_timer_phys:
 	cmp rax, 0
 	jz init_timer_error
 	call init_timer_hpet
+	mov qword [sys_timer], hpet_delay
 	jmp init_timer_done
 
 init_timer_virt:
 	call init_timer_kvm
+	mov qword [sys_timer], kvm_delay
 
 init_timer_error:
 
@@ -239,6 +241,10 @@ kvm_get_usec_shift_done:
 	pop rcx				; Restore tsc_to_system_mul
 
 	; Calculate nanoseconds as (delta * mul) >> 32
+	mul rcx				; RDX:RAX = RAX * RCX
+	shl rdx, 32
+	shr rax, 32
+	or rax, rdx
 
 	; Add system time to nanoseconds
 	add rax, rbx
@@ -297,15 +303,9 @@ kvm_delay_wait:
 ;	There are 1,000 milliseconds in a second
 timer_delay:
 	push rax
-	push rbx
 
-	; Detect which timer is to be used
+	call [sys_timer]
 
-
-	call hpet_delay
-;	call kvm_delay
-
-	pop rbx
 	pop rax
 	ret
 ; -----------------------------------------------------------------------------

@@ -946,7 +946,7 @@ lfb_wc_end:
 	mov rsi, msg_kernel
 	call debug_msg
 
-%ifdef BIOS
+%ifdef FLOPPY
 	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
@@ -977,7 +977,7 @@ clear_regs:
 %include "init/serial.asm"
 %include "init/smp.asm"
 %include "init/timer.asm"
-%ifdef BIOS
+%ifdef FLOPPY
 %include "fdc/dma.asm"
 %include "fdc/fdc_64.asm"
 %endif
@@ -1044,7 +1044,7 @@ nextline:
 ; -----------------------------------------------------------------------------
 %endif
 
-%ifdef BIOS
+%ifdef FLOPPY
 ; -----------------------------------------------------------------------------
 ; debug_progressbar
 ; IN:	EBX = Index #

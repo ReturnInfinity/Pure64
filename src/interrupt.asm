@@ -26,7 +26,7 @@ interrupt_gate:				; handler for all other interrupts
 ; -----------------------------------------------------------------------------
 ; Floppy drive interrupt. IRQ 0x06, INT 0x26
 ; This IRQ runs when floppy drive reads from or writes to whole disk
-%ifdef BIOS
+%ifdef FLOPPY
 align 16
 floppy_irq:
 	push rdi

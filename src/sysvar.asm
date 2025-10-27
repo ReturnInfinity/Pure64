@@ -37,9 +37,8 @@ VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 ; DQ - Starting at offset 0, increments by 0x8
 p_ACPITableAddress:	equ SystemVariables + 0x00
 p_LocalAPICAddress:	equ SystemVariables + 0x10
-p_Counter_Timer:	equ SystemVariables + 0x18
-p_Counter_RTC:		equ SystemVariables + 0x20
 p_HPET_Address:		equ SystemVariables + 0x28
+sys_timer:		equ SystemVariables + 0x30
 
 ; DD - Starting at offset 0x80, increments by 4
 p_BSP:			equ SystemVariables + 0x80
@@ -63,7 +62,7 @@ p_HPET_Timers:		equ SystemVariables + 0x184
 p_BootDisk:		equ SystemVariables + 0x185	; 'F' for Floppy drive
 p_1GPages:		equ SystemVariables + 0x186	; 1 if 1GB pages are supported
 
-p_timer:		equ SystemVariables + 0x1000
+p_timer:		equ SystemVariables + 0x1000	; This overwrites the memory details from firmware
 
 align 16
 GDTR32:					; Global Descriptors Table Register
