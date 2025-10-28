@@ -17,8 +17,7 @@ msg_bios:		db 'bios', 0
 msg_uefi:		db 'uefi', 0
 msg_acpi:		db 13, 10, 'acpi ', 0
 msg_bsp:		db 13, 10, 'bsp ', 0
-msg_hpet:		db 13, 10, 'hpet ', 0
-msg_pit:		db 13, 10, 'pit ', 0
+msg_timer:		db 13, 10, 'timer ', 0
 msg_smp:		db 13, 10, 'smp ', 0
 msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 
@@ -38,9 +37,8 @@ VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 ; DQ - Starting at offset 0, increments by 0x8
 p_ACPITableAddress:	equ SystemVariables + 0x00
 p_LocalAPICAddress:	equ SystemVariables + 0x10
-p_Counter_Timer:	equ SystemVariables + 0x18
-p_Counter_RTC:		equ SystemVariables + 0x20
 p_HPET_Address:		equ SystemVariables + 0x28
+sys_timer:		equ SystemVariables + 0x30
 
 ; DD - Starting at offset 0x80, increments by 4
 p_BSP:			equ SystemVariables + 0x80
@@ -64,6 +62,8 @@ p_HPET_Timers:		equ SystemVariables + 0x184
 p_BootDisk:		equ SystemVariables + 0x185	; 'F' for Floppy drive
 p_1GPages:		equ SystemVariables + 0x186	; 1 if 1GB pages are supported
 
+p_timer:		equ SystemVariables + 0x1000	; This overwrites the memory details from firmware
+
 align 16
 GDTR32:					; Global Descriptors Table Register
 dw gdt32_end - gdt32 - 1		; limit of GDT (size minus one)
@@ -75,7 +75,7 @@ SYS32_NULL_SEL equ $-gdt32		; Null Segment
 dq 0x0000000000000000
 SYS32_CODE_SEL equ $-gdt32		; 32-bit code descriptor
 dq 0x00CF9A000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 43 Executable, 41 Readable
-SYS32_DATA_SEL equ $-gdt32		; 32-bit data descriptor		
+SYS32_DATA_SEL equ $-gdt32		; 32-bit data descriptor
 dq 0x00CF92000000FFFF			; 55 Granularity 4KiB, 54 Size 32bit, 47 Present, 44 Code/Data, 41 Writeable
 gdt32_end:
 

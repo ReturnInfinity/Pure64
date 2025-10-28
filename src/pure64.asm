@@ -770,9 +770,9 @@ pde_end:
 %endif
 
 ; Configure system timer
-	mov rsi, msg_hpet
+	mov rsi, msg_timer
 	call debug_msg
-	call init_hpet			; Configure the HPET
+	call init_timer			; Configure the timer
 	mov rsi, msg_ok
 	call debug_msg
 
@@ -946,7 +946,7 @@ lfb_wc_end:
 	mov rsi, msg_kernel
 	call debug_msg
 
-%ifdef BIOS
+%ifdef FLOPPY
 	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
@@ -974,10 +974,10 @@ clear_regs:
 
 %include "init/acpi.asm"
 %include "init/cpu.asm"
-%include "init/hpet.asm"
 %include "init/serial.asm"
 %include "init/smp.asm"
-%ifdef BIOS
+%include "init/timer.asm"
+%ifdef FLOPPY
 %include "fdc/dma.asm"
 %include "fdc/fdc_64.asm"
 %endif
@@ -1044,7 +1044,7 @@ nextline:
 ; -----------------------------------------------------------------------------
 %endif
 
-%ifdef BIOS
+%ifdef FLOPPY
 ; -----------------------------------------------------------------------------
 ; debug_progressbar
 ; IN:	EBX = Index #
