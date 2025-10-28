@@ -205,7 +205,6 @@ init_timer_kvm_configure:
 kvm_get_usec:
 	push r10
 	push r9
-	push r8
 	push rdi
 	push rdx
 	push rcx
@@ -228,11 +227,9 @@ kvm_get_usec_wait:
 	mov rax, [rdi+0x08]		; 64-bit tsc_timestamp
 	mov rbx, [rdi+0x10]		; 64-bit system_time
 	mov ecx, [rdi+0x18]		; 32-bit tsc_to_system_mul
-	movzx r8, byte [rdi+0x1C]	; 8-bit tsc_shift
-
-	; Reorg register usage
 	push rcx			; Save tsc_to_system_mul to stack
-	mov ecx, r8d			; Copy tsc_shift to ECX
+	xor ecx, ecx
+	mov cl, [rdi+0x1C]		; 8-bit tsc_shift
 
 	; Calculate timer delta (CPU TSC - tsc_timestamp)
 	sub r9, rax
@@ -274,7 +271,6 @@ kvm_get_usec_shift_done:
 	pop rcx
 	pop rdx
 	pop rdi
-	pop r8
 	pop r9
 	pop r10
 	ret

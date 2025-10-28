@@ -4,9 +4,9 @@ mkdir -p bin
 
 cd src
 
-nasm -dBIOS=1 -dNOVIDEO=1 pure64.asm -o ../bin/pure64-bios-novideo.sys -l ../bin/pure64-bios-novideo-debug.txt
-nasm -dBIOS=1 pure64.asm -o ../bin/pure64-bios.sys -l ../bin/pure64-bios-debug.txt
-nasm -dUEFI=1 pure64.asm -o ../bin/pure64-uefi.sys -l ../bin/pure64-uefi-debug.txt
+nasm -dBIOS -dNOVIDEO pure64.asm -o ../bin/pure64-bios-novideo.sys -l ../bin/pure64-bios-novideo-debug.txt
+nasm -dBIOS pure64.asm -o ../bin/pure64-bios.sys -l ../bin/pure64-bios-debug.txt
+nasm -dUEFI pure64.asm -o ../bin/pure64-uefi.sys -l ../bin/pure64-uefi-debug.txt
 
 cd boot
 
