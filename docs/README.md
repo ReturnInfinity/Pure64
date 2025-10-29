@@ -212,7 +212,8 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x5094 - 0x50DF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x50E0</td><td>8-bit</td><td>FLAG_1GBPAGE</td><td>1 if 1GB Pages are supported</td></tr>
 <tr><td>0x50E1</td><td>8-bit</td><td>FLAG_X2APIC</td><td>1 if X2APIC is supported</td></tr>
-<tr><td>0x50E2 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x50E2</td><td>8-bit</td><td>FLAG_BOOTMODE</td><td>'B' if BIOS, 'U' for UEFI</td></tr>
+<tr><td>0x50E3 - 0x50FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5100 - 0x51FF</td><td>8-bit</td><td>APIC_ID</td><td>APIC ID's for valid CPU cores (based on CORES_ACTIVE)</td></tr>
 <tr><td>0x5200 - 0x53FF</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5400 - 0x55FF</td><td>16 byte entries</td><td>PCIE</td><td>PCIe bus data</td></tr>

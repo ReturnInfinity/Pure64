@@ -876,6 +876,8 @@ no_address_size:
 	stosb
 	mov al, [p_x2APIC]
 	stosb
+	mov al, [p_BootMode]
+	stosb
 
 %ifndef NOVIDEO
 ; Visual Debug (7/8)
