@@ -55,6 +55,7 @@ spurious:				; handler for spurious interrupts
 
 ; -----------------------------------------------------------------------------
 ; CPU Exception Gates
+align 16
 exception_gate_00:
 	mov al, 0x00
 	jmp exception_gate_main
