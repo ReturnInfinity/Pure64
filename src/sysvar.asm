@@ -6,6 +6,7 @@
 ; =============================================================================
 
 
+%ifdef DEBUG
 ; Messages
 msg_pure64:		db 13, 10, 13, 10, '[ Pure64 ]', 0
 msg_ok:			db 'ok', 0
@@ -20,6 +21,7 @@ msg_bsp:		db 13, 10, 'bsp ', 0
 msg_timer:		db 13, 10, 'timer ', 0
 msg_smp:		db 13, 10, 'smp ', 0
 msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
+%endif
 
 ;CONFIG
 cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
