@@ -268,10 +268,11 @@ start64:
 
 	; Configure serial port @ 0x03F8 as 115200 8N1
 	call init_serial
-	
+
+%ifdef DEBUG
 	mov rsi, msg_pure64		; Output "[ Pure64 ]"
 	call debug_msg
-	
+
 	; Output boot method
 	mov rsi, msg_boot
 	call debug_msg
@@ -284,6 +285,7 @@ boot_uefi:
 	mov rsi, msg_uefi
 	call debug_msg
 msg_boot_done:
+%endif
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	mov ecx, 5120
@@ -745,11 +747,15 @@ pde_end:
 	call debug_block
 %endif
 
+%ifdef DEBUG
 	mov rsi, msg_acpi
 	call debug_msg
+%endif
 	call init_acpi			; Find and process the ACPI tables
+%ifdef DEBUG
 	mov rsi, msg_ok
 	call debug_msg
+%endif
 
 %ifndef NOVIDEO
 ; Visual Debug (4/8)
@@ -757,11 +763,15 @@ pde_end:
 	call debug_block
 %endif
 
+%ifdef DEBUG
 	mov rsi, msg_bsp
 	call debug_msg
+%endif
 	call init_cpu			; Configure the BSP CPU
+%ifdef DEBUG
 	mov rsi, msg_ok
 	call debug_msg
+%endif
 
 %ifndef NOVIDEO
 ; Visual Debug (5/8)
@@ -769,12 +779,16 @@ pde_end:
 	call debug_block
 %endif
 
+%ifdef DEBUG
 ; Configure system timer
 	mov rsi, msg_timer
 	call debug_msg
+%endif
 	call init_timer			; Configure the timer
+%ifdef DEBUG
 	mov rsi, msg_ok
 	call debug_msg
+%endif
 
 %ifndef NOVIDEO
 ; Visual Debug (6/8)
@@ -782,11 +796,15 @@ pde_end:
 	call debug_block
 %endif
 
+%ifdef DEBUG
 	mov rsi, msg_smp
 	call debug_msg
+%endif
 	call init_smp			; Init of SMP, deactivate interrupts
+%ifdef DEBUG
 	mov rsi, msg_ok
 	call debug_msg
+%endif
 
 ; Reset the stack to the proper location (was set to 0x8000 previously)
 	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
@@ -945,8 +963,10 @@ lfb_wc_end:
 	call debug_block
 %endif
 
+%ifdef DEBUG
 	mov rsi, msg_kernel
 	call debug_msg
+%endif
 
 %ifdef FLOPPY
 	cmp byte [p_BootDisk], 'F'	; Check if sys is booted from floppy?
@@ -1073,6 +1093,7 @@ debug_progressbar:
 %endif
 
 
+%ifdef DEBUG
 ; -----------------------------------------------------------------------------
 ; debug_msg_char - Send a single char via the serial port
 ; IN: AL = Byte to send
@@ -1171,6 +1192,7 @@ debug_dump_al_l:
 	pop rax				; Restore RAX
 	ret
 ; -----------------------------------------------------------------------------
+%endif
 
 
 EOF:
