@@ -387,7 +387,7 @@ skip1GB:
 	lgdt [GDTR64]
 
 ; Point cr3 at PML4
-	mov rax, 0x00002008		; Write-thru enabled (Bit 3)
+	mov eax, 0x00002008		; Write-thru enabled (Bit 3)
 	mov cr3, rax
 
 	xor eax, eax			; aka r0
@@ -431,9 +431,9 @@ clearcs64:
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
-	mov rcx, 32
+	mov ecx, 32
 make_exception_gates: 			; make gates for exception handlers
-	mov rax, exception_gate
+	mov eax, exception_gate
 	push rax			; save the exception gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
@@ -445,14 +445,14 @@ make_exception_gates: 			; make gates for exception handlers
 	stosw				; store the high word (31:16) of the address
 	shr rax, 16
 	stosd				; store the extra high dword (63:32) of the address.
-	xor rax, rax
+	xor eax, eax
 	stosd				; reserved
-	dec rcx
+	dec ecx
 	jnz make_exception_gates
 
-	mov rcx, 256-32
+	mov ecx, 256-32
 make_interrupt_gates: 			; make gates for the other interrupts
-	mov rax, interrupt_gate
+	mov eax, interrupt_gate
 	push rax			; save the interrupt gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
@@ -466,33 +466,22 @@ make_interrupt_gates: 			; make gates for the other interrupts
 	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
 	stosd				; reserved
-	dec rcx
+	dec ecx
 	jnz make_interrupt_gates
 
 	; Set up the exception gates for all of the CPU exceptions
-	; The following code depends on exception gates being below 16MB
-	mov word [0x00*16], exception_gate_00	; #DE
-	mov word [0x01*16], exception_gate_01	; #DB
-	mov word [0x02*16], exception_gate_02
-	mov word [0x03*16], exception_gate_03	; #BP
-	mov word [0x04*16], exception_gate_04	; #OF
-	mov word [0x05*16], exception_gate_05	; #BR
-	mov word [0x06*16], exception_gate_06	; #UD
-	mov word [0x07*16], exception_gate_07	; #NM
-	mov word [0x08*16], exception_gate_08	; #DF
-	mov word [0x09*16], exception_gate_09	; #MF
-	mov word [0x0A*16], exception_gate_10	; #TS
-	mov word [0x0B*16], exception_gate_11	; #NP
-	mov word [0x0C*16], exception_gate_12	; #SS
-	mov word [0x0D*16], exception_gate_13	; #GP
-	mov word [0x0E*16], exception_gate_14	; #PF
-	mov word [0x0F*16], exception_gate_15
-	mov word [0x10*16], exception_gate_16	; #MF
-	mov word [0x11*16], exception_gate_17	; #AC
-	mov word [0x12*16], exception_gate_18	; #MC
-	mov word [0x13*16], exception_gate_19	; #XM
-	mov word [0x14*16], exception_gate_20	; #VE
-	mov word [0x15*16], exception_gate_21	; #CP
+	; The following code depends on:
+	; - Exception gates being below 16MB
+	; - Each exception_gate_XX being exactly 4 bytes apart
+	mov eax, exception_gate_00	; Address of first handler
+	xor edi, edi			; Clear EDI as IDT starts at 0x0000
+	mov cl, 22			; 22 exception gates (0x00-0x15)
+set_exception_gate:
+	mov [rdi], ax			; Patch low word of handler address in IDT entry
+	add edi, 16			; Advance to next IDT entry (16 bytes each)
+	add eax, 4			; Advance to next gate handler (4 bytes each)
+	dec cl
+	jnz set_exception_gate
 
 	lidt [IDTR64]			; load IDT register
 
