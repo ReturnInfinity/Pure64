@@ -72,9 +72,11 @@ bootcode:
 	mov ax, 0x00E3			; Init port, 9600bps 8N1
 	int 0x14
 
+%ifdef DEBUG
 	; Output message to serial
 	mov si, msg_Load
 	call output_serial
+%endif
 
 ; Get the BIOS E820 Memory Map
 ; https://wiki.osdev.org/Detecting_Memory_(x86)#BIOS_Function:_INT_0x15,_EAX_=_0xE820
@@ -167,9 +169,11 @@ check_A20:
 ;	cmp eax, 0x00017EE9		; Match against the Pure64 binary
 ;	jne halt
 
+%ifdef DEBUG
 	; Output message to serial
 	mov si, msg_Ok
 	call output_serial
+%endif
 
 	mov bl, 'B'			; 'B' as we booted via BIOS
 
@@ -190,6 +194,7 @@ halt:
 ;------------------------------------------------------------------------------
 
 
+%ifdef DEBUG
 ;------------------------------------------------------------------------------
 ; Output a string via serial
 ; IN:	SI - Address of start of string
@@ -207,10 +212,10 @@ output_serial_done:
 	popa
 	ret
 ;------------------------------------------------------------------------------
-
 msg_Load db "MBR ", 0
 msg_Ok db "OK", 0
 msg_Error db "Error!", 0
+%endif
 
 align 16
 GDTR32:					; Global Descriptors Table Register
