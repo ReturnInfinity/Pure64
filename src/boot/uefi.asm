@@ -461,7 +461,7 @@ halt:
 ; -----------------------------------------------------------------------------
 ; printhex - Display a 64-bit value in hex
 ; IN: RBX = Value
-printhex:			 
+printhex:
 	mov rbp, 16						; Counter
 	push rax
 	push rcx
