@@ -135,15 +135,17 @@ avx512_supported:
 	xsetbv				; Save XCR0 register
 avx512_not_supported:
 
-; Enable and Configure Local APIC
-;	mov ecx, IA32_APIC_BASE
-;	rdmsr
-;	bts eax, 11			; APIC Global Enable
-;	cmp byte [p_x2APIC], 1
-;	jne skip_x2APIC_enable
-;	bts eax, 10			; Enable x2APIC mode
-;skip_x2APIC_enable:
-;	wrmsr
+; Enable APIC
+	mov ecx, IA32_APIC_BASE
+	rdmsr
+	bts eax, 11			; APIC Global Enable
+	cmp byte [p_x2APIC], 1
+	jne skip_x2APIC_enable
+	bts eax, 10			; Enable x2APIC mode
+skip_x2APIC_enable:
+	wrmsr
+
+; Configure APIC
 	mov ecx, APIC_TPR
 	mov eax, 0x00000020
 	call apic_write			; Disable softint delivery
@@ -153,12 +155,15 @@ avx512_not_supported:
 	mov ecx, APIC_LVT_PERF
 	mov eax, 0x00010000
 	call apic_write			; Disable performance counter interrupts
+	cmp byte [p_x2APIC], 1
+	je skip_APIC			; Next 2 registers are APIC only
 	mov ecx, APIC_LDR
 	xor eax, eax
 	call apic_write			; Set Logical Destination Register
 	mov ecx, APIC_DFR
 	not eax				; Set EAX to 0xFFFFFFFF; Bits 31-28 set for Flat Mode
 	call apic_write			; Set Destination Format Register
+skip_APIC:
 	mov ecx, APIC_LVT_LINT0
 	mov eax, 0x00008700		; Bit 15 (1 = Level), Bits 10:8 for Ext
 	call apic_write			; Enable normal external interrupts
@@ -186,11 +191,27 @@ avx512_not_supported:
 ; -----------------------------------------------------------------------------
 ; apic_read -- Read from a register in the APIC
 ;  IN:	ECX = Register to read
-; OUT:	EAX = Register value
+; OUT:	RAX = Register value
 ;	All other registers preserved
 apic_read:
+	cmp byte [p_x2APIC], 1
+	je apic_read_x2
+
+apic_read_x:
 	mov rax, [p_LocalAPICAddress]
 	mov eax, [rax + rcx]
+	ret
+
+apic_read_x2:
+	push rdx
+	push rcx
+	shr ecx, 4		; Convert xAPIC register to x2APIC
+	add ecx, 0x800		; Add MSR base offset
+	rdmsr			; Read to EDX:EAX
+	shl rdx, 32		; Shift to upper 32 bits
+	or rax, rdx		; Combine into RAX
+	pop rcx
+	pop rdx
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -198,13 +219,29 @@ apic_read:
 ; -----------------------------------------------------------------------------
 ; apic_write -- Write to a register in the APIC
 ;  IN:	ECX = Register to write
-;	EAX = Value to write
+;	RAX = Value to write
 ; OUT:	All registers preserved
 apic_write:
+	cmp byte [p_x2APIC], 1
+	je apic_write_x2
+
+apic_write_x:
 	push rcx
 	add rcx, [p_LocalAPICAddress]
 	mov [rcx], eax
 	pop rcx
+	ret
+
+apic_write_x2:
+	push rdx
+	push rcx
+	shr ecx, 4		; Convert xAPIC register to x2APIC
+	add ecx, 0x800		; Add MSR base offset
+	mov rdx, rax		; Copy RAX to RDX
+	shr rdx, 32		; Shift upper 32 bits to lower 32
+	wrmsr			; Write as EDX:EAX
+	pop rcx
+	pop rdx
 	ret
 ; -----------------------------------------------------------------------------
 
@@ -227,6 +264,7 @@ APIC_TMR	equ 0x180		; Trigger Mode Register (Starting Address)
 APIC_IRR	equ 0x200		; Interrupt Request Register (Starting Address)
 APIC_ESR	equ 0x280		; Error Status Register
 ; 0x290 - 0x2E0 are Reserved
+APIC_ICR	equ 0x300		; Interrupt Command Register
 APIC_ICRL	equ 0x300		; Interrupt Command Register (low 32 bits)
 APIC_ICRH	equ 0x310		; Interrupt Command Register (high 32 bits)
 APIC_LVT_TMR	equ 0x320		; LVT Timer Register
@@ -253,6 +291,37 @@ IA32_MTRR_PHYSMASK1	equ 0x203
 IA32_PAT		equ 0x277
 IA32_MTRR_DEF_TYPE	equ 0x2FF
 
+; x2APIC MSR List
+; 0x000 - 0x001 are Reserved
+x2APIC_ID		equ 0x002		; ID Register
+x2APIC_VER		equ 0x003		; Version Register
+; 0x004 - 0x007 are Reserved
+x2APIC_TPR		equ 0x008		; Task Priority Register - Bits 31:8 are Reserved.
+; 0x009 is Reserved
+x2APIC_PPR		equ 0x00A		; Processor Priority Register
+x2APIC_EOI		equ 0x00B		; End Of Interrupt - Write 0 Only
+; 0x00C is Reserved
+x2APIC_LDR		equ 0x00D		; Logical Destination Register - Read Only
+; 0x00E is Reserved
+x2APIC_SPURIOUS		equ 0x00F		; Spurious Interrupt Vector Register
+x2APIC_ISR		equ 0x010		; In-Service Register (Starting Address) - Read Only
+x2APIC_TMR		equ 0x018		; Trigger Mode Register (Starting Address) - Read Only
+x2APIC_IRR		equ 0x020		; Interrupt Request Register (Starting Address) - Read Only
+x2APIC_ESR		equ 0x028		; Error Status Register
+; 0x029 - 0x02E are Reserved
+x2APIC_ICRL		equ 0x030		; Interrupt Command Register
+x2APIC_LVT_TMR		equ 0x032		; LVT Timer Register
+x2APIC_LVT_TSR		equ 0x033		; LVT Thermal Sensor Register
+x2APIC_LVT_PERF		equ 0x034		; LVT Performance Monitoring Counters Register
+x2APIC_LVT_LINT0	equ 0x035		; LVT LINT0 Register
+x2APIC_LVT_LINT1	equ 0x036		; LVT LINT1 Register
+x2APIC_LVT_ERR		equ 0x037		; LVT Error Register
+x2APIC_TMRINITCNT	equ 0x038		; Initial Count Register (for Timer)
+x2APIC_TMRCURRCNT	equ 0x039		; Current Count Register (for Timer) - Read Only
+; 0x03A - 0x03D are Reserved
+x2APIC_TMRDIV		equ 0x03E		; Divide Configuration Register (for Timer)
+x2APIC_SELF_IPI		equ 0x03F		; Self IPI - Write Only
+; 0x040 - 0x3FF are Reserved
 
 ; =============================================================================
 ; EOF
