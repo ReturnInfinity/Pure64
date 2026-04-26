@@ -292,6 +292,7 @@ IA32_PAT		equ 0x277
 IA32_MTRR_DEF_TYPE	equ 0x2FF
 
 ; x2APIC MSR List
+x2APIC_BASE		equ 0x800
 ; 0x000 - 0x001 are Reserved
 x2APIC_ID		equ 0x002		; ID Register
 x2APIC_VER		equ 0x003		; Version Register
