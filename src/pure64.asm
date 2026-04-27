@@ -20,11 +20,11 @@
 BITS 64
 ORG 0x00008000
 DEFAULT ABS
-%ifdef NOVIDEO
-PURE64SIZE equ 4096			; Pad Pure64 to this length
-%else
+;%ifdef NOVIDEO
+;PURE64SIZE equ 4096			; Pad Pure64 to this length
+;%else
 PURE64SIZE equ 6144			; Pad Pure64 to this length
-%endif
+;%endif
 
 start:
 	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started

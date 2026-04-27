@@ -11,13 +11,17 @@ init_smp:
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
 
-	; Start the AP's one by one
-	xor eax, eax
-	xor edx, edx
-	mov rsi, [p_LocalAPICAddress]
-	mov eax, [rsi+0x20]		; Add the offset for the APIC ID location
-	shr rax, 24			; APIC ID is stored in bits 31:24
-	mov dl, al			; Store BSP APIC ID in DL
+	; Get the BSP APIC ID
+	mov ecx, APIC_ID
+	call apic_read
+
+	cmp byte [p_x2APIC], 1
+	je init_smp_get_apic_done
+
+	shr eax, 24			; APIC ID is stored in bits 31:24
+
+init_smp_get_apic_done:
+	mov edx, eax			; Store BSP APIC ID in EDX
 
 	mov esi, IM_DetectedCoreIDs
 	xor eax, eax
@@ -26,9 +30,9 @@ init_smp:
 smp_send_INIT:
 	cmp cx, 0
 	je smp_send_INIT_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
+	cmp eax, edx			; Is it the BSP?
 	je smp_send_INIT_skipcore
 
 	cmp byte [p_x2APIC], 1
@@ -77,9 +81,9 @@ smp_send_INIT_done:
 smp_send_SIPI:
 	cmp cx, 0
 	je smp_send_SIPI_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
+	cmp eax, edx			; Is it the BSP?
 	je smp_send_SIPI_skipcore
 
 	cmp byte [p_x2APIC], 1
@@ -126,12 +130,11 @@ noMP:
 	; Gather and store the APIC ID of the BSP
 	mov ecx, APIC_ID
 	call apic_read
-;	xor eax, eax
-;	mov rsi, [p_LocalAPICAddress]
-;	add rsi, 0x20			; Add the offset for the APIC ID location
-;	lodsd				; APIC ID is stored in bits 31:24
-;	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov [p_BSP], eax		; Store the BSP APIC ID
+	cmp byte [p_x2APIC], 1
+	je smp_store_apic_id
+	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+smp_store_apic_id:
+	mov [p_BSP], edx		; Store the BSP APIC ID
 
 	; Calculate base speed of CPU
 	cpuid
