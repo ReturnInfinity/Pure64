@@ -138,12 +138,14 @@ avx512_not_supported:
 ; Enable APIC
 	mov ecx, IA32_APIC_BASE
 	rdmsr
-	bts eax, 11			; APIC Global Enable
+	bts eax, 11			; EN - xAPIC global enable/disable
 	cmp byte [p_x2APIC], 1
 	jne skip_x2APIC_enable
-	bts eax, 10			; Enable x2APIC mode
+	bts eax, 10			; EXTD - Enable x2APIC mode
 skip_x2APIC_enable:
 	wrmsr
+
+	mov r8d, eax			; Save MSR value as bit 8 is checked later
 
 ; Configure APIC
 	mov ecx, APIC_TPR
@@ -179,13 +181,17 @@ skip_APIC:
 
 	lock inc word [p_cpu_activated]
 	mov ecx, APIC_ID
-	call apic_read			; APIC ID is stored in bits 31:24
+	call apic_read
 	cmp byte [p_x2APIC], 1
 	je skip_shift
 	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
 skip_shift:
-	mov rdi, IM_ActivedCoreIDs	; The location where the activated cores set their record to 1
-	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5E01 would be APIC ID 1
+	bt r8d, 8			; Check for BSP bit
+	jnc skip_bsp
+	mov [p_BSP], eax
+skip_bsp:
+	mov edi, IM_ActivedCoreIDs	; The location where the activated cores set their record to 1
+	add edi, eax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5E01 would be APIC ID 1
 	mov al, 1
 	stosb				; Store a 1 as the core is activated
 
@@ -267,7 +273,7 @@ APIC_TMR	equ 0x180		; Trigger Mode Register (Starting Address)
 APIC_IRR	equ 0x200		; Interrupt Request Register (Starting Address)
 APIC_ESR	equ 0x280		; Error Status Register
 ; 0x290 - 0x2E0 are Reserved
-APIC_ICR	equ 0x300		; Interrupt Command Register
+APIC_ICR	equ 0x300		; Interrupt Command Register (64-bit - x2APIC only)
 APIC_ICRL	equ 0x300		; Interrupt Command Register (low 32 bits)
 APIC_ICRH	equ 0x310		; Interrupt Command Register (high 32 bits)
 APIC_LVT_TMR	equ 0x320		; LVT Timer Register
@@ -313,7 +319,7 @@ x2APIC_TMR		equ 0x018		; Trigger Mode Register (Starting Address) - Read Only
 x2APIC_IRR		equ 0x020		; Interrupt Request Register (Starting Address) - Read Only
 x2APIC_ESR		equ 0x028		; Error Status Register
 ; 0x029 - 0x02E are Reserved
-x2APIC_ICRL		equ 0x030		; Interrupt Command Register
+x2APIC_ICR		equ 0x030		; Interrupt Command Register
 x2APIC_LVT_TMR		equ 0x032		; LVT Timer Register
 x2APIC_LVT_TSR		equ 0x033		; LVT Thermal Sensor Register
 x2APIC_LVT_PERF		equ 0x034		; LVT Performance Monitoring Counters Register

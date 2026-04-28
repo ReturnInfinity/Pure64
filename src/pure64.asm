@@ -20,11 +20,11 @@
 BITS 64
 ORG 0x00008000
 DEFAULT ABS
-;%ifdef NOVIDEO
-;PURE64SIZE equ 4096			; Pad Pure64 to this length
-;%else
+%ifdef NOVIDEO
+PURE64SIZE equ 4096			; Pad Pure64 to this length
+%else
 PURE64SIZE equ 6144			; Pad Pure64 to this length
-;%endif
+%endif
 
 start:
 	jmp bootmode			; This command will be overwritten with 'NOP's before the AP's are started
@@ -720,7 +720,7 @@ pde_end:
 ; Read APIC Address from MSR and enable it (if not done so already)
 	mov ecx, IA32_APIC_BASE
 	rdmsr				; Returns APIC in EDX:EAX
-	bts eax, 11			; APIC Global Enable
+	bts eax, 11			; EN - xAPIC global enable
 	wrmsr
 	and eax, 0xFFFFF000		; Clear lower 12 bits
 	shl rdx, 32			; Shift lower 32 bits to upper 32 bits
@@ -729,10 +729,10 @@ pde_end:
 
 ; Check for x2APIC support
 	mov eax, 1
-	cpuid				; x2APIC is supported if bit 21 is set
+	cpuid				; x2APIC is supported if ECX[21] is set
 	shr ecx, 21
 	and cl, 1
-	mov byte [p_x2APIC], cl
+	mov byte [p_x2APIC], cl		; Set flag for x2APIC
 
 %ifndef NOVIDEO
 ; Visual Debug (3/8)
@@ -798,15 +798,6 @@ pde_end:
 	mov rsi, msg_ok
 	call debug_msg
 %endif
-
-; Reset the stack to the proper location (was set to 0x8000 previously)
-	mov rsi, [p_LocalAPICAddress]	; We would call p_smp_get_id here but the stack is not ...
-	add rsi, 0x20			; ... yet defined. It is safer to find the value directly.
-	lodsd				; Load a 32-bit value. We only want the high 8 bits
-	shr rax, 24			; Shift to the right and AL now holds the CPU's APIC ID
-	shl rax, 10			; shift left 10 bits for a 1024byte stack
-	add rax, 0x0000000000050400	; stacks decrement when you "push", start at 1024 bytes in
-	mov rsp, rax			; Pure64 leaves 0x50000-0x9FFFF free so we use that
 
 ; Build the InfoMap
 	xor edi, edi

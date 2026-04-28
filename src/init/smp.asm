@@ -11,19 +11,8 @@ init_smp:
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
 
-	; Get the BSP APIC ID
-	mov ecx, APIC_ID
-	call apic_read
-
-	cmp byte [p_x2APIC], 1
-	je init_smp_get_apic_done
-
-	shr eax, 24			; APIC ID is stored in bits 31:24
-
-init_smp_get_apic_done:
-	mov edx, eax			; Store BSP APIC ID in EDX
-
-	mov esi, IM_DetectedCoreIDs
+	mov edx, [p_BSP]		; Get the BSP APIC ID
+	mov esi, IM_DetectedCoreIDs	; List of 32-bit APIC IDs
 	xor eax, eax
 	xor ecx, ecx
 	mov cx, [p_cpu_detected]
@@ -33,14 +22,14 @@ smp_send_INIT:
 	lodsd
 
 	cmp eax, edx			; Is it the BSP?
-	je smp_send_INIT_skipcore
+	je smp_send_INIT_skipcore	; If so, skip
 
 	cmp byte [p_x2APIC], 1
 	je smp_send_INIT_x2APIC
 
 smp_send_INIT_APIC:
 	; Send 'INIT' IPI to APIC ID in AL
-	push rcx
+	push rcx			; Save counter
 	shl eax, 24
 	mov ecx, APIC_ICRH		; Interrupt Command Register (ICR); bits 63-32
 	call apic_write
@@ -51,17 +40,17 @@ smp_send_INIT_verify:
 	call apic_read
 	bt eax, 12			; Verify that the command completed
 	jc smp_send_INIT_verify
-	pop rcx
+	pop rcx				; Restore counter
 	jmp smp_send_INIT_APIC_done
 
 smp_send_INIT_x2APIC:
 	; Send 'INIT' IPI to APIC ID in AL
-	push rcx
+	push rcx			; Save counter
 	mov ecx, APIC_ICR		; Interrupt Command Register (ICR); bits 63-0
 	shl rax, 32
 	mov ax, 0x4500
 	call apic_write
-	pop rcx
+	pop rcx				; Restore counter
 
 smp_send_INIT_APIC_done:
 
@@ -127,14 +116,6 @@ smp_send_SIPI_done:
 	call timer_delay
 
 noMP:
-	; Gather and store the APIC ID of the BSP
-	mov ecx, APIC_ID
-	call apic_read
-	cmp byte [p_x2APIC], 1
-	je smp_store_apic_id
-	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-smp_store_apic_id:
-	mov [p_BSP], edx		; Store the BSP APIC ID
 
 	; Calculate base speed of CPU
 	cpuid
