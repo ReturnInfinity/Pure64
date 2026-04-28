@@ -180,7 +180,10 @@ skip_APIC:
 	lock inc word [p_cpu_activated]
 	mov ecx, APIC_ID
 	call apic_read			; APIC ID is stored in bits 31:24
+	cmp byte [p_x2APIC], 1
+	je skip_shift
 	shr eax, 24			; AL now holds the CPU's APIC ID (0 - 255)
+skip_shift:
 	mov rdi, IM_ActivedCoreIDs	; The location where the activated cores set their record to 1
 	add rdi, rax			; RDI points to InfoMap CPU area + APIC ID. ex 0x5E01 would be APIC ID 1
 	mov al, 1
