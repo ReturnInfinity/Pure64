@@ -231,7 +231,7 @@ APICapic:				; Entry Type 0
 	jnc readAPICstructures		; Read the next structure if CPU not usable
 	inc word [p_cpu_detected]
 	xchg eax, edx			; Restore the APIC ID back to EAX
-	stosb				; Store the 8-bit APIC ID
+	stosd				; Store the 8-bit APIC ID as a 32-bit value
 	jmp readAPICstructures		; Read the next structure
 
 ; I/O APIC Structure - 5.2.12.3
@@ -285,6 +285,7 @@ APICinterruptsourceoverride:		; Entry Type 2
 	jmp readAPICstructures		; Read the next structure
 
 ; Processor Local x2APIC Structure - 5.2.12.12
+; TODO - Check if the same ID was found via APICapic - if so, ignore
 ;APICx2apic:				; Entry Type 9
 ;	xor eax, eax
 ;	xor edx, edx

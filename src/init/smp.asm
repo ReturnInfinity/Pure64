@@ -11,36 +11,48 @@ init_smp:
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
 	jne noMP			; If not then skip SMP init
 
-	; Start the AP's one by one
-	xor eax, eax
-	xor edx, edx
-	mov rsi, [p_LocalAPICAddress]
-	mov eax, [rsi+0x20]		; Add the offset for the APIC ID location
-	shr rax, 24			; APIC ID is stored in bits 31:24
-	mov dl, al			; Store BSP APIC ID in DL
-
-	mov esi, IM_DetectedCoreIDs
+	mov edx, [p_BSP]		; Get the BSP APIC ID
+	mov esi, IM_DetectedCoreIDs	; List of 32-bit APIC IDs
 	xor eax, eax
 	xor ecx, ecx
 	mov cx, [p_cpu_detected]
 smp_send_INIT:
 	cmp cx, 0
 	je smp_send_INIT_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
-	je smp_send_INIT_skipcore
+	cmp eax, edx			; Is it the BSP?
+	je smp_send_INIT_skipcore	; If so, skip
 
+	cmp byte [p_x2APIC], 1
+	je smp_send_INIT_x2APIC
+
+smp_send_INIT_APIC:
 	; Send 'INIT' IPI to APIC ID in AL
-	mov rdi, [p_LocalAPICAddress]
+	push rcx			; Save counter
 	shl eax, 24
-	mov dword [rdi+0x310], eax	; Interrupt Command Register (ICR); bits 63-32
+	mov ecx, APIC_ICRH		; Interrupt Command Register (ICR); bits 63-32
+	call apic_write
 	mov eax, 0x00004500
-	mov dword [rdi+0x300], eax	; Interrupt Command Register (ICR); bits 31-0
+	mov ecx, APIC_ICRL		; Interrupt Command Register (ICR); bits 31-0
+	call apic_write
 smp_send_INIT_verify:
-	mov eax, [rdi+0x300]		; Interrupt Command Register (ICR); bits 31-0
+	call apic_read
 	bt eax, 12			; Verify that the command completed
 	jc smp_send_INIT_verify
+	pop rcx				; Restore counter
+	jmp smp_send_INIT_APIC_done
+
+smp_send_INIT_x2APIC:
+	; Send 'INIT' IPI to APIC ID in AL
+	push rcx			; Save counter
+	mov ecx, APIC_ICR		; Interrupt Command Register (ICR); bits 63-0
+	shl rax, 32
+	mov ax, 0x4500
+	call apic_write
+	pop rcx				; Restore counter
+
+smp_send_INIT_APIC_done:
 
 smp_send_INIT_skipcore:
 	dec cl
@@ -58,21 +70,40 @@ smp_send_INIT_done:
 smp_send_SIPI:
 	cmp cx, 0
 	je smp_send_SIPI_done
-	lodsb
+	lodsd
 
-	cmp al, dl			; Is it the BSP?
+	cmp eax, edx			; Is it the BSP?
 	je smp_send_SIPI_skipcore
 
+	cmp byte [p_x2APIC], 1
+	je smp_send_SIPI_x2APIC
+
+smp_send_SIPI_APIC:
 	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
-	mov rdi, [p_LocalAPICAddress]
+	push rcx
 	shl eax, 24
-	mov dword [rdi+0x310], eax	; Interrupt Command Register (ICR); bits 63-32
+	mov ecx, APIC_ICRH		; Interrupt Command Register (ICR); bits 63-32
+	call apic_write
 	mov eax, 0x00004608		; Vector 0x08
-	mov dword [rdi+0x300], eax	; Interrupt Command Register (ICR); bits 31-0
+	mov ecx, APIC_ICRL		; Interrupt Command Register (ICR); bits 31-0
+	call apic_write
 smp_send_SIPI_verify:
-	mov eax, [rdi+0x300]		; Interrupt Command Register (ICR); bits 31-0
+	call apic_read
 	bt eax, 12			; Verify that the command completed
 	jc smp_send_SIPI_verify
+	pop rcx
+	jmp smp_send_SIPI_APIC_done
+
+smp_send_SIPI_x2APIC:
+	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
+	push rcx
+	mov ecx, APIC_ICR	; Interrupt Command Register (ICR); bits 63-0
+	shl rax, 32
+	mov ax, 0x4608		; Vector 0x08
+	call apic_write
+	pop rcx
+
+smp_send_SIPI_APIC_done:
 
 smp_send_SIPI_skipcore:
 	dec cl
@@ -85,13 +116,6 @@ smp_send_SIPI_done:
 	call timer_delay
 
 noMP:
-	; Gather and store the APIC ID of the BSP
-	xor eax, eax
-	mov rsi, [p_LocalAPICAddress]
-	add rsi, 0x20			; Add the offset for the APIC ID location
-	lodsd				; APIC ID is stored in bits 31:24
-	shr rax, 24			; AL now holds the CPU's APIC ID (0 - 255)
-	mov [p_BSP], eax		; Store the BSP APIC ID
 
 	; Calculate base speed of CPU
 	cpuid
