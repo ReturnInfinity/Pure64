@@ -200,6 +200,8 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><td>0x504C</td><td>16-bit</td><td>HPET Counter Minumum</td><td>Minimum Counter for the High Precision Event Timer</td></tr>
 <tr><td>0x504E</td><td>8-bit</td><td>HPET Counters</td><td>Number of Counter in the High Precision Event Timer</td></tr>
 <tr><td>0x504F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
+<tr><td>0x5050</td><td>64-bit</td><td>T0</td><td>RDTSC at Pure64 start</td></tr>
+<tr><td>0x5058</td><td>64-bit</td><td>T1</td><td>RDTSC at Pure64 end</td></tr>
 <tr><td>0x5060</td><td>64-bit</td><td>LAPIC</td><td>Local APIC address</td></tr>
 <tr><td>0x5068 - 0x507F</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5080</td><td>64-bit</td><td>VIDEO_BASE</td><td>Base memory for video (if graphics mode set)</td></tr>

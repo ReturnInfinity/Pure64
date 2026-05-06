@@ -64,6 +64,10 @@ bootmode:
 %ifdef BIOS
 	mov [p_BootDisk], bh		; Save disk from where system was booted from
 
+	rdtsc				; Read the timestamp counter into EDX:EAX
+	mov [0x5FFC], edx
+	mov [0x5FF8], eax
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -849,6 +853,14 @@ no_address_size:
 	stosw
 	mov al, [p_HPET_Timers]
 	stosb
+
+	mov esi, 0x5FF8			; Address of T0
+	mov di, 0x5050
+	movsq
+	rdtsc				; Gather T1
+	stosd
+	mov eax, edx
+	stosd
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]
