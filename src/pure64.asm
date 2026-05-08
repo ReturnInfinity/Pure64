@@ -215,6 +215,11 @@ start64:
 	mov ax, 0x03			; Set flags for legacy ports (in case of no ACPI data)
 	mov [p_IAPC_BOOT_ARCH], ax
 
+	; Save EBDA segment from BDA (BIOS Data Area)
+	movzx esi, word [0x040E]	; EBDA segment
+	shl esi, 4			; Convert to proper address
+	mov [p_EBDA], rsi
+
 	; Mask all PIC interrupts
 	mov al, 0xFF
 	out 0x21, al

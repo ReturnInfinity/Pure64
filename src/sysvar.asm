@@ -41,6 +41,7 @@ p_ACPITableAddress:	equ SystemVariables + 0x00
 p_LocalAPICAddress:	equ SystemVariables + 0x10
 p_HPET_Address:		equ SystemVariables + 0x28
 sys_timer:		equ SystemVariables + 0x30
+p_EBDA:			equ SystemVariables + 0x38
 
 ; DD - Starting at offset 0x80, increments by 4
 p_BSP:			equ SystemVariables + 0x80
