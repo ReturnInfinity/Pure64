@@ -131,17 +131,13 @@ nextACPITable:
 	pop rsi				; Pop an Entry address from the stack
 	lodsd
 	add ecx, 1
-	mov ebx, 'APIC'			; Signature for the Multiple APIC Description Table
-	cmp eax, ebx
+	cmp eax, 'APIC'			; Signature for the Multiple APIC Description Table
 	je foundAPICTable
-	mov ebx, 'HPET'			; Signature for the HPET Description Table
-	cmp eax, ebx
+	cmp eax, 'HPET'			; Signature for the HPET Description Table
 	je foundHPETTable
-	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
-	cmp eax, ebx
+	cmp eax, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
 	je foundMCFGTable
-	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
-	cmp eax, ebx
+	cmp eax, 'FACP'			; Signature for the Fixed ACPI Description Table
 	je foundFADTTable
 	jmp nextACPITable
 
