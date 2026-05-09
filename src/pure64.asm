@@ -149,8 +149,7 @@ pdpte_low_32:
 	pop eax
 	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne pdpte_low_32
+	jnz pdpte_low_32
 
 ; Create the temporary low Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
@@ -693,8 +692,7 @@ create_pdpe_high:
 	stosq
 	add rax, 0x00001000		; 4K later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne create_pdpe_high
+	jnz create_pdpe_high
 
 ; Create the High Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
@@ -714,15 +712,14 @@ pde_next_range:
 	sub rcx, 2			; Subtract 2 MiB from the length
 skipfirst4mb:
 	shr ecx, 1			; Quick divide by 2 for 2 MB pages
+	cmp ecx, 0
+	je pde_next_range
 	add rax, 0x00000083		; Bits 0 (P), 1 (R/W), and 7 (PS) set
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
-	cmp ecx, 0
-	je pde_next_range
 	dec ecx
-	cmp ecx, 0
-	jne pde_high
+	jnz pde_high
 	jmp pde_next_range
 pde_end:
 

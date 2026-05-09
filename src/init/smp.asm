@@ -117,21 +117,21 @@ smp_send_SIPI_done:
 
 noMP:
 
-	; Calculate base speed of CPU
-	cpuid
-	xor edx, edx
-	xor eax, eax
-	rdtsc
-	push rax
-	mov rax, 1024		; 1024 microseconds (1ms)
-	call timer_delay
-	rdtsc
-	pop rdx
-	sub rax, rdx
-	xor edx, edx
-	mov rcx, 1024
-	div rcx
-	mov [p_cpu_speed], ax
+;	; Calculate base speed of CPU
+;	cpuid
+;	xor edx, edx
+;	xor eax, eax
+;	rdtsc
+;	push rax
+;	mov rax, 1024		; 1024 microseconds (1ms)
+;	call timer_delay
+;	rdtsc
+;	pop rdx
+;	sub rax, rdx
+;	xor edx, edx
+;	mov rcx, 1024
+;	div rcx
+;	mov [p_cpu_speed], ax
 
 	ret
 

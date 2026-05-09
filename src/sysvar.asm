@@ -24,7 +24,7 @@ msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 %endif
 
 ;CONFIG
-cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
+cfg_smpinit:		db 0		; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
 InfoMap:		equ 0x0000000000005000
@@ -38,6 +38,7 @@ VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
 p_ACPITableAddress:	equ SystemVariables + 0x00
+p_HPET_CyclesPerUs:	equ SystemVariables + 0x08	; Precomputed HPET cycles per microsecond
 p_LocalAPICAddress:	equ SystemVariables + 0x10
 p_HPET_Address:		equ SystemVariables + 0x28
 sys_timer:		equ SystemVariables + 0x30
