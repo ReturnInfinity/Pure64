@@ -24,7 +24,7 @@ msg_kernel:		db 13, 10, 'kernel start', 13, 10, 0
 %endif
 
 ;CONFIG
-cfg_smpinit:		db 0		; By default SMP is enabled. Set to 0 to disable.
+cfg_smpinit:		db 1		; By default SMP is enabled. Set to 0 to disable.
 
 ; Memory locations
 InfoMap:		equ 0x0000000000005000
