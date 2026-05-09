@@ -117,11 +117,6 @@ bootmode:
 	stosw				; BitsPerPixel
 %endif
 
-	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
-	mov edi, 0x00210000
-	mov ecx, 81920
-	rep stosd			; Write 320KiB
-
 ; Create the temporary Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000202000, create the first entry there
 ; A single PML4 entry can map 512GiB with 2MiB pages
@@ -202,11 +197,6 @@ pde_low_32:				; Create a 2 MiB page
 BITS 64
 start64:
 	mov esp, 0x8000			; Set a known free location for the stack
-
-	mov edi, 0x5000			; Clear the info map and system variable memory
-	xor eax, eax
-	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
-	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
 
 	mov [p_BootMode], bl
 	mov [p_BootDisk], bh
@@ -299,17 +289,6 @@ boot_uefi:
 msg_boot_done:
 %endif
 
-; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
-	mov ecx, 5120
-	xor eax, eax
-	mov edi, eax
-	rep stosd
-
-; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
-	mov edi, 0x00010000
-	mov ecx, 81920
-	rep stosd			; Write 320KiB
-
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
 	mov edi, 0x00001000		; GDT address
@@ -384,7 +363,7 @@ pml4_low_1GB:
 	dec ecx
 	jnz pml4_low_1GB
 
-	mov ecx, 8191			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
+	mov ecx, 7			; number of PDPE's to make.. each PDPE maps 1GiB of physical memory
 	mov edi, 0x00010000		; location of low PDPE
 	mov eax, 0x00000083		; Bits 0 (P), 1 (R/W), 7 (PS)
 pdpte_low_1GB:				; Create a 1GiB page
@@ -443,41 +422,33 @@ clearcs64:
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
+	; exception_gate and interrupt_gate are within the Pure64 binary (0x8000-0x97FF),
+	; so bits 31:16 and 63:32 of their addresses are always 0.
 	mov ecx, 32
 make_exception_gates: 			; make gates for exception handlers
 	mov eax, exception_gate
-	push rax			; save the exception gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8E00
 	stosw				; store exception gate marker
-	pop rax				; get the exception gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_exception_gates
 
 	mov ecx, 256-32
 make_interrupt_gates: 			; make gates for the other interrupts
 	mov eax, interrupt_gate
-	push rax			; save the interrupt gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8F00
 	stosw				; store interrupt gate marker
-	pop rax				; get the interrupt gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_interrupt_gates
 
@@ -859,10 +830,6 @@ no_address_size:
 	mov esi, 0x5FF8			; Address of T0
 	mov di, 0x5050
 	movsq
-	rdtsc				; Gather T1
-	stosd
-	mov eax, edx
-	stosd
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]
@@ -971,6 +938,12 @@ lfb_wc_end:
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
 %endif
+
+	mov edi, 0x5058
+	rdtsc				; Gather T1
+	shr rdx, 32			; Shift high bits to low
+	or rax, rdx
+	stosq
 
 ; Clear all registers (skip the stack pointer)
 clear_regs:
