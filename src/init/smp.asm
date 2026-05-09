@@ -60,8 +60,8 @@ smp_send_INIT_skipcore:
 
 smp_send_INIT_done:
 
-	; Wait 500 microseconds
-	mov eax, 500
+	; Wait
+	mov eax, 500			; 500 microseconds (0.5ms)
 	call timer_delay
 
 	mov esi, IM_DetectedCoreIDs
@@ -97,9 +97,9 @@ smp_send_SIPI_verify:
 smp_send_SIPI_x2APIC:
 	; Send 'Startup' IPI to destination using vector 0x08 to specify entry-point is at the memory-address 0x00008000
 	push rcx
-	mov ecx, APIC_ICR	; Interrupt Command Register (ICR); bits 63-0
+	mov ecx, APIC_ICR		; Interrupt Command Register (ICR); bits 63-0
 	shl rax, 32
-	mov ax, 0x4608		; Vector 0x08
+	mov ax, 0x4608			; Vector 0x08
 	call apic_write
 	pop rcx
 
@@ -111,8 +111,8 @@ smp_send_SIPI_skipcore:
 
 smp_send_SIPI_done:
 
-	; Wait 10000 microseconds for the AP's to finish
-	mov eax, 10000
+	; Wait for the AP's to finish
+	mov eax, 10000		; 10000 microseconds (10ms)
 	call timer_delay
 
 noMP:
@@ -123,7 +123,7 @@ noMP:
 	xor eax, eax
 	rdtsc
 	push rax
-	mov rax, 1024
+	mov rax, 1024		; 1024 microseconds (1ms)
 	call timer_delay
 	rdtsc
 	pop rdx
