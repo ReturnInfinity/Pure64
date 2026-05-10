@@ -938,8 +938,8 @@ lfb_wc_end:
 %endif
 
 	mov edi, 0x5058
-	rdtsc				; Gather T1
-	shr rdx, 32			; Shift high bits to low
+	rdtsc				; Gather T1 to EDX:EAX
+	shl rdx, 32			; Shift low bits to high
 	or rax, rdx
 	stosq
 

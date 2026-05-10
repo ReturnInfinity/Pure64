@@ -139,7 +139,7 @@ EntryPoint:
 	; Find the address of the ACPI data from the UEFI configuration table
 	mov rax, [EFI_SYSTEM_TABLE]
 	mov rcx, [rax + EFI_SYSTEM_TABLE_NUMBEROFENTRIES]
-	shl rcx, 3						; Quick multiply by 4
+	shl rcx, 3						; Quick multiply by 8
 	mov rsi, [CONFIG]
 nextentry:
 	dec rcx
@@ -366,6 +366,10 @@ get_memmap:
 
 	; Stop interrupts
 	cli
+
+	rdtsc							; Read the timestamp counter into EDX:EAX
+	mov [0x5FFC], edx
+	mov [0x5FF8], eax
 
 	; Copy Pure64 to the correct memory address
 	mov rsi, PAYLOAD

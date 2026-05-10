@@ -65,7 +65,7 @@ init_timer_hpet:
 	; Calculate the HPET frequency
 	mov rbx, rax			; Move Counter Clock Period to RBX
 	xor rdx, rdx
-	mov rax, 1000000000000000	; femotoseconds per second
+	mov rax, 1000000000000000	; femtoseconds per second
 	div rbx				; RDX:RAX / RBX = frequency in Hz
 	mov [p_HPET_Frequency], eax	; Save the HPET frequency
 
