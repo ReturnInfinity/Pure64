@@ -9,13 +9,16 @@
 init_smp:
 	; Check if we want the AP's to be enabled.. if not then skip to end
 	cmp byte [cfg_smpinit], 1	; Check if SMP should be enabled
-	jne noMP			; If not then skip SMP init
+	jne init_smp_done		; If not then skip SMP init
 
+	; Check if multiple CPUs were detected via the ACPI tables
+	xor ecx, ecx
+	mov cx, [p_cpu_detected]
+	cmp cx, 1
+	je init_smp_done		; Only 1 CPU detected, skip SMP init
 	mov edx, [p_BSP]		; Get the BSP APIC ID
 	mov esi, IM_DetectedCoreIDs	; List of 32-bit APIC IDs
 	xor eax, eax
-	xor ecx, ecx
-	mov cx, [p_cpu_detected]
 smp_send_INIT:
 	cmp cx, 0
 	je smp_send_INIT_done
@@ -115,24 +118,7 @@ smp_send_SIPI_done:
 	mov eax, 10000		; 10000 microseconds (10ms)
 	call timer_delay
 
-noMP:
-
-;	; Calculate base speed of CPU
-;	cpuid
-;	xor edx, edx
-;	xor eax, eax
-;	rdtsc
-;	push rax
-;	mov rax, 1024		; 1024 microseconds (1ms)
-;	call timer_delay
-;	rdtsc
-;	pop rdx
-;	sub rax, rdx
-;	xor edx, edx
-;	mov rcx, 1024
-;	div rcx
-;	mov [p_cpu_speed], ax
-
+init_smp_done:
 	ret
 
 

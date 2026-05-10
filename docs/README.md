@@ -183,7 +183,7 @@ The Pure64 information table is located at `0x0000000000005000` and ends at `0x0
 <tr><th>Memory Address</th><th>Variable Size</th><th>Name</th><th>Description</th></tr>
 <tr><td>0x5000</td><td>64-bit</td><td>ACPI</td><td>Address of the ACPI tables</td></tr>
 <tr><td>0x5008</td><td>32-bit</td><td>CPU_BSP_ID</td><td>APIC ID of the BSP</td></tr>
-<tr><td>0x5010</td><td>16-bit</td><td>CPU_SPEED</td><td>Speed of the CPUs in MegaHertz (<a href="http://en.wikipedia.org/wiki/Hertz">MHz</a>)</td></tr>
+<tr><td>0x500C - 0x5011</td><td>&nbsp;</td><td>&nbsp;</td><td>For future use</td></tr>
 <tr><td>0x5012</td><td>16-bit</td><td>CPU_CORES_ACTIVE</td><td>The number of CPU cores that were activated in the system</td></tr>
 <tr><td>0x5014</td><td>16-bit</td><td>CPU_CORES_DETECT</td><td>The number of CPU cores that were detected in the system</td></tr>
 <tr><td>0x5016</td><td>8-bit</td><td>CPU_MEM_PHYSICAL</td><td>The number of bits that are valid for a physical address</td></tr>

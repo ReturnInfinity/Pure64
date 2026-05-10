@@ -50,7 +50,6 @@ p_mem_amount:		equ SystemVariables + 0x84	; in MiB
 p_HPET_Frequency:	equ SystemVariables + 0x88
 
 ; DW - Starting at offset 0x100, increments by 2
-p_cpu_speed:		equ SystemVariables + 0x100
 p_cpu_activated:	equ SystemVariables + 0x102
 p_cpu_detected:		equ SystemVariables + 0x104
 p_PCIECount:		equ SystemVariables + 0x106

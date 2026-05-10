@@ -784,9 +784,7 @@ pde_end:
 	mov eax, [p_BSP]
 	stosd
 
-	mov di, 0x5010
-	mov ax, [p_cpu_speed]
-	stosw
+	mov di, 0x5012
 	mov ax, [p_cpu_activated]
 	stosw
 	mov ax, [p_cpu_detected]
