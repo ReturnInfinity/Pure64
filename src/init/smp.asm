@@ -115,7 +115,7 @@ smp_send_SIPI_skipcore:
 smp_send_SIPI_done:
 
 	; Wait for the AP's to finish
-	mov eax, 10000		; 10000 microseconds (10ms)
+	mov eax, 10000			; 10000 microseconds (10ms)
 	call timer_delay
 
 init_smp_done:
