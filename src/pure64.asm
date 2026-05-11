@@ -117,6 +117,11 @@ bootmode:
 	stosw				; BitsPerPixel
 %endif
 
+	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+	mov edi, 0x00210000
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
+
 ; Create the temporary Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000202000, create the first entry there
 ; A single PML4 entry can map 512GiB with 2MiB pages
@@ -210,6 +215,11 @@ start64:
 	mov ax, 0x03			; Set flags for legacy ports (in case of no ACPI data)
 	mov [p_IAPC_BOOT_ARCH], ax
 
+	; Save EBDA segment from BDA (BIOS Data Area)
+	movzx esi, word [0x040E]	; EBDA segment
+	shl esi, 4			; Convert to proper address
+	mov [p_EBDA], rsi
+
 	; Mask all PIC interrupts
 	mov al, 0xFF
 	out 0x21, al
@@ -289,6 +299,17 @@ boot_uefi:
 	call debug_msg
 msg_boot_done:
 %endif
+
+; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
+	mov ecx, 5120
+	xor eax, eax
+	mov edi, eax
+	rep stosd
+
+; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+	mov edi, 0x00010000
+	mov ecx, 81920
+	rep stosd			; Write 320KiB
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
