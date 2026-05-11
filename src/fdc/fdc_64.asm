@@ -1,12 +1,12 @@
 ; =============================================================================
 ; Floppy Disk Driver
-; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2026 Return Infinity -- see LICENSE.TXT
 ; Implemented by Isa Isoux -- https://github.com/isoux/BMFLFS
 
-; Here is a minimal simplified version intended only for reading whole floppy 
+; Here is a minimal simplified version intended only for reading whole floppy
 ; disk into memory or writing back image from memory to whole disk at once.
-; Errors are poorly handled due to the simplicity of the handling, one thing 
-; that can be easily noticed is that the disk is damaged and does not load 
+; Errors are poorly handled due to the simplicity of the handling, one thing
+; that can be easily noticed is that the disk is damaged and does not load
 ; completely.
 
 ; FDC - Floppy Disk Controler

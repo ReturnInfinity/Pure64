@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2026 Return Infinity -- see LICENSE.TXT
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
@@ -117,7 +117,7 @@ bootmode:
 	stosw				; BitsPerPixel
 %endif
 
-	; Clear memory for the Page Descriptor Entries (0x210000 - 0x25FFFF)
+	; Clear memory for the temporary Page Descriptor Entries (0x210000 - 0x25FFFF)
 	mov edi, 0x00210000
 	mov ecx, 320 * 1024 / 4
 	rep stosd			; Write 320KiB

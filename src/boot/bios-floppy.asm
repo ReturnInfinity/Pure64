@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 MBR -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2026 Return Infinity -- see LICENSE.TXT
 ;
 ; This Master Boot Record will load Pure64 from a pre-defined location on the
 ; floppy drive without making use of the file system.
@@ -149,13 +149,13 @@ VBESearch:
 
 	; Read the 2nd stage boot loader into memory.
 	; Load 4 cylinders - 7 sectors
-	mov byte [cylinder], 0 
+	mov byte [cylinder], 0
 	mov word [sec_buff], 0x7E00	; For simplicity load whole cylinder but jump to 0x8000
 	call load_sector
 	mov byte [head], 1
 	mov word [sec_buff], 0xA200
 	call load_sector
-	mov byte [cylinder], 1 
+	mov byte [cylinder], 1
 	mov byte [head], 0
 	mov word [sec_buff], 0xC600
 	call load_sector

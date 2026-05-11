@@ -1,6 +1,6 @@
 ; =============================================================================
 ; DMA Driver
-; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2026 Return Infinity -- see LICENSE.TXT
 ; Implemented by Isa Isoux -- https://github.com/isoux/BMFLFS
 
 ; The DMA controller performs data transfers:
@@ -31,7 +31,7 @@ DMA1_CHR_ADDR	EQU 0x81
 ; bl  = channel
 ; bh  = 1 = read, 0 = write
 ; esi = count
-dma_IO: 
+dma_IO:
 
 ; Examine whether it is writing or reading
 ; what_mode
