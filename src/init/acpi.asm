@@ -17,45 +17,59 @@ init_acpi:
 	je foundACPIfromUEFI		; If so, jump - otherwise fall thru for BIOS
 
 ; Find the ACPI RSDP Structure on a BIOS system
-; It's supposed to be somewhere in the first MiB of memory but some systems don't adhere to that
-	mov esi, 0x00000007		; Start looking for the Root System Description Pointer Structure
-searchingforACPI:
-	sub esi, 0x7
-	lodsq				; Load a quad word from RSI and store in RAX, then increment RSI by 8
-	cmp rax, rbx			; Verify the Signature
+; The RSDP is potentially located in 2 places:
+; 1) Within the first 1 KiB of the EBDA (Extended BIOS Data Area; a 2 byte address to the start of it is located at 0x40E)
+; 2) In the BIOS ROM memory region from 0x000E0000 to 0x000FFFFF
+; The signature always starts on a 16 byte boundary.
+; If the system does not adhere to the standard then this will fail.
+
+;	; Check EBDA (first 1KB)
+;	mov rsi, [p_EBDA]
+;	mov ecx, 64			; 0x400 / 16 = 64 iterations
+;acpi_search_ebda:
+;	cmp qword [rsi], rbx		; Compare the Signature
+;	je foundACPI
+;	add esi, 16
+;	dec ecx
+;	jnz acpi_search_ebda
+
+	; Check BIOS ROM area (0xE0000–0xFFFFF)
+	mov esi, 0xE0000		; Start of BIOS ROM
+	mov ecx, 8192			; 0x20000 / 16 = 8192 iterations
+acpi_search_rom:
+	cmp qword [rsi], rbx		; Compare the Signature
 	je foundACPI
-	cmp esi, 0xFFFFFFF8		; Keep looking until we get here
-	ja noACPI			; ACPI tables couldn't be found, fail
-	jmp searchingforACPI
+	add esi, 16
+	dec ecx
+	jnz acpi_search_rom
+	jmp noACPI			; ACPI tables couldn't be found, fail
 
 ; Find the ACPI RSDP Structure on a UEFI system
 foundACPIfromUEFI:
 	mov rsi, [0x400830]		; TODO This should be passed properly
-	lodsq				; Signature
+	mov rax, [rsi]			; Signature
 	cmp rax, rbx			; Verify the Signature
 	jne noACPI			; If it isn't a match then fail
 
 ; Parse the Root System Description Pointer (RSDP) Structure (5.2.5.3)
+; 8 bytes - Signature
+; 1 byte - Checksum
+; 6 bytes - OEMID
+; 1 byte - Revision
+; 4 bytes - Address
 foundACPI:				; Found a Pointer Structure, verify the checksum
-	push rsi			; Save the RSDP location - currently pointing to the checksum
-	push rbx
+	push rsi			; Save the RSDP location
 	xor ebx, ebx
-	mov ecx, 20			; As per the spec only the first 20 bytes matter
-	sub esi, 8			; Bytes 0 thru 19 must sum to zero
+	mov ecx, 20			; As per the spec only the first 20 bytes matter for checksum
 nextchecksum:
 	lodsb				; Get a byte
 	add bl, al			; Add it to the running total
 	dec cl
 	jnz nextchecksum		; 'dec' will set the zero flag
-	mov al, bl			; Save the value to AL before RBX gets popped
-	pop rbx
 	pop rsi				; Restore the RSDP location
-	cmp al, 0			; Verify the checksum is zero
-	jne searchingforACPI		; Checksum didn't check out? Keep looking for a valid record
-
-	lodsb				; Checksum
-	lodsd				; OEMID (First 4 bytes)
-	lodsw				; OEMID (Last 2 bytes)
+	cmp bl, 0			; Verify the checksum is zero
+	jne noACPI			; Checksum didn't check out? Keep looking for a valid record
+	add rsi, 15			; Add offset to revision byte
 	lodsb				; Revision (0 is v1.0, 1 is v2.0, 2 is v3.0, etc)
 	cmp al, 0
 	je foundACPIv1			; If AL is 0 then the system is using ACPI v1.0

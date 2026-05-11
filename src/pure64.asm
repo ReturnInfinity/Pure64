@@ -117,9 +117,9 @@ bootmode:
 	stosw				; BitsPerPixel
 %endif
 
-	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
+	; Clear memory for the Page Descriptor Entries (0x210000 - 0x25FFFF)
 	mov edi, 0x00210000
-	mov ecx, 81920
+	mov ecx, 320 * 1024 / 4
 	rep stosd			; Write 320KiB
 
 ; Create the temporary Page Map Level 4 Entries (PML4E)
@@ -205,8 +205,8 @@ start64:
 
 	mov edi, 0x5000			; Clear the info map and system variable memory
 	xor eax, eax
-	mov ecx, 960			; 3840 bytes (Range is 0x5000 - 0x5EFF)
-	rep stosd			; Don't overwrite the UEFI/BIOS data at 0x5F00
+	mov ecx, 3840 / 8		; 3840 bytes (Range is 0x5000 - 0x5EFF)
+	rep stosq			; Don't overwrite the 256-byte UEFI/BIOS data at 0x5F00
 
 	mov [p_BootMode], bl
 	mov [p_BootDisk], bh
@@ -300,15 +300,15 @@ msg_boot_done:
 %endif
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
-	mov ecx, 5120
 	xor eax, eax
-	mov edi, eax
-	rep stosd
+	mov edi, edi
+	mov ecx, 20 * 1024 / 8
+	rep stosq			; Write 20KiB
 
 ; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
 	mov edi, 0x00010000
-	mov ecx, 81920
-	rep stosd			; Write 320KiB
+	mov ecx, 320 * 1024 / 8
+	rep stosq			; Write 320KiB
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
