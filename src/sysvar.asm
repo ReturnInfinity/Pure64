@@ -38,9 +38,11 @@ VBEModeInfoBlock:	equ 0x0000000000005F00		; 256 bytes
 
 ; DQ - Starting at offset 0, increments by 0x8
 p_ACPITableAddress:	equ SystemVariables + 0x00
+p_HPET_CyclesPerUs:	equ SystemVariables + 0x08	; Precomputed HPET cycles per microsecond
 p_LocalAPICAddress:	equ SystemVariables + 0x10
 p_HPET_Address:		equ SystemVariables + 0x28
 sys_timer:		equ SystemVariables + 0x30
+p_EBDA:			equ SystemVariables + 0x38
 
 ; DD - Starting at offset 0x80, increments by 4
 p_BSP:			equ SystemVariables + 0x80

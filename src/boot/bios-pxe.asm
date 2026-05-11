@@ -121,7 +121,7 @@ check_A20:
 
 	cmp ax, 0x004F			; Return value in AX should equal 0x004F if command supported and successful
 	jne halt
-	cmp byte [VBEModeInfoBlock.BitsPerPixel], 24	; Make sure this matches the number of bits for the mode!
+	cmp byte [VBEModeInfoBlock.BitsPerPixel], 32	; Make sure this matches the number of bits for the mode!
 	jne halt			; If set bit mode was unsuccessful then bail out
 	or bx, 0x4000			; Use linear/flat frame buffer model (set bit 14)
 	mov ax, 0x4F02			; SET SuperVGA VIDEO MODE - http://www.ctyme.com/intr/rb-0275.htm

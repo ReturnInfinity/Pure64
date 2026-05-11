@@ -64,6 +64,10 @@ bootmode:
 %ifdef BIOS
 	mov [p_BootDisk], bh		; Save disk from where system was booted from
 
+	rdtsc				; Read the timestamp counter into EDX:EAX
+	mov [0x5FFC], edx
+	mov [0x5FF8], eax
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -112,11 +116,6 @@ bootmode:
 	mov eax, 32
 	stosw				; BitsPerPixel
 %endif
-
-	; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
-	mov edi, 0x00210000
-	mov ecx, 81920
-	rep stosd			; Write 320KiB
 
 ; Create the temporary Page Map Level 4 Entries (PML4E)
 ; PML4 is stored at 0x0000000000202000, create the first entry there
@@ -290,17 +289,6 @@ boot_uefi:
 	call debug_msg
 msg_boot_done:
 %endif
-
-; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
-	mov ecx, 5120
-	xor eax, eax
-	mov edi, eax
-	rep stosd
-
-; Clear memory for the Page Descriptor Entries (0x10000 - 0x5FFFF)
-	mov edi, 0x00010000
-	mov ecx, 81920
-	rep stosd			; Write 320KiB
 
 ; Copy the GDT to its final location in memory
 	mov esi, gdt64
@@ -807,9 +795,7 @@ pde_end:
 	mov eax, [p_BSP]
 	stosd
 
-	mov di, 0x5010
-	mov ax, [p_cpu_speed]
-	stosw
+	mov di, 0x5012
 	mov ax, [p_cpu_activated]
 	stosw
 	mov ax, [p_cpu_detected]
@@ -849,6 +835,10 @@ no_address_size:
 	stosw
 	mov al, [p_HPET_Timers]
 	stosb
+
+	mov esi, 0x5FF8			; Address of T0
+	mov di, 0x5050
+	movsq
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]
@@ -957,6 +947,12 @@ lfb_wc_end:
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
 %endif
+
+	mov edi, 0x5058
+	rdtsc				; Gather T1 to EDX:EAX
+	shl rdx, 32			; Shift low bits to high
+	or rax, rdx
+	stosq
 
 ; Clear all registers (skip the stack pointer)
 clear_regs:
