@@ -14,7 +14,7 @@ init_serial:
 
 	; Enable divisor register for setting baud rate
 	mov dx, COM_PORT_LINE_CONTROL
-	mov dl, 0x80			; DLB (7 set)
+	mov al, 0x80			; DLB (7 set)
 	out dx, al
 
 	; Send the divisor (baud rate will be 115200 / divisor)
@@ -27,7 +27,7 @@ init_serial:
 
 	; Disable divisor register and set values
 	mov dx, COM_PORT_LINE_CONTROL
-	mov al, 00000111b		; 8 data bits (0-1 set), one stop bit (2 set), no parity (3-5 clear), DLB (7 clear)
+	mov al, 00000011b		; 8 data bits (0-1 set), one stop bit (2 clear), no parity (3-5 clear), DLB (7 clear)
 	out dx, al
 
 	; Disable modem control

@@ -119,17 +119,13 @@ nextACPITable:
 	pop rsi				; Pop an Entry address from the stack
 	lodsd
 	add ecx, 1
-	mov ebx, 'APIC'			; Signature for the Multiple APIC Description Table
-	cmp eax, ebx
+	cmp eax, 'APIC'			; Signature for the Multiple APIC Description Table
 	je foundAPICTable
-	mov ebx, 'HPET'			; Signature for the HPET Description Table
-	cmp eax, ebx
+	cmp eax, 'HPET'			; Signature for the HPET Description Table
 	je foundHPETTable
-	mov ebx, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
-	cmp eax, ebx
+	cmp eax, 'MCFG'			; Signature for the PCIe Enhanced Configuration Mechanism
 	je foundMCFGTable
-	mov ebx, 'FACP'			; Signature for the Fixed ACPI Description Table
-	cmp eax, ebx
+	cmp eax, 'FACP'			; Signature for the Fixed ACPI Description Table
 	je foundFADTTable
 	jmp nextACPITable
 
@@ -320,28 +316,38 @@ parseAPICTable_done:
 
 ; -----------------------------------------------------------------------------
 ; High Precision Event Timer (HPET)
+;
+; ACPI Memory Layout
+; 4 byte - Signature
+; 4 byte - Length of HPET in bytes
+; 1 byte - Revision
+; 1 byte - Checksum
+; 6 byte - OEMID
+; 8 byte - OEM Table ID
+; 4 byte - OEM Revision
+; 4 byte - Creator ID
+; 4 byte - Creator Revision
+; 1 byte - Hardware Revision ID
+; 1 byte - # of Comparators (5:0), COUNT_SIZE_CAP (6), Legacy IRQ (7)
+; 2 byte - PCI Vendor ID
+; 1 byte - Address Space ID
+; 1 byte - Register bit width
+; 1 byte - Register bit offset
+; 1 byte - Reserved
+; 8 byte - Base Address Value
+; 1 byte - HPET Number
+; 2 byte - Main Counter Minimum
+; 1 byte - Page Protection
+;
 ; http://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/software-developers-hpet-spec-1-0a.pdf
 parseHPETTable:
-	lodsd				; Length of HPET in bytes
-	lodsb				; Revision
-	lodsb				; Checksum
-	lodsd				; OEMID (First 4 bytes)
-	lodsw				; OEMID (Last 2 bytes)
-	lodsq				; OEM Table ID
-	lodsd				; OEM Revision
-	lodsd				; Creator ID
-	lodsd				; Creator Revision
-
-	lodsb				; Hardware Revision ID
-	lodsb				; # of Comparators (5:0), COUNT_SIZE_CAP (6), Legacy IRQ (7)
-	lodsw				; PCI Vendor ID
-	lodsd				; Generic Address Structure
-	lodsq				; Base Address Value
+	; At this point RSI points to the Length of HPET in bytes
+	mov ebx, [rsi]			; Should be 0x38
+	mov rax, [rsi + 40]		; Base Address Value
 	mov [p_HPET_Address], rax	; Save the Address of the HPET
-	lodsb				; HPET Number
-	lodsw				; Main Counter Minimum
+	mov ax, [rsi + 49]		; Main Counter Minimum
 	mov [p_HPET_CounterMin], ax	; Save the Counter Minimum
-	lodsb				; Page Protection And OEM Attribute
+	add rsi, rbx			; Add the table length to RSI
 	ret
 ; -----------------------------------------------------------------------------
 

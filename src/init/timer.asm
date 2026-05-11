@@ -65,9 +65,15 @@ init_timer_hpet:
 	; Calculate the HPET frequency
 	mov rbx, rax			; Move Counter Clock Period to RBX
 	xor rdx, rdx
-	mov rax, 1000000000000000	; femotoseconds per second
-	div rbx				; RDX:RAX / RBX
+	mov rax, 1000000000000000	; femtoseconds per second
+	div rbx				; RDX:RAX / RBX = frequency in Hz
 	mov [p_HPET_Frequency], eax	; Save the HPET frequency
+
+	; Precompute cycles per microsecond (freq_Hz / 1,000,000)
+	xor rdx, rdx
+	mov ecx, 1000000
+	div rcx
+	mov [p_HPET_CyclesPerUs], rax
 
 	; Disable interrupts on all timers
 	xor ebx, ebx
@@ -140,24 +146,17 @@ hpet_delay:
 	push rax
 
 	mov rbx, rax			; Save delay to RBX
-	xor edx, edx
-	xor ecx, ecx
-	call hpet_read			; Get HPET General Capabilities and ID Register
-	shr rax, 32
-	mov rcx, rax			; RCX = RAX >> 32 (timer period in femtoseconds)
-	mov rax, 1000000000
-	div rcx				; Divide 1000000000 (RDX:RAX) / RCX (converting from period in femtoseconds to frequency in MHz)
-	mul rbx				; RAX *= RBX, should get number of HPET cycles to wait, save result in RBX
+	mov rax, [p_HPET_CyclesPerUs]	; Use precomputed cycles per microsecond
+	mul rbx				; RAX = cycles to wait
 	mov rbx, rax
 	mov ecx, HPET_MAIN_COUNTER
 	call hpet_read			; Get HPET counter in RAX
-	add rbx, rax			; RBX += RAX Until when to wait
+	add rbx, rax			; RBX = target counter value
 hpet_delay_loop:			; Stay in this loop until the HPET timer reaches the expected value
-	mov ecx, HPET_MAIN_COUNTER
+	pause
 	call hpet_read			; Get HPET counter in RAX
-	cmp rax, rbx			; If RAX >= RBX then jump to end, otherwise jump to loop
-	jae hpet_delay_end
-	jmp hpet_delay_loop
+	cmp rax, rbx
+	jb hpet_delay_loop
 hpet_delay_end:
 
 	pop rax
@@ -291,6 +290,7 @@ kvm_delay:
 	call kvm_get_usec
 	add rbx, rax			; Add elapsed time
 kvm_delay_wait:
+	pause
 	call kvm_get_usec
 	cmp rax, rbx
 	jb kvm_delay_wait

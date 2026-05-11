@@ -64,6 +64,10 @@ bootmode:
 %ifdef BIOS
 	mov [p_BootDisk], bh		; Save disk from where system was booted from
 
+	rdtsc				; Read the timestamp counter into EDX:EAX
+	mov [0x5FFC], edx
+	mov [0x5FF8], eax
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -145,8 +149,7 @@ pdpte_low_32:
 	pop eax
 	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne pdpte_low_32
+	jnz pdpte_low_32
 
 ; Create the temporary low Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
@@ -210,6 +213,11 @@ start64:
 
 	mov ax, 0x03			; Set flags for legacy ports (in case of no ACPI data)
 	mov [p_IAPC_BOOT_ARCH], ax
+
+	; Save EBDA segment from BDA (BIOS Data Area)
+	movzx esi, word [0x040E]	; EBDA segment
+	shl esi, 4			; Convert to proper address
+	mov [p_EBDA], rsi
 
 	; Mask all PIC interrupts
 	mov al, 0xFF
@@ -435,41 +443,33 @@ clearcs64:
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
+	; exception_gate and interrupt_gate are within the Pure64 binary (0x8000-0x97FF),
+	; so bits 31:16 and 63:32 of their addresses are always 0.
 	mov ecx, 32
 make_exception_gates: 			; make gates for exception handlers
 	mov eax, exception_gate
-	push rax			; save the exception gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8E00
 	stosw				; store exception gate marker
-	pop rax				; get the exception gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_exception_gates
 
 	mov ecx, 256-32
 make_interrupt_gates: 			; make gates for the other interrupts
 	mov eax, interrupt_gate
-	push rax			; save the interrupt gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8F00
 	stosw				; store interrupt gate marker
-	pop rax				; get the interrupt gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_interrupt_gates
 
@@ -807,9 +807,7 @@ pde_end:
 	mov eax, [p_BSP]
 	stosd
 
-	mov di, 0x5010
-	mov ax, [p_cpu_speed]
-	stosw
+	mov di, 0x5012
 	mov ax, [p_cpu_activated]
 	stosw
 	mov ax, [p_cpu_detected]
@@ -849,6 +847,10 @@ no_address_size:
 	stosw
 	mov al, [p_HPET_Timers]
 	stosb
+
+	mov esi, 0x5FF8			; Address of T0
+	mov di, 0x5050
+	movsq
 
 	mov di, 0x5060
 	mov rax, [p_LocalAPICAddress]
@@ -957,6 +959,12 @@ lfb_wc_end:
 	jnz clear_regs
 	call read_floppy		; Then load whole floppy at memory
 %endif
+
+	mov edi, 0x5058
+	rdtsc				; Gather T1 to EDX:EAX
+	shl rdx, 32			; Shift low bits to high
+	or rax, rdx
+	stosq
 
 ; Clear all registers (skip the stack pointer)
 clear_regs:
