@@ -149,8 +149,7 @@ pdpte_low_32:
 	pop eax
 	add eax, 0x00001000		; 4KiB later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne pdpte_low_32
+	jnz pdpte_low_32
 
 ; Create the temporary low Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
@@ -444,41 +443,33 @@ clearcs64:
 ; Build the IDT
 	xor edi, edi 			; create the 64-bit IDT (at linear address 0x0000000000000000)
 
+	; exception_gate and interrupt_gate are within the Pure64 binary (0x8000-0x97FF),
+	; so bits 31:16 and 63:32 of their addresses are always 0.
 	mov ecx, 32
 make_exception_gates: 			; make gates for exception handlers
 	mov eax, exception_gate
-	push rax			; save the exception gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8E00
 	stosw				; store exception gate marker
-	pop rax				; get the exception gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_exception_gates
 
 	mov ecx, 256-32
 make_interrupt_gates: 			; make gates for the other interrupts
 	mov eax, interrupt_gate
-	push rax			; save the interrupt gate to the stack for later use
 	stosw				; store the low word (15:0) of the address
 	mov ax, SYS64_CODE_SEL
 	stosw				; store the segment selector
 	mov ax, 0x8F00
 	stosw				; store interrupt gate marker
-	pop rax				; get the interrupt gate back
-	shr rax, 16
-	stosw				; store the high word (31:16) of the address
-	shr rax, 16
-	stosd				; store the extra high dword (63:32) of the address.
 	xor eax, eax
-	stosd				; reserved
+	stosw				; store the high word (31:16) of the address (always 0)
+	stosq				; store bits 63:32 of address + reserved (always 0)
 	dec ecx
 	jnz make_interrupt_gates
 
