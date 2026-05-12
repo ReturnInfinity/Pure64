@@ -1,6 +1,6 @@
 ; =============================================================================
 ; Pure64 -- a 64-bit OS/software loader written in Assembly for x86-64 systems
-; Copyright (C) 2008-2025 Return Infinity -- see LICENSE.TXT
+; Copyright (C) 2008-2026 Return Infinity -- see LICENSE.TXT
 ;
 ; The first stage loader is required to gather information about the system
 ; while the BIOS or UEFI is still available and load the Pure64 binary to
@@ -68,6 +68,12 @@ bootmode:
 	mov [0x5FFC], edx
 	mov [0x5FF8], eax
 
+	; Set up the Page Attribute Table (PAT). This will happen twice for the BSP.
+	mov edx, 0x00000105		; PA7 UC (00), PA6 UC (00), PA5 WC (01), PA4 WP (05)
+	mov eax, 0x00070406		; PA3 UC (00), PA2 UC- (07), PA1 WT (04), PA0 WB (06)
+	mov ecx, IA32_PAT
+	wrmsr
+
 	mov eax, 16			; Set the correct segment registers
 	mov ds, ax
 	mov es, ax
@@ -117,7 +123,7 @@ bootmode:
 	stosw				; BitsPerPixel
 %endif
 
-	; Clear memory for the Page Descriptor Entries (0x210000 - 0x25FFFF)
+	; Clear memory for the temporary Page Descriptor Entries (0x210000 - 0x25FFFF)
 	mov edi, 0x00210000
 	mov ecx, 320 * 1024 / 4
 	rep stosd			; Write 320KiB
@@ -167,6 +173,28 @@ pde_low_32:				; Create a 2 MiB page
 	inc ecx
 	cmp ecx, 2048
 	jne pde_low_32			; Create 2048 2 MiB page maps.
+
+%ifndef NOVIDEO
+; Set the Linear Frame Buffer memory to WC
+lfb_twc_2MB:
+	mov ecx, 4			; 4 2MiB pages - TODO only set the pages needed
+	mov edi, 0x00210000
+	mov eax, [0x00005F00]		; Base address of video memory
+	shr eax, 18
+	add edi, eax
+lfb_twc_2MB_nextpage:
+	mov eax, [edi]			; Load the 8-byte value
+	or ax, 0x1008			; Set bits 12 (PAT) and 3 (PWT)
+	and ax, 0xFFEF			; Clear bit 4 (PCD)
+	mov [edi], eax			; Write it back
+	add edi, 8
+	sub ecx, 1
+	jnz lfb_twc_2MB_nextpage
+lfb_twc_end:
+	mov eax, cr3			; Flush TLB
+	mov cr3, eax
+	wbinvd				; Flush Cache
+%endif
 
 ; Load the GDT
 	lgdt [tGDTR64]
