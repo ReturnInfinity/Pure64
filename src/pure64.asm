@@ -712,8 +712,7 @@ create_pdpe_high:
 	stosq
 	add rax, 0x00001000		; 4K later (512 records x 8 bytes)
 	dec ecx
-	cmp ecx, 0
-	jne create_pdpe_high
+	jnz create_pdpe_high
 
 ; Create the High Page-Directory Entries (PDE).
 ; A single PDE can map 2MiB of RAM
@@ -737,11 +736,8 @@ skipfirst4mb:
 pde_high:				; Create a 2MiB page
 	stosq
 	add rax, 0x00200000		; Increment by 2MiB
-	cmp ecx, 0
-	je pde_next_range
 	dec ecx
-	cmp ecx, 0
-	jne pde_high
+	jnz pde_high
 	jmp pde_next_range
 pde_end:
 
