@@ -329,7 +329,7 @@ msg_boot_done:
 
 ; Clear out the first 20KiB of memory. This will store the 64-bit IDT, GDT, PML4, PDP Low, and PDP High
 	xor eax, eax
-	mov edi, edi
+	xor edi, edi
 	mov ecx, 20 * 1024 / 8
 	rep stosq			; Write 20KiB
 
