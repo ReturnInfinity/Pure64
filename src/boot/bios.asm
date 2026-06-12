@@ -130,19 +130,11 @@ memmapend:
 	rep stosd
 
 ; Enable the A20 gate
-set_A20:
-	in al, 0x64
-	test al, 0x02
-	jnz set_A20
-	mov al, 0xD1
-	out 0x64, al
-check_A20:
-	in al, 0x64
-	test al, 0x02
-	jnz check_A20
-	mov al, 0xDF
-	out 0x60, al
+	mov ax, 0x2401			; ENABLE A20 GATE
+	int 0x15
+	jc halt				; CF clear if successful
 
+; Gather Video details
 	mov cx, 0x4000 - 1		; Start looking from here
 VBESearch:
 	inc cx
